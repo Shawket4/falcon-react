@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
+import { debounce } from 'lodash'; // Import lodash for debouncing
 
 const TripForm = () => {
   const { id } = useParams();
@@ -8,6 +9,7 @@ const TripForm = () => {
   
   // State management
   const [isLoading, setIsLoading] = useState(false);
+  const [isMappingLoading, setIsMappingLoading] = useState(false);
   const [error, setError] = useState('');
   const [companies, setCompanies] = useState([]);
   const [terminals, setTerminals] = useState([]);
@@ -25,6 +27,11 @@ const TripForm = () => {
   const [companySearch, setCompanySearch] = useState('');
   const [terminalSearch, setTerminalSearch] = useState('');
   const [dropOffSearch, setDropOffSearch] = useState('');
+  
+  // Pagination for drop-off points
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pointsPerPage = 15; // Show 15 points per page
   
   // Dropdown visibility state
   const [carDropdownVisible, setCarDropdownVisible] = useState(false);
@@ -78,19 +85,49 @@ const TripForm = () => {
     };
   }, []);
 
+  // Debounced search function for drop-off points
+  const debouncedSearch = useCallback(
+    debounce((searchTerm) => {
+      if (dropOffPoints.length > 0) {
+        if (searchTerm.trim() === '') {
+          // No search term, show all drop-off points (paginated)
+          setFilteredDropOffPoints(dropOffPoints.slice(0, pointsPerPage));
+          setTotalPages(Math.ceil(dropOffPoints.length / pointsPerPage));
+        } else {
+          // Filter by search term
+          const filtered = dropOffPoints.filter(point => 
+            point.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+          setFilteredDropOffPoints(filtered.slice(0, pointsPerPage));
+          setTotalPages(Math.ceil(filtered.length / pointsPerPage));
+        }
+        setCurrentPage(1);
+      }
+    }, 300), // 300ms debounce time
+    [dropOffPoints, pointsPerPage]
+  );
+
   // Filter drop-off points when search changes
   useEffect(() => {
+    debouncedSearch(dropOffSearch);
+  }, [dropOffSearch, debouncedSearch]);
+
+  // Update filtered points when page changes
+  useEffect(() => {
     if (dropOffPoints.length > 0) {
-      if (dropOffSearch.trim() === '') {
-        setFilteredDropOffPoints(dropOffPoints);
-      } else {
-        const filtered = dropOffPoints.filter(point => 
+      const startIndex = (currentPage - 1) * pointsPerPage;
+      let filtered = dropOffPoints;
+      
+      if (dropOffSearch.trim() !== '') {
+        filtered = dropOffPoints.filter(point => 
           point.toLowerCase().includes(dropOffSearch.toLowerCase())
         );
-        setFilteredDropOffPoints(filtered);
       }
+      
+      setFilteredDropOffPoints(filtered.slice(startIndex, startIndex + pointsPerPage));
+      setTotalPages(Math.ceil(filtered.length / pointsPerPage));
     }
-  }, [dropOffSearch, dropOffPoints]);
+  }, [currentPage, dropOffPoints, dropOffSearch]);
 
   // Fetch initial data on component mount
   useEffect(() => {
@@ -107,24 +144,23 @@ const TripForm = () => {
       const companiesResponse = await apiClient.get('/api/mappings/companies');
       setCompanies(companiesResponse.data.data || []);
       
-      // Fetch car and driver data
-      // Note: These would need to be replaced with your actual car/driver APIs
-      // Using placeholder endpoints for now
-      try {
-        const carsResponse = await apiClient.get('/api/GetCars');
-        setCars(carsResponse.data || []);
-      } catch (error) {
-        console.error('Failed to fetch cars:', error);
-        // Fallback to empty array
+      // Fetch car and driver data in parallel
+      const [carsResponse, driversResponse] = await Promise.allSettled([
+        apiClient.get('/api/GetCars'),
+        apiClient.get('/api/GetDrivers')
+      ]);
+      
+      if (carsResponse.status === 'fulfilled') {
+        setCars(carsResponse.value.data || []);
+      } else {
+        console.error('Failed to fetch cars:', carsResponse.reason);
         setCars([]);
       }
       
-      try {
-        const driversResponse = await apiClient.get('/api/GetDrivers');
-        setDrivers(driversResponse.data || []);
-      } catch (error) {
-        console.error('Failed to fetch drivers:', error);
-        // Fallback to empty array
+      if (driversResponse.status === 'fulfilled') {
+        setDrivers(driversResponse.value.data || []);
+      } else {
+        console.error('Failed to fetch drivers:', driversResponse.reason);
         setDrivers([]);
       }
     } catch (err) {
@@ -150,15 +186,16 @@ const TripForm = () => {
     if (!tripData.company || !tripData.terminal) {
       setDropOffPoints([]);
       setFilteredDropOffPoints([]);
+      setMappingDetails({});
       return;
     }
 
-    fetchDropOffPoints(tripData.company, tripData.terminal);
+    fetchDropOffPointsWithMappings(tripData.company, tripData.terminal);
   }, [tripData.company, tripData.terminal]);
 
   const fetchTerminals = async (company) => {
     try {
-      const response = await apiClient.get(`/api/mappings/terminals/${company}`);
+      const response = await apiClient.get(`/api/mappings/terminals/${encodeURIComponent(company)}`);
       setTerminals(response.data.data || []);
     } catch (err) {
       setError('Failed to fetch terminals');
@@ -166,32 +203,30 @@ const TripForm = () => {
     }
   };
 
-  const fetchDropOffPoints = async (company, terminal) => {
+  // New optimized function to fetch drop-off points along with their mappings
+  const fetchDropOffPointsWithMappings = async (company, terminal) => {
+    setIsMappingLoading(true);
     try {
-      const response = await apiClient.get(`/api/mappings/dropoffs/${company}/${terminal}`);
-      const points = response.data.data || [];
-      setDropOffPoints(points);
-      setFilteredDropOffPoints(points);
-      setDropOffSearch(''); // Reset search when drop-off points change
+      const response = await apiClient.get(`/api/mappings/dropoffs/${encodeURIComponent(company)}/${encodeURIComponent(terminal)}`);
       
-      // Prepare mapping details for each drop-off point
-      const mappingDetailsObj = {};
-      for (const point of points) {
-        try {
-          const feeResponse = await apiClient.get(`/api/mappings/fee?company=${company}&terminal=${terminal}&drop_off_point=${point}`);
-          mappingDetailsObj[point] = {
-            fee: feeResponse.data.fee || 0,
-            distance: feeResponse.data.distance || 0
-          };
-        } catch (err) {
-          console.error(`Failed to fetch fee details for ${point}:`, err);
-          mappingDetailsObj[point] = { fee: 0, distance: 0 };
-        }
-      }
-      setMappingDetails(mappingDetailsObj);
+      // Extract data
+      const points = response.data.data || [];
+      const mappings = response.data.mappings || {};
+      
+      // Update state
+      setDropOffPoints(points);
+      setMappingDetails(mappings);
+      setCurrentPage(1);
+      
+      // Only show first page initially
+      setFilteredDropOffPoints(points.slice(0, pointsPerPage));
+      setTotalPages(Math.ceil(points.length / pointsPerPage));
+      setDropOffSearch(''); // Reset search when drop-off points change
     } catch (err) {
       setError('Failed to fetch drop-off points');
       console.error(err);
+    } finally {
+      setIsMappingLoading(false);
     }
   };
 
@@ -209,8 +244,8 @@ const TripForm = () => {
       // When editing, we need to load the dependent dropdowns
       if (trip.company) {
         await fetchTerminals(trip.company);
-        if (trip.terminal && trip.drop_off_point) {
-          await fetchDropOffPoints(trip.company, trip.terminal);
+        if (trip.terminal) {
+          await fetchDropOffPointsWithMappings(trip.company, trip.terminal);
         }
       }
     } catch (err) {
@@ -335,12 +370,25 @@ const TripForm = () => {
         await apiClient.post(`/api/trips`, dataToSubmit);
       }
       
-      navigate('/trips');
+      navigate('/trips-list');
     } catch (err) {
       setError(err.response?.data?.message || 'An error occurred');
       console.error(err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Pagination handlers
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -685,7 +733,6 @@ const TripForm = () => {
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                       </div>
                       <input
@@ -699,7 +746,7 @@ const TripForm = () => {
                   </div>
                 )}
                 
-                {isLoading ? (
+                {isMappingLoading ? (
                   <div className="flex flex-col items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
                     <p className="mt-4 text-gray-600">Loading locations...</p>
@@ -717,43 +764,68 @@ const TripForm = () => {
                     No drop-off locations match your search
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredDropOffPoints.map((point) => {
-                      const details = mappingDetails[point] || { fee: 0, distance: 0 };
-                      return (
-                        <div
-                          key={point}
-                          onClick={() => handleDropOffPointSelect(point)}
-                          className={`border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer ${
-                            tripData.drop_off_point === point 
-                              ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500' 
-                              : 'border-gray-200 hover:border-blue-300'
-                          }`}
-                        >
-                          <div className="p-4">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="font-medium text-gray-900">{point}</h4>
-                              <input 
-                                type="radio"
-                                checked={tripData.drop_off_point === point}
-                                onChange={() => {}} // Handled by the div click
-                                onClick={e => e.stopPropagation()}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div className="bg-gray-100 p-2 rounded">
-                                <span className="text-gray-500">Fee:</span> {details.fee.toFixed(2)}
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredDropOffPoints.map((point) => {
+                        const details = mappingDetails[point] || { fee: 0, distance: 0 };
+                        return (
+                          <div
+                            key={point}
+                            onClick={() => handleDropOffPointSelect(point)}
+                            className={`border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer ${
+                              tripData.drop_off_point === point 
+                                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500' 
+                                : 'border-gray-200 hover:border-blue-300'
+                            }`}
+                          >
+                            <div className="p-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-medium text-gray-900">{point}</h4>
+                                <input 
+                                  type="radio"
+                                  checked={tripData.drop_off_point === point}
+                                  onChange={() => {}} // Handled by the div click
+                                  onClick={e => e.stopPropagation()}
+                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                />
                               </div>
-                              <div className="bg-gray-100 p-2 rounded">
-                                <span className="text-gray-500">Distance:</span> {details.distance.toFixed(2)} km
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="bg-gray-100 p-2 rounded">
+                                  <span className="text-gray-500">Fee:</span> {details.fee?.toFixed(2) || "0.00"}
+                                </div>
+                                <div className="bg-gray-100 p-2 rounded">
+                                  <span className="text-gray-500">Distance:</span> {details.distance?.toFixed(2) || "0.00"} km
+                                </div>
                               </div>
                             </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Pagination controls */}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center items-center mt-6 space-x-4">
+                        <button 
+                          onClick={handlePrevPage} 
+                          disabled={currentPage === 1}
+                          className="px-4 py-2 bg-blue-100 text-blue-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        <div className="text-gray-700">
+                          Page {currentPage} of {totalPages}
                         </div>
-                      );
-                    })}
-                  </div>
+                        <button 
+                          onClick={handleNextPage} 
+                          disabled={currentPage === totalPages}
+                          className="px-4 py-2 bg-blue-100 text-blue-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -808,6 +880,11 @@ const TripForm = () => {
             </form>
           )}
         </div>
+      </div>
+      
+      {/* Copyright footer */}
+      <div className="py-3 px-6 mt-6 bg-white border border-gray-200 rounded-md text-center text-gray-500 text-sm">
+        © {new Date().getFullYear()} Shawket Ibrahim. All rights reserved.
       </div>
     </div>
   );

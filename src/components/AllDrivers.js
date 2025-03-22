@@ -55,7 +55,8 @@ const AllDrivers = () => {
     }, {});
   };
   
-  const loadData = useCallback(async () => {
+  // Define loadData without useCallback to prevent dependency cycles
+  const loadData = async () => {
     setLoading(true);
     
     try {
@@ -80,11 +81,12 @@ const AllDrivers = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  };
   
+  // Only call loadData once on component mount
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, []); // Empty dependency array ensures this runs only once
   
   const handleRefresh = () => {
     setRefreshing(true);

@@ -4,8 +4,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { 
   AlertTriangle, Edit, Trash2, Phone, 
-  CreditCard, FileText, FileCheck, CheckCircle, XCircle 
+  CreditCard, FileText, FileCheck, CheckCircle, XCircle, LockIcon 
 } from 'lucide-react';
+import { useAuth } from './AuthContext';
+
+// Permission level required for certain operations
+const REQUIRED_PERMISSION_LEVEL = 3;
 
 const DriverDetails = ({ serverIp }) => {
   const { id } = useParams();
@@ -15,6 +19,12 @@ const DriverDetails = ({ serverIp }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
+  
+  // Get auth context to check permissions
+  const { hasMinPermissionLevel } = useAuth();
+  
+  // Check if user has required permission level
+  const canEditDelete = hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL);
   
   useEffect(() => {
     const fetchDriverData = async () => {
@@ -54,6 +64,8 @@ const DriverDetails = ({ serverIp }) => {
   }, [id, serverIp]);
   
   const handleDelete = async () => {
+    if (!canEditDelete) return;
+    
     setDeleting(true);
     
     try {
@@ -78,6 +90,8 @@ const DriverDetails = ({ serverIp }) => {
   };
   
   const handleEditDriver = () => {
+    if (!canEditDelete) return;
+    
     // Navigate to edit driver page (not implemented in this example)
     alert("Edit driver functionality not implemented");
   };
@@ -95,6 +109,8 @@ const DriverDetails = ({ serverIp }) => {
   };
   
   const handleApproveDriver = async () => {
+    if (!canEditDelete) return;
+    
     try {
       await apiClient.post(
         '/api/ApproveRequest',
@@ -120,6 +136,8 @@ const DriverDetails = ({ serverIp }) => {
   };
   
   const handleRejectDriver = async () => {
+    if (!canEditDelete) return;
+    
     try {
       await apiClient.post(
         '/api/RejectRequest',
@@ -182,23 +200,35 @@ const DriverDetails = ({ serverIp }) => {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-800">{driver.name}</h1>
-        <div className="flex space-x-2">
-          <button 
-            className="flex items-center px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
-            onClick={handleEditDriver}
-          >
-            <Edit size={18} className="mr-2" />
-            <span>Edit</span>
-          </button>
-          <button 
-            className="flex items-center px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors"
-            onClick={() => setShowDeleteConfirm(true)}
-          >
-            <Trash2 size={18} className="mr-2" />
-            <span>Delete</span>
-          </button>
+        <div className="flex items-center">
+          <h1 className="text-2xl font-bold text-gray-800">{driver.name}</h1>
+          
+          {!canEditDelete && (
+            <div className="ml-3 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm flex items-center">
+              <LockIcon size={14} className="mr-1" />
+              <span>View Only</span>
+            </div>
+          )}
         </div>
+        
+        {canEditDelete && (
+          <div className="flex space-x-2">
+            <button 
+              className="flex items-center px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+              onClick={handleEditDriver}
+            >
+              <Edit size={18} className="mr-2" />
+              <span>Edit</span>
+            </button>
+            <button 
+              className="flex items-center px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 size={18} className="mr-2" />
+              <span>Delete</span>
+            </button>
+          </div>
+        )}
       </div>
       
       <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
@@ -298,7 +328,7 @@ const DriverDetails = ({ serverIp }) => {
         </div>
       </div>
       
-      {driver.is_approved === 0 && (
+      {driver.is_approved === 0 && canEditDelete && (
         <div className="flex space-x-4 mt-8">
           <button 
             className="flex-1 flex items-center justify-center px-4 py-3 bg-red-500 text-white font-medium rounded-md hover:bg-red-600 transition-colors"
@@ -317,8 +347,8 @@ const DriverDetails = ({ serverIp }) => {
         </div>
       )}
       
-      {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
+      {/* Delete Confirmation Dialog - Only shown if user has permission */}
+      {showDeleteConfirm && canEditDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
             <div className="flex items-center mb-4">

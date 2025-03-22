@@ -18,11 +18,17 @@ import {
 import Breadcrumbs from './Breadcrumbs';
 import { useAuth } from './AuthContext';
 
+// Permission level required for certain operations
+const REQUIRED_PERMISSION_LEVEL = 3;
+
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, user, hasPermission } = useAuth();
+  const { logout, user, hasPermission, userPermission, hasMinPermissionLevel } = useAuth();
+  
+  // Check if user has required permission level
+  const hasRequiredPermissionLevel = hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL);
   
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -40,11 +46,22 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
   
+  // Filter navigation items based on permissions
+  const getNavItems = (items) => {
+    return items.filter(item => {
+      // Hide restricted items if user doesn't have required permission level
+      if (item.minPermissionLevel && !hasMinPermissionLevel(item.minPermissionLevel)) {
+        return false;
+      }
+      return true;
+    });
+  };
+  
   // Navigation items grouped by sections
   const navSections = [
     {
       title: "Fuel Management",
-      items: [
+      items: getNavItems([
         { 
           path: '/', 
           icon: <Fuel size={20} />, 
@@ -55,9 +72,10 @@ const Layout = ({ children }) => {
           path: '/add-fuel', 
           icon: <PlusCircle size={20} />, 
           label: 'Add Fuel Event',
-          isActive: location.pathname === '/add-fuel'
+          isActive: location.pathname === '/add-fuel',
+          minPermissionLevel: REQUIRED_PERMISSION_LEVEL
         },
-      ]
+      ])
     },
     {
       title: "Fleet Management",
@@ -84,12 +102,13 @@ const Layout = ({ children }) => {
     },
     {
       title: "Trip Management",
-      items: [
+      items: getNavItems([
         { 
           path: '/fees', 
           icon: <DollarSign size={20} />, 
           label: 'Fee Mappings',
-          isActive: location.pathname === '/fees'
+          isActive: location.pathname === '/fees',
+          minPermissionLevel: REQUIRED_PERMISSION_LEVEL
         },
         { 
           path: '/trips-list', 
@@ -97,7 +116,7 @@ const Layout = ({ children }) => {
           label: 'Trips',
           isActive: location.pathname === '/trips-list' || location.pathname.includes('/trip-details/')
         },
-      ]
+      ])
     },
     {
       title: "Driver Management",
@@ -126,6 +145,9 @@ const Layout = ({ children }) => {
       ]
     });
   }
+
+  // Filter out sections with no items
+  const filteredNavSections = navSections.filter(section => section.items.length > 0);
   
   return (
     <div className="flex min-h-screen bg-gray-50 overflow-hidden">
@@ -149,7 +171,7 @@ const Layout = ({ children }) => {
         </div>
         
         <nav className="p-4 overflow-y-auto flex-grow">
-          {navSections.map((section, idx) => (
+          {filteredNavSections.map((section, idx) => (
             <div key={idx} className="mb-6">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">
                 {section.title}
@@ -179,7 +201,7 @@ const Layout = ({ children }) => {
                   </Link>
                 ))}
               </div>
-              {idx < navSections.length - 1 && (
+              {idx < filteredNavSections.length - 1 && (
                 <div className="border-t border-gray-200 my-4"></div>
               )}
             </div>
@@ -192,6 +214,13 @@ const Layout = ({ children }) => {
             <div className="mb-4 px-3">
               <p className="text-sm font-medium text-gray-600">{user.name}</p>
               <p className="text-xs text-gray-400">{user.email}</p>
+              {userPermission && (
+                <div className="mt-1">
+                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                    Permission: {userPermission}
+                  </span>
+                </div>
+              )}
             </div>
           )}
           
@@ -232,6 +261,15 @@ const Layout = ({ children }) => {
             {/* Breadcrumbs component */}
             <Breadcrumbs />
           </div>
+          
+          {/* Permission level indicator */}
+          {!hasRequiredPermissionLevel && (
+            <div className="hidden md:block">
+              <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
+                Limited Access Mode
+              </span>
+            </div>
+          )}
         </div>
         
         {/* Page content */}

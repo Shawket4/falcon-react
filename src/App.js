@@ -39,7 +39,14 @@ export const pathNames = {
   'add-fuel': 'Add Fuel Event',
   distances: 'Distance Mappings',
   fees: 'Fee Mappings',
+  'trips-list': 'Trips',
+  'add-trip': 'Add Trip',
+  'oil-changes-list': 'Oil Changes',
+  'add-oil-change': 'Add Oil Change',
 };
+
+// Permission level required for certain operations
+const REQUIRED_PERMISSION_LEVEL = 3;
 
 function App() {
   return (
@@ -58,10 +65,11 @@ function App() {
             </ProtectedRoute>
           } />
           
+          {/* Add Fuel Event - Requires permission level 3 or higher */}
           <Route path="/add-fuel" element={
-            <ProtectedRoute>
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
               <Layout>
-                <AddFuelEvent  />
+                <AddFuelEvent />
               </Layout>
             </ProtectedRoute>
           } />
@@ -69,15 +77,16 @@ function App() {
           <Route path="/details/:id" element={
             <ProtectedRoute>
               <Layout>
-                <FuelEventDetails  />
+                <FuelEventDetails />
               </Layout>
             </ProtectedRoute>
           } />
           
+          {/* Edit Fuel Event - Requires permission level 3 or higher */}
           <Route path="/edit-fuel/:id" element={
-            <ProtectedRoute>
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
               <Layout>
-                <EditFuelEvent  />
+                <EditFuelEvent />
               </Layout>
             </ProtectedRoute>
           } />
@@ -85,7 +94,7 @@ function App() {
           <Route path="/drivers" element={
             <ProtectedRoute>
               <Layout>
-                <AllDrivers  />
+                <AllDrivers />
               </Layout>
             </ProtectedRoute>
           } />
@@ -93,7 +102,7 @@ function App() {
           <Route path="/driver/:id" element={
             <ProtectedRoute>
               <Layout>
-                <DriverDetails  />
+                <DriverDetails />
               </Layout>
             </ProtectedRoute>
           } />
@@ -101,15 +110,16 @@ function App() {
           <Route path="/driver/loans/:id" element={
             <ProtectedRoute>
               <Layout>
-                <DriverLoans  />
+                <DriverLoans />
               </Layout>
             </ProtectedRoute>
           } />
           
+          {/* Add Driver Loan - Requires permission level 3 or higher */}
           <Route path="/driver/loans/:id/add" element={
-            <ProtectedRoute>
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
               <Layout>
-                <AddDriverLoan  />
+                <AddDriverLoan />
               </Layout>
             </ProtectedRoute>
           } />
@@ -165,9 +175,9 @@ function App() {
             </ProtectedRoute>
           } />
           
-          {/* Fee mapping routes */}
+          {/* Fee mapping routes - Requires permission level 3 or higher */}
           <Route path="/fees" element={
-            <ProtectedRoute>
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
               <Layout>
                 <FeeMappings />
               </Layout>
@@ -175,60 +185,60 @@ function App() {
           } />
 
           <Route path="/add-trip" element={
-   <ProtectedRoute>
+            <ProtectedRoute>
               <Layout>
                 <AddTripComponent />
               </Layout>
-              </ProtectedRoute>
+            </ProtectedRoute>
           } />
 
-<Route path="/trips/:id" element={
-   <ProtectedRoute>
+          <Route path="/trips/:id" element={
+            <ProtectedRoute>
               <Layout>
                 <AddTripComponent />
               </Layout>
-              </ProtectedRoute>
+            </ProtectedRoute>
           } />
 
-<Route path="/trips-list" element={
-   <ProtectedRoute>
+          <Route path="/trips-list" element={
+            <ProtectedRoute>
               <Layout>
                 <TripsList />
               </Layout>
-              </ProtectedRoute>
+            </ProtectedRoute>
           } />
 
-<Route path="/oil-changes-list" element={
-   <ProtectedRoute>
-   <Layout>
-     <OilChangeList />
-   </Layout>
-   </ProtectedRoute>
-} />
+          <Route path="/oil-changes-list" element={
+            <ProtectedRoute>
+              <Layout>
+                <OilChangeList />
+              </Layout>
+            </ProtectedRoute>
+          } />
 
-<Route path="/add-oil-change" element={
-   <ProtectedRoute>
-   <Layout>
-     <AddOilChange />
-   </Layout>
-   </ProtectedRoute>
-} />
+          <Route path="/add-oil-change" element={
+            <ProtectedRoute>
+              <Layout>
+                <AddOilChange />
+              </Layout>
+            </ProtectedRoute>
+          } />
 
-<Route path="/edit-oil-change/:oilChangeId" element={
-   <ProtectedRoute>
-   <Layout>
-     <EditOilChange />
-   </Layout>
-   </ProtectedRoute>
-} />
+          <Route path="/edit-oil-change/:oilChangeId" element={
+            <ProtectedRoute>
+              <Layout>
+                <EditOilChange />
+              </Layout>
+            </ProtectedRoute>
+          } />
 
-<Route path="/trip-details/:tripId" element={
-   <ProtectedRoute>
-   <Layout>
-     <TripDetails />
-   </Layout>
-   </ProtectedRoute>
-} />
+          <Route path="/trip-details/:tripId" element={
+            <ProtectedRoute>
+              <Layout>
+                <TripDetails />
+              </Layout>
+            </ProtectedRoute>
+          } />
           
           {/* Admin-only route example */}
           <Route path="/admin" element={

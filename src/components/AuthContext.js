@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { SERVER_IP } from '../config';
+import { setLogoutHandler } from '../apiClient';
 
 const AuthContext = createContext(null);
 
@@ -8,6 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userPermission, setUserPermission] = useState(null);
+  const [user, setUser] = useState(null);
 
   // Initialize auth state
   useEffect(() => {
@@ -19,16 +21,21 @@ export const AuthProvider = ({ children }) => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
         try {
-          // Instead of validating with the server on every refresh (which can cause issues),
-          // we'll trust the token in localStorage and just set the auth state
+          // Trust token from localStorage to prevent loading issues
           setIsAuthenticated(true);
           
           // Get user permission level
           const permission = localStorage.getItem('permission');
-          setUserPermission(permission);
+          const userName = localStorage.getItem('user_name');
+          const userEmail = localStorage.getItem('user_email');
           
-          // Optional: You can still do a lightweight validation in the background
-          // without blocking the auth flow
+          setUserPermission(permission);
+          setUser({
+            name: userName,
+            email: userEmail
+          });
+          
+          // Optional background validation
           axios.get(`${SERVER_IP}/api/validate-token`, {
             headers: { Authorization: `Bearer ${token}` }
           }).catch(error => {
@@ -47,6 +54,11 @@ export const AuthProvider = ({ children }) => {
     };
     
     initAuth();
+  }, []);
+
+  // Register the logout function with the API client
+  useEffect(() => {
+    setLogoutHandler(logout);
   }, []);
 
   const login = async (email, password) => {
@@ -72,6 +84,10 @@ export const AuthProvider = ({ children }) => {
         
         setIsAuthenticated(true);
         setUserPermission(response.data.permission);
+        setUser({
+          name: response.data.name || email,
+          email: email
+        });
         
         return true;
       }
@@ -82,7 +98,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Define logout function outside of useEffect to avoid circular reference
   const logout = () => {
     localStorage.removeItem('jwt');
     localStorage.removeItem('permission');
@@ -93,12 +108,25 @@ export const AuthProvider = ({ children }) => {
     
     setIsAuthenticated(false);
     setUserPermission(null);
+    setUser(null);
+    
+    // Redirect to login if needed
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
   };
 
-  // Check if user has required permission
+  // Check if user has required permission role
   const hasPermission = (requiredPermission) => {
     if (!requiredPermission) return true;
     return userPermission === requiredPermission;
+  };
+
+  // Check if user has minimum permission level
+  const hasMinPermissionLevel = (minLevel) => {
+    // Convert the string permission to a number
+    const permissionLevel = parseInt(userPermission) || 0;
+    return permissionLevel >= minLevel;
   };
 
   const authContextValue = {
@@ -107,7 +135,9 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     hasPermission,
-    userPermission
+    hasMinPermissionLevel,
+    userPermission,
+    user
   };
 
   return (

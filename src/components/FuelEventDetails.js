@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { Edit, Trash2, AlertTriangle, Droplet, Calendar, Truck, User, DollarSign, Gauge, ArrowRight } from 'lucide-react';
+import { useAuth } from './AuthContext';
+
+// Permission level required for edit/delete operations
+const REQUIRED_PERMISSION_LEVEL = 3;
 
 const FuelEventDetails = ({ serverIp }) => {
   const { id } = useParams();
@@ -11,6 +15,12 @@ const FuelEventDetails = ({ serverIp }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
+  
+  // Get auth context to check permissions
+  const { hasMinPermissionLevel } = useAuth();
+  
+  // Check if user has required permission level
+  const canEditDelete = hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL);
   
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -108,22 +118,31 @@ const FuelEventDetails = ({ serverIp }) => {
         <h1 className="text-2xl font-bold text-gray-800 mb-4 md:mb-0">
           Fuel Event for Vehicle {event.CarNoPlate}
         </h1>
-        <div className="flex space-x-3">
-          <button 
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            onClick={handleEdit}
-          >
-            <Edit size={18} className="mr-2" />
-            <span>Edit</span>
-          </button>
-          <button 
-            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-            onClick={() => setShowDeleteConfirm(true)}
-          >
-            <Trash2 size={18} className="mr-2" />
-            <span>Delete</span>
-          </button>
-        </div>
+        
+        {/* Only show edit/delete buttons if user has required permission */}
+        {canEditDelete ? (
+          <div className="flex space-x-3">
+            <button 
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              onClick={handleEdit}
+            >
+              <Edit size={18} className="mr-2" />
+              <span>Edit</span>
+            </button>
+            <button 
+              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 size={18} className="mr-2" />
+              <span>Delete</span>
+            </button>
+          </div>
+        ) : (
+          <div className="px-4 py-2 bg-amber-100 text-amber-800 rounded-md flex items-center">
+            <AlertTriangle size={16} className="mr-2" />
+            <span className="text-sm">View Only Mode</span>
+          </div>
+        )}
       </div>
       
       <div className="space-y-8">
@@ -229,8 +248,8 @@ const FuelEventDetails = ({ serverIp }) => {
         </div>
       </div>
       
-      {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
+      {/* Delete Confirmation Dialog - Only shown if user has permission */}
+      {showDeleteConfirm && canEditDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-fadeIn">
             <div className="flex items-center mb-4">

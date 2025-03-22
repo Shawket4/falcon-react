@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
-import { Plus, Trash2, Calendar, DollarSign, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, RefreshCw, AlertTriangle, LockIcon } from 'lucide-react';
+import { useAuth } from './AuthContext';
+
+// Permission level required for add/delete operations
+const REQUIRED_PERMISSION_LEVEL = 3;
 
 const DriverLoans = ({ serverIp }) => {
   const { id } = useParams();
@@ -14,6 +18,12 @@ const DriverLoans = ({ serverIp }) => {
   const [loanToDelete, setLoanToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
+  
+  // Get auth context to check permissions
+  const { hasMinPermissionLevel } = useAuth();
+  
+  // Check if user has required permission level
+  const canAddDelete = hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL);
   
   // Group loans by year and month
   const groupLoansByYearMonth = (loansList) => {
@@ -92,12 +102,13 @@ const DriverLoans = ({ serverIp }) => {
   };
   
   const confirmDeleteLoan = (loan) => {
+    if (!canAddDelete) return;
     setLoanToDelete(loan);
     setShowDeleteConfirm(true);
   };
   
   const handleDeleteLoan = async () => {
-    if (!loanToDelete) return;
+    if (!loanToDelete || !canAddDelete) return;
     
     setDeleting(true);
     try {
@@ -125,6 +136,7 @@ const DriverLoans = ({ serverIp }) => {
   };
   
   const handleAddLoan = () => {
+    if (!canAddDelete) return;
     navigate(`/driver/loans/${id}/add`);
   };
   
@@ -160,7 +172,17 @@ const DriverLoans = ({ serverIp }) => {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-800">{driver?.name || 'Driver'} - Loans</h1>
+        <div className="flex items-center">
+          <h1 className="text-2xl font-bold text-gray-800">{driver?.name || 'Driver'} - Loans</h1>
+          
+          {!canAddDelete && (
+            <div className="ml-3 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm flex items-center">
+              <LockIcon size={14} className="mr-1" />
+              <span>View Only</span>
+            </div>
+          )}
+        </div>
+        
         <div className="flex space-x-2">
           <button 
             onClick={handleRefresh} 
@@ -169,13 +191,16 @@ const DriverLoans = ({ serverIp }) => {
           >
             <RefreshCw size={20} className={refreshing ? "animate-spin" : ""} />
           </button>
-          <button 
-            onClick={handleAddLoan} 
-            className="flex items-center px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-          >
-            <Plus size={20} className="mr-1" />
-            <span>Add Loan</span>
-          </button>
+          
+          {canAddDelete && (
+            <button 
+              onClick={handleAddLoan} 
+              className="flex items-center px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            >
+              <Plus size={20} className="mr-1" />
+              <span>Add Loan</span>
+            </button>
+          )}
         </div>
       </div>
       
@@ -186,13 +211,16 @@ const DriverLoans = ({ serverIp }) => {
               <DollarSign size={64} />
             </div>
             <p className="text-gray-600 mb-6">No loans found for this driver</p>
-            <button 
-              onClick={handleAddLoan} 
-              className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-            >
-              <Plus size={16} className="mr-2" />
-              Register Loan
-            </button>
+            
+            {canAddDelete && (
+              <button 
+                onClick={handleAddLoan} 
+                className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+              >
+                <Plus size={16} className="mr-2" />
+                Register Loan
+              </button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -219,12 +247,15 @@ const DriverLoans = ({ serverIp }) => {
                             </h3>
                             <p className="text-sm text-gray-500">{loan.date}</p>
                           </div>
-                          <button 
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                            onClick={() => confirmDeleteLoan(loan)}
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          
+                          {canAddDelete && (
+                            <button 
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                              onClick={() => confirmDeleteLoan(loan)}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -245,8 +276,8 @@ const DriverLoans = ({ serverIp }) => {
         </div>
       )}
       
-      {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && loanToDelete && (
+      {/* Delete Confirmation Dialog - Only shown if user has permission */}
+      {showDeleteConfirm && loanToDelete && canAddDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
             <div className="flex items-center mb-4">

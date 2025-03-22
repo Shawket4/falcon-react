@@ -7,6 +7,14 @@ const apiClient = axios.create({
   withCredentials: true, // Important for cookies
 });
 
+// This will be set after initialization
+let logoutFunction = null;
+
+// Function to set the logout handler
+export const setLogoutHandler = (logoutFn) => {
+  logoutFunction = logoutFn;
+};
+
 // Add a request interceptor to attach JWT to each request
 apiClient.interceptors.request.use(
   (config) => {
@@ -29,15 +37,20 @@ apiClient.interceptors.response.use(
   async (error) => {
     // Handle 401 Unauthorized errors
     if (error.response && error.response.status === 401) {
-      // Clear local storage and redirect to login
-      localStorage.removeItem('jwt');
-      localStorage.removeItem('permission');
-      localStorage.removeItem('user_name');
-      localStorage.removeItem('user_email');
-      
-      // Only redirect if we're not already on the login page
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      // Call the logout function if it's been set
+      if (logoutFunction) {
+        logoutFunction();
+      } else {
+        // Fallback: clear local storage
+        localStorage.removeItem('jwt');
+        localStorage.removeItem('permission');
+        localStorage.removeItem('user_name');
+        localStorage.removeItem('user_email');
+        
+        // Only redirect if we're not already on the login page
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
     

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { format } from 'date-fns';
 import { Calendar, Save, AlertTriangle, Check, X } from 'lucide-react';
+import apiClient from '../apiClient';
 
 const AddDriverLoan = ({ serverIp }) => {
   const { id } = useParams();
@@ -22,8 +22,8 @@ const AddDriverLoan = ({ serverIp }) => {
   useEffect(() => {
     const fetchDriverData = async () => {
       try {
-        const response = await axios.post(
-          `${serverIp}/api/GetDriverProfileData`,
+        const response = await apiClient.post(
+          `/api/GetDriverProfileData`,
           {},
           {
             headers: { 'Content-Type': 'application/json' },
@@ -61,8 +61,8 @@ const AddDriverLoan = ({ serverIp }) => {
     setSubmitting(true);
     
     try {
-      const response = await axios.post(
-        `${serverIp}/api/RegisterDriverLoan/`,
+      const response = await apiClient.post(
+        `/api/RegisterDriverLoan/`,
         {
           driver_id: parseInt(id),
           loan: {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import apiClient from '../apiClient';
+import { pathNames } from '../App';
 
 const Breadcrumbs = () => {
   const location = useLocation();
@@ -11,27 +12,67 @@ const Breadcrumbs = () => {
   
   // Get driver name for driver-related pages
   const [driverName, setDriverName] = useState('');
+  const [truckDetails, setTruckDetails] = useState(null);
+  const [tripDetails, setTripDetails] = useState(null);
   
   useEffect(() => {
-    // Fetch driver name when on driver routes
-    const fetchDriverName = async () => {
+    // Reset state when path changes
+    setDriverName('');
+    setTruckDetails(null);
+    setTripDetails(null);
+    
+    const fetchEntityDetails = async () => {
+      // Fetch driver name when on driver routes
       const driverId = params.id || (pathnames[0] === 'driver' && pathnames[1]);
       
       if (driverId && (pathnames[0] === 'driver' || pathnames[2] === 'loans')) {
         try {
-          const response = await apiClient.get(`/drivers/${driverId}`);
-          const data = response.data;
-          if (data && data.name) {
-            setDriverName(data.name);
+          const response = await apiClient.post(
+            '/api/GetDriverProfileData',
+            {},
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+          
+          if (response.data) {
+            const driverData = response.data.find(d => d.ID.toString() === driverId);
+            if (driverData) {
+              setDriverName(driverData.name);
+            }
           }
         } catch (error) {
           console.error('Error fetching driver name:', error);
         }
       }
+      
+      // Fetch truck details
+      if (pathnames[0] === 'trucks' && pathnames.length > 1 && pathnames[1] !== 'create') {
+        try {
+          const truckId = pathnames[1];
+          const response = await apiClient.get(`/api/trucks/${truckId}`);
+          if (response.data) {
+            setTruckDetails(response.data);
+          }
+        } catch (error) {
+          console.error('Error fetching truck details:', error);
+        }
+      }
+      
+      // Fetch trip details
+      if ((pathnames[0] === 'trip-details' || pathnames[0] === 'trips') && pathnames.length > 1) {
+        try {
+          const tripId = pathnames[1];
+          const response = await apiClient.get(`/api/trips/${tripId}`);
+          if (response.data) {
+            setTripDetails(response.data);
+          }
+        } catch (error) {
+          console.error('Error fetching trip details:', error);
+        }
+      }
     };
     
-    fetchDriverName();
-  }, [params.id, pathnames]);
+    fetchEntityDetails();
+  }, [location.pathname, params.id, pathnames]);
 
   // Don't render breadcrumbs on home page
   if (location.pathname === '/') {
@@ -54,113 +95,147 @@ const Breadcrumbs = () => {
       </span>
     ];
     
-    // If we're on the drivers listing page
+    // Helper function to add a breadcrumb item
+    const addBreadcrumb = (key, text, path = null, isActive = false) => {
+      // Add chevron separator
+      breadcrumbs.push(<ChevronRight key={`chevron-${key}`} size={16} />);
+      
+      // Add the breadcrumb item
+      if (path && !isActive) {
+        breadcrumbs.push(
+          <span
+            key={key}
+            className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+            onClick={() => navigate(path)}
+          >
+            {text}
+          </span>
+        );
+      } else {
+        breadcrumbs.push(
+          <span key={key} className="text-gray-500 dark:text-gray-400">
+            {text}
+          </span>
+        );
+      }
+    };
+    
+    // DRIVERS SECTION
     if (pathnames[0] === 'drivers') {
-      breadcrumbs.push(
-        <ChevronRight key="chevron-drivers" size={16} />,
-        <span key="drivers" className="text-gray-500 dark:text-gray-400">
-          Drivers
-        </span>
-      );
+      addBreadcrumb('drivers', 'Drivers', null, true);
     }
     
-    // If we're on a specific driver's page
+    // DRIVER DETAILS SECTION
     else if (pathnames[0] === 'driver') {
-      // Add Drivers breadcrumb with link
-      breadcrumbs.push(
-        <ChevronRight key="chevron-drivers" size={16} />,
-        <span 
-          key="drivers"
-          className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-          onClick={() => navigate('/drivers')}
-        >
-          Drivers
-        </span>
-      );
+      addBreadcrumb('drivers', 'Drivers', '/drivers');
       
       // If we're on driver loans page
       if (pathnames[2] === 'loans') {
         // Add Driver name breadcrumb with link
-        breadcrumbs.push(
-          <ChevronRight key="chevron-driver" size={16} />,
-          <span 
-            key="driver-name"
-            className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-            onClick={() => navigate(`/driver/${pathnames[1]}`)}
-          >
-            {driverName || 'Driver Details'}
-          </span>,
-          <ChevronRight key="chevron-loans" size={16} />,
-          <span key="loans" className="text-gray-500 dark:text-gray-400">
-            Loans
-          </span>
-        );
+        addBreadcrumb('driver-name', driverName || 'Driver Details', `/driver/${pathnames[1]}`);
         
-        // If we're adding a loan
+        // Add Loans breadcrumb
         if (pathnames[3] === 'add') {
-          breadcrumbs.push(
-            <ChevronRight key="chevron-add" size={16} />,
-            <span key="add" className="text-gray-500 dark:text-gray-400">
-              Add Loan
-            </span>
-          );
+          addBreadcrumb('loans', 'Loans', `/driver/loans/${pathnames[1]}`);
+          addBreadcrumb('add-loan', 'Add Loan', null, true);
+        } else {
+          addBreadcrumb('loans', 'Loans', null, true);
         }
       } 
       // Just driver details page
       else {
-        breadcrumbs.push(
-          <ChevronRight key="chevron-driver" size={16} />,
-          <span key="driver-name" className="text-gray-500 dark:text-gray-400">
-            {driverName || 'Driver Details'}
-          </span>
-        );
+        addBreadcrumb('driver-name', driverName || 'Driver Details', null, true);
       }
     }
     
-    // If we're on fuel events page
+    // FUEL EVENTS SECTION
     else if (pathnames[0] === 'add-fuel') {
-      breadcrumbs.push(
-        <ChevronRight key="chevron-add-fuel" size={16} />,
-        <span key="add-fuel" className="text-gray-500 dark:text-gray-400">
-          Add Fuel Event
-        </span>
-      );
+      addBreadcrumb('add-fuel', 'Add Fuel Event', null, true);
     }
-    
-    // If we're on details page
     else if (pathnames[0] === 'details') {
-      breadcrumbs.push(
-        <ChevronRight key="chevron-fuel-events" size={16} />,
-        <span 
-          key="fuel-events"
-          className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-          onClick={() => navigate('/')}
-        >
-          Fuel Events
-        </span>,
-        <ChevronRight key="chevron-details" size={16} />,
-        <span key="details" className="text-gray-500 dark:text-gray-400">
-          Details
-        </span>
-      );
+      addBreadcrumb('fuel-events', 'Fuel Events', '/');
+      addBreadcrumb('details', 'Details', null, true);
+    }
+    else if (pathnames[0] === 'edit-fuel') {
+      addBreadcrumb('fuel-events', 'Fuel Events', '/');
+      addBreadcrumb('edit', 'Edit Event', null, true);
     }
     
-    // If we're on edit fuel page
-    else if (pathnames[0] === 'edit-fuel') {
-      breadcrumbs.push(
-        <ChevronRight key="chevron-fuel-events" size={16} />,
-        <span 
-          key="fuel-events"
-          className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-          onClick={() => navigate('/')}
-        >
-          Fuel Events
-        </span>,
-        <ChevronRight key="chevron-edit" size={16} />,
-        <span key="edit" className="text-gray-500 dark:text-gray-400">
-          Edit Event
-        </span>
-      );
+    // TRUCKS SECTION
+    else if (pathnames[0] === 'trucks') {
+      if (pathnames.length === 1) {
+        addBreadcrumb('trucks', 'Trucks', null, true);
+      } else if (pathnames[1] === 'create') {
+        addBreadcrumb('trucks', 'Trucks', '/trucks');
+        addBreadcrumb('create-truck', 'Add Truck', null, true);
+      } else {
+        addBreadcrumb('trucks', 'Trucks', '/trucks');
+        addBreadcrumb('truck-details', truckDetails?.plate_number || 'Truck Details', null, true);
+      }
+    }
+    
+    // TIRES SECTION
+    else if (pathnames[0] === 'tires') {
+      if (pathnames.length === 1) {
+        addBreadcrumb('tires', 'Tires', null, true);
+      } else if (pathnames[1] === 'create') {
+        addBreadcrumb('tires', 'Tires', '/tires');
+        addBreadcrumb('create-tire', 'Add Tire', null, true);
+      } else {
+        addBreadcrumb('tires', 'Tires', '/tires');
+        addBreadcrumb('tire-details', 'Tire Details', null, true);
+      }
+    }
+    
+    // MAPPINGS SECTION
+    else if (pathnames[0] === 'distances') {
+      addBreadcrumb('distances', 'Distance Mappings', null, true);
+    }
+    else if (pathnames[0] === 'fees') {
+      addBreadcrumb('fees', 'Fee Mappings', null, true);
+    }
+    
+    // TRIPS SECTION
+    else if (pathnames[0] === 'trips-list') {
+      addBreadcrumb('trips', 'Trips', null, true);
+    }
+    else if (pathnames[0] === 'add-trip') {
+      addBreadcrumb('trips', 'Trips', '/trips-list');
+      addBreadcrumb('add-trip', 'Add Trip', null, true);
+    }
+    else if (pathnames[0] === 'trips' && pathnames.length > 1) {
+      addBreadcrumb('trips', 'Trips', '/trips-list');
+      addBreadcrumb('edit-trip', 'Edit Trip', null, true);
+    }
+    else if (pathnames[0] === 'trip-details') {
+      addBreadcrumb('trips', 'Trips', '/trips-list');
+      addBreadcrumb('trip-details', 'Trip Details', null, true);
+    }
+    
+    // OIL CHANGES SECTION
+    else if (pathnames[0] === 'oil-changes-list') {
+      addBreadcrumb('oil-changes', 'Oil Changes', null, true);
+    }
+    else if (pathnames[0] === 'add-oil-change') {
+      addBreadcrumb('oil-changes', 'Oil Changes', '/oil-changes-list');
+      addBreadcrumb('add-oil-change', 'Add Oil Change', null, true);
+    }
+    else if (pathnames[0] === 'edit-oil-change') {
+      addBreadcrumb('oil-changes', 'Oil Changes', '/oil-changes-list');
+      addBreadcrumb('edit-oil-change', 'Edit Oil Change', null, true);
+    }
+    
+    // ADMIN SECTION
+    else if (pathnames[0] === 'admin') {
+      addBreadcrumb('admin', 'Admin Dashboard', null, true);
+    }
+    
+    // Try to use the pathNames mapping for unknown routes
+    else {
+      const path = pathnames.join('/');
+      if (pathNames[path]) {
+        addBreadcrumb(path, pathNames[path], null, true);
+      }
     }
     
     return breadcrumbs;

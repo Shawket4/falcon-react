@@ -2,8 +2,8 @@ name: Build and Deploy React App
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches: [ main, master ]  # Trigger on push to main or master
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   build-and-deploy:
@@ -16,32 +16,48 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '20'  # Updated to Node.js 20 to match React Router requirements
+        node-version: '20'  # Using Node.js 20 for React Router compatibility
         cache: 'npm'
 
     - name: Install dependencies
       run: |
-        # Update package-lock.json first to fix the sync issue
+        # First update package-lock.json to fix sync issues
         npm install
-        # Then install dependencies based on the updated lock file
+        # Then install from updated lock file
         npm ci
-      
+
     - name: Build React app
       run: npm run build
       env:
-        CI: false  # This prevents the build from failing on warnings
+        CI: false  # Prevents build failure on warnings
 
-    - name: Install SSH key
+    - name: Set up SSH
       uses: shimataro/ssh-key-action@v2
       with:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        name: github-actions-deploy  # Specify the key filename
         known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
         if_key_exists: replace
+        config: |
+          Host vps
+            HostName ${{ secrets.SSH_HOST }}
+            User ${{ secrets.SSH_USER }}
+            Port ${{ secrets.SSH_PORT }}
+            IdentityFile ~/.ssh/github-actions-deploy
+            StrictHostKeyChecking yes
 
     - name: Deploy to VPS
       run: |
-        scp -r -P ${{ secrets.SSH_PORT }} build/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}
+        # Create directory if it doesn't exist
+        ssh vps "mkdir -p ${{ secrets.DEPLOY_PATH }}"
+        
+        # Copy build files to VPS
+        scp -r build/* vps:${{ secrets.DEPLOY_PATH }}
+        
+        # Optional: Set proper permissions
+        ssh vps "chmod -R 755 ${{ secrets.DEPLOY_PATH }}"
 
     - name: Verify deployment
       run: |
-        ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.DEPLOY_PATH }} && ls -la"
+        ssh vps "cd ${{ secrets.DEPLOY_PATH }} && ls -la"
+        echo "🚀 Deployment completed successfully!"

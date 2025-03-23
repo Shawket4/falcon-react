@@ -11,7 +11,7 @@ import { useAuth } from './AuthContext';
 // Permission level required for certain operations
 const REQUIRED_PERMISSION_LEVEL = 3;
 
-const DriverDetails = () => {  // Remove props completely
+const DriverDetails = () => {
   const { id } = useParams();
   const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,8 +30,14 @@ const DriverDetails = () => {  // Remove props completely
   const isMounted = useRef(true);
   
   // Use fetchDriverData as a ref to prevent re-creation
-  const fetchDriverData = useRef(async () => {
+  const fetchDriverData = useRef(async (forceRefresh = false) => {
     if (!isMounted.current) return;
+    
+    // Skip fetching if driver data is already available and not forcing refresh
+    if (driver && !forceRefresh) {
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     
@@ -81,7 +87,7 @@ const DriverDetails = () => {  // Remove props completely
     return () => {
       isMounted.current = false;
     };
-  }, [id]); // Only depend on id
+  }, [id]);
   
   const handleDelete = async () => {
     if (!canEditDelete) return;
@@ -147,8 +153,8 @@ const DriverDetails = () => {  // Remove props completely
         }
       );
       
-      // Refresh driver data
-      fetchDriverData();
+      // Force refresh driver data
+      fetchDriverData(true);
     } catch (err) {
       console.error(err);
       setError("Failed to approve driver");

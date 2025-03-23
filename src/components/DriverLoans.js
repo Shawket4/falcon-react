@@ -45,52 +45,53 @@ const DriverLoans = ({ serverIp }) => {
     }, {});
   };
   
-  const loadData = useCallback(async () => {
-    setLoading(true);
+// Remove serverIp from the dependency array since it's not used in the function
+const loadData = useCallback(async () => {
+  setLoading(true);
+  
+  try {
+    // Get driver info
+    const profileResponse = await apiClient.post(
+      '/api/GetDriverProfileData',
+      {},
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 4000
+      }
+    );
     
-    try {
-      // Get driver info
-      const profileResponse = await apiClient.post(
-        '/api/GetDriverProfileData',
-        {},
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 4000
-        }
-      );
-      
-      if (profileResponse.data) {
-        const driverData = profileResponse.data.find(d => d.ID.toString() === id);
-        if (driverData) {
-          setDriver(driverData);
-        }
+    if (profileResponse.data) {
+      const driverData = profileResponse.data.find(d => d.ID.toString() === id);
+      if (driverData) {
+        setDriver(driverData);
       }
-      
-      // Get driver loans
-      const loansResponse = await apiClient.post(
-        '/api/GetDriverLoans',
-        { id: parseInt(id) },
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 4000
-        }
-      );
-      
-      if (loansResponse.data && loansResponse.data.length > 0) {
-        // Sort loans by date (newest first)
-        const sortedLoans = [...loansResponse.data].sort((a, b) => new Date(b.date) - new Date(a.date));
-        setLoans(sortedLoans);
-      } else {
-        setLoans([]);
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load driver loans");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
-  }, [id, serverIp]);
+    
+    // Get driver loans
+    const loansResponse = await apiClient.post(
+      '/api/GetDriverLoans',
+      { id: parseInt(id) },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 4000
+      }
+    );
+    
+    if (loansResponse.data && loansResponse.data.length > 0) {
+      // Sort loans by date (newest first)
+      const sortedLoans = [...loansResponse.data].sort((a, b) => new Date(b.date) - new Date(a.date));
+      setLoans(sortedLoans);
+    } else {
+      setLoans([]);
+    }
+  } catch (err) {
+    console.error(err);
+    setError("Failed to load driver loans");
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, [id]); // Remove serverIp from here since it's not used
   
   useEffect(() => {
     loadData();

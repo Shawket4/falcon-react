@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
+// Original imports
 import AddFuelEvent from './components/AddFuelEvent';
 import FuelEventDetails from './components/FuelEventDetails';
 import EditFuelEvent from './components/EditFuelEvent';
@@ -19,7 +20,7 @@ import AllFuelEvents from './components/AllFuelEvents';
 import { AuthProvider } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Import the new distance and fee mapping components
+// Original imports for distance and fee mapping components
 import DistanceMappings from './components/DistanceMappings';
 import FeeMappings from './components/FeeMappings';
 import AddTripComponent from './components/TripForm';
@@ -28,6 +29,13 @@ import TripDetails from './components/TripDetails';
 import OilChangeList from './components/AllOilChanges';
 import EditOilChange from './components/EditOilChange';
 import AddOilChange from './components/AddOilChange';
+
+// New Vendor Expense components
+import VendorList from './components/VendorList';
+import VendorForm from './components/VendorForm';
+import ExpenseList from './components/ExpenseList';
+import ExpenseForm from './components/ExpenseForm';
+import Dashboard from './components/VendorDashboard'; // This is the vendor expense dashboard
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -43,6 +51,15 @@ export const pathNames = {
   'add-trip': 'Add Trip',
   'oil-changes-list': 'Oil Changes',
   'add-oil-change': 'Add Oil Change',
+  
+  // Add vendor expense path names
+  vendors: 'Vendors',
+  'add-vendor': 'Add Vendor',
+  'edit-vendor': 'Edit Vendor',
+  expenses: 'Expenses',
+  'add-expense': 'Add Expense',
+  'edit-expense': 'Edit Expense',
+  'vendor-expenses': 'Vendor Expenses',
 };
 
 // Permission level required for certain operations
@@ -248,6 +265,71 @@ function App() {
                   <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
                   <p>This page is only visible to users with admin permissions.</p>
                 </div>
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          {/* New Vendor Expense Routes - All restricted to permission level 3 or higher */}
+          <Route path="/vendor-dashboard" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/vendors" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <VendorList />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/add-vendor" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <VendorForm />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/edit-vendor/:vendorId" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <VendorForm />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/vendor/:vendorId/expenses" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <ExpenseList />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/expenses" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <ExpenseList />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/add-expense/:vendorId?" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <ExpenseForm />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/edit-expense/:vendorId/:expenseId" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <ExpenseForm />
               </Layout>
             </ProtectedRoute>
           } />

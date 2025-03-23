@@ -12,7 +12,8 @@ import {
   Settings, 
   DollarSign,
   Container,
-  Droplet
+  Droplet,
+  Building
 } from 'lucide-react';
 import Breadcrumbs from './Breadcrumbs';
 import { useAuth } from './AuthContext';
@@ -143,8 +144,33 @@ const Layout = ({ children }) => {
           isActive: location.pathname === '/drivers' || location.pathname.includes('/driver/')
         },
       ]
-    },
+    }
   ];
+  
+  // Only add the Vendor Expenses section if user has the required permission level
+  if (hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL)) {
+    navSections.push({
+      title: "Vendor Expenses",
+      icon: <Building size={18} />,
+      items: [
+        { 
+          path: '/vendor-dashboard', 
+          icon: <DollarSign size={18} />, 
+          label: 'Expense Dashboard',
+          isActive: location.pathname === '/vendor-dashboard'
+        },
+        { 
+          path: '/vendors', 
+          icon: <Building size={18} />, 
+          label: 'Vendors',
+          isActive: location.pathname === '/vendors' || 
+                    location.pathname.includes('/edit-vendor/') || 
+                    location.pathname.includes('/add-vendor') ||
+                    location.pathname.includes('/vendor/')
+        }
+      ]
+    });
+  }
   
   // Admin section - only displayed for users with admin permission
   if (hasPermission('admin')) {

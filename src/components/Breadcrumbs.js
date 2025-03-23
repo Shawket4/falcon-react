@@ -10,15 +10,18 @@ const Breadcrumbs = () => {
   const params = useParams();
   const pathnames = location.pathname.split('/').filter(x => x);
   
-  // Get driver name for driver-related pages
+  // State variables for fetching entity details
   const [driverName, setDriverName] = useState('');
   const [truckDetails, setTruckDetails] = useState(null);
   const [tripDetails, setTripDetails] = useState(null);
+  const [vendorName, setVendorName] = useState('');
+  const [expenseDetails, setExpenseDetails] = useState(null);
   
   // Prevent duplicate API calls
   const currentPathRef = useRef(location.pathname);
   const fetchInProgressRef = useRef(false);
   const driverIDRef = useRef(null);
+  const vendorIDRef = useRef(null);
   
   useEffect(() => {
     // If the path hasn't changed, don't do anything
@@ -33,6 +36,8 @@ const Breadcrumbs = () => {
     setDriverName('');
     setTruckDetails(null);
     setTripDetails(null);
+    setVendorName('');
+    setExpenseDetails(null);
     
     const fetchEntityDetails = async () => {
       // Prevent concurrent fetches
@@ -97,6 +102,42 @@ const Breadcrumbs = () => {
         }
       }
       
+      // Fetch vendor name when on vendor routes
+      const vendorId = params.vendorId || params.id || (pathnames[0] === 'vendor' && pathnames[1]);
+      
+      // Only fetch if we have a vendor ID and we're on a vendor-related page
+      if (vendorId && 
+          (pathnames[0] === 'vendor' || pathnames[0] === 'edit-vendor' || 
+           (pathnames[0] === 'add-expense' && pathnames.length > 1) || 
+           (pathnames[0] === 'edit-expense' && pathnames.length > 1)) && 
+          vendorIDRef.current !== vendorId) {
+        
+        vendorIDRef.current = vendorId; // Update the current vendor ID
+        
+        try {
+          const response = await apiClient.get(`/api/vendors/${vendorId}`);
+          if (response.data) {
+            setVendorName(response.data.name);
+          }
+        } catch (error) {
+          console.error('Error fetching vendor name:', error);
+        }
+      }
+      
+      // Fetch expense details
+      if (pathnames[0] === 'edit-expense' && pathnames.length > 2) {
+        try {
+          const vendorId = pathnames[1];
+          const expenseId = pathnames[2];
+          const response = await apiClient.get(`/api/vendors/${vendorId}/expenses/${expenseId}`);
+          if (response.data) {
+            setExpenseDetails(response.data);
+          }
+        } catch (error) {
+          console.error('Error fetching expense details:', error);
+        }
+      }
+      
       fetchInProgressRef.current = false;
     };
     
@@ -106,8 +147,9 @@ const Breadcrumbs = () => {
     return () => {
       fetchInProgressRef.current = false;
       driverIDRef.current = null;
+      vendorIDRef.current = null;
     };
-  }, [location.pathname, params.id]);
+  }, [location.pathname, params.id, params.vendorId, params.expenseId]);
 
   // Don't render breadcrumbs on home page
   if (location.pathname === '/') {
@@ -119,14 +161,41 @@ const Breadcrumbs = () => {
     );
   }
   
+  // Home label is different for vendor expense dashboard
+  const getHomeLabel = () => {
+    if (location.pathname.includes('/vendor') || 
+        location.pathname.includes('/expense') || 
+        location.pathname === '/vendors' || 
+        location.pathname === '/expenses' ||
+        location.pathname === '/vendor-dashboard') {
+      return 'Expense Dashboard';
+    }
+    return 'Apex';
+  };
+  
+  // Home path is different for vendor expense dashboard
+  const getHomePath = () => {
+    if (location.pathname.includes('/vendor') || 
+        location.pathname.includes('/expense') || 
+        location.pathname === '/vendors' || 
+        location.pathname === '/expenses' ||
+        location.pathname === '/vendor-dashboard') {
+      return '/vendor-dashboard';
+    }
+    return '/';
+  };
+  
   // Custom rendering for specific routes
   const renderBreadcrumbs = () => {
-    // Base breadcrumb always shows Apex
+    // Base breadcrumb
+    const homeLabel = getHomeLabel();
+    const homePath = getHomePath();
+    
     const breadcrumbs = [
       <span key="home" 
         className="cursor-pointer hover:text-blue-600 font-medium dark:hover:text-blue-400"
-        onClick={() => navigate('/')}>
-        Apex
+        onClick={() => navigate(homePath)}>
+        {homeLabel}
       </span>
     ];
     
@@ -260,9 +329,53 @@ const Breadcrumbs = () => {
       addBreadcrumb('edit-oil-change', 'Edit Oil Change', null, true);
     }
     
+    // VENDOR EXPENSE SECTIONS
+    else if (pathnames[0] === 'vendor-dashboard') {
+      addBreadcrumb('vendor-dashboard', 'Expense Dashboard', null, true);
+    }
+    else if (pathnames[0] === 'vendors') {
+      addBreadcrumb('vendors', 'Vendors', null, true);
+    }
+    else if (pathnames[0] === 'add-vendor') {
+      addBreadcrumb('vendors', 'Vendors', '/vendors');
+      addBreadcrumb('add-vendor', 'Add Vendor', null, true);
+    }
+    else if (pathnames[0] === 'edit-vendor') {
+      addBreadcrumb('vendors', 'Vendors', '/vendors');
+      addBreadcrumb('edit-vendor', 'Edit Vendor', null, true);
+    }
+    else if (pathnames[0] === 'expenses') {
+      addBreadcrumb('expenses', 'All Expenses', null, true);
+    }
+    else if (pathnames[0] === 'add-expense' && !pathnames[1]) {
+      addBreadcrumb('expenses', 'All Expenses', '/expenses');
+      addBreadcrumb('add-expense', 'Add Expense', null, true);
+    }
+    else if (pathnames[0] === 'vendor' && pathnames[2] === 'expenses') {
+      addBreadcrumb('vendors', 'Vendors', '/vendors');
+      addBreadcrumb('vendor-name', vendorName || 'Vendor Details', null, true);
+      addBreadcrumb('expenses', 'Expenses', null, true);
+    }
+    else if (pathnames[0] === 'add-expense' && pathnames[1]) {
+      addBreadcrumb('vendors', 'Vendors', '/vendors');
+      addBreadcrumb('vendor-name', vendorName || 'Vendor', `/vendor/${pathnames[1]}/expenses`);
+      addBreadcrumb('add-expense', 'Add Expense', null, true);
+    }
+    else if (pathnames[0] === 'edit-expense') {
+      addBreadcrumb('vendors', 'Vendors', '/vendors');
+      addBreadcrumb('vendor-name', vendorName || 'Vendor', `/vendor/${pathnames[1]}/expenses`);
+      addBreadcrumb('edit-expense', 'Edit Expense', null, true);
+    }
+    
     // ADMIN SECTION
     else if (pathnames[0] === 'admin') {
       addBreadcrumb('admin', 'Admin Dashboard', null, true);
+    }
+    else if (pathnames[0] === 'settings') {
+      addBreadcrumb('settings', 'Settings', null, true);
+    }
+    else if (pathnames[0] === 'users') {
+      addBreadcrumb('users', 'Users', null, true);
     }
     
     // Try to use the pathNames mapping for unknown routes

@@ -61,7 +61,7 @@ const DriverDetails = ({ serverIp }) => {
     };
     
     fetchDriverData();
-  }, [id, serverIp]);
+  }, [id]); // Remove serverIp from here since it's not used
   
   const handleDelete = async () => {
     if (!canEditDelete) return;

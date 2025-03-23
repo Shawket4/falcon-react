@@ -39,7 +39,7 @@ const SearchableDropdown = ({
   icon: Icon, 
   label, 
   placeholder,
-  enableArabicNormalization = false,
+  enableArabicNormalization = true,
   customFilterFunction = null,
   noResultsText = "No results found",
   maxHeight = "60",

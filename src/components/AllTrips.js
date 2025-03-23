@@ -4,6 +4,7 @@ import apiClient from '../apiClient';
 import * as XLSX from 'xlsx';
 
 const TripList = () => {
+  // State declarations
   const [trips, setTrips] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +21,7 @@ const TripList = () => {
     startDate: '',
     endDate: ''
   });
-  // New state for mobile view
+  // Mobile view state
   const [showMobileDetails, setShowMobileDetails] = useState(null);
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -255,9 +256,6 @@ const TripList = () => {
     // Create workbook and add the worksheet
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Trips');
-
-    // Apply styles by creating a new workbook with styles
-    // Note: SheetJS Free version has limited styling capabilities
     
     // Generate Excel file
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
@@ -280,12 +278,13 @@ const TripList = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+    // Main container - improved max width and padding for mobile/wide screens
+    <div className="w-full max-w-full mx-auto px-2 sm:px-4 md:px-6 py-2 sm:py-4 overflow-hidden">
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-md w-full mx-4 overflow-hidden shadow-xl transform transition-all">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md mx-auto overflow-hidden shadow-xl transform transition-all">
+            <div className="p-4 sm:p-6">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   {/* Warning Icon */}
@@ -336,11 +335,11 @@ const TripList = () => {
       )}
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-4 sm:px-6 py-4">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-3 sm:px-4 py-3 sm:py-4">
           <h2 className="text-lg sm:text-xl font-bold text-white">Trip Management</h2>
         </div>
         
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="p-3 sm:p-4 md:p-6 space-y-4">
           {error && (
             <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 sm:p-4 rounded" role="alert">
               <p className="font-medium">Error</p>
@@ -348,23 +347,23 @@ const TripList = () => {
             </div>
           )}
           
-          {/* Filter panel */}
-          <div className="bg-gray-50 rounded-lg p-4 sm:p-6 border border-gray-200">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center">
+          {/* Filter panel - improved mobile layout */}
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 flex items-center">
               <svg className="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
               </svg>
               Filters
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Company</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
                 <select
                   name="company"
                   value={filters.company}
                   onChange={handleFilterChange}
-                  className="block w-full px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 >
                   <option value="">All Companies</option>
                   {companies.map((company) => (
@@ -374,32 +373,32 @@ const TripList = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Start Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                 <input
                   type="date"
                   name="startDate"
                   value={filters.startDate}
                   onChange={handleFilterChange}
-                  className="block w-full px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">End Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
                 <input
                   type="date"
                   name="endDate"
                   value={filters.endDate}
                   onChange={handleFilterChange}
-                  className="block w-full px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
             </div>
             
-            <div className="flex justify-end mt-4 sm:mt-6">
+            <div className="flex justify-end mt-4">
               <button
                 onClick={handleResetFilters}
-                className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -409,18 +408,18 @@ const TripList = () => {
             </div>
           </div>
           
-          {/* Actions */}
+          {/* Actions - improved responsive layout */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-            <div className="text-xs sm:text-sm text-gray-500">
+            <div className="text-xs sm:text-sm text-gray-500 mb-2 sm:mb-0">
               {isLoading ? 'Loading trips...' : (
                 trips.length > 0 ? `Showing ${trips.length} trips` : 'No trips found'
               )}
             </div>
-            <div className="flex flex-col sm:flex-row w-full sm:w-auto space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="flex flex-wrap w-full sm:w-auto gap-2 sm:gap-3">
               <button
                 onClick={exportToExcel}
                 disabled={isExporting}
-                className="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-green-300 w-full sm:w-auto"
+                className="inline-flex items-center justify-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-green-300 flex-1 sm:flex-none"
               >
                 {isExporting ? (
                   <>
@@ -435,31 +434,30 @@ const TripList = () => {
                     <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Export to Excel
+                    Export
                   </>
                 )}
               </button>
               <Link
                 to="/add-trip"
-                className="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto"
+                className="inline-flex items-center justify-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex-1 sm:flex-none"
               >
                 <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                Add New Trip
+                Add Trip
               </Link>
             </div>
           </div>
-          
-          {/* Desktop Trip list */}
+          {/* Desktop Trip list with horizontal scroll for small/mid screens */}
           <div className="hidden md:block bg-white overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 table-fixed">
                 <thead className="bg-gray-50">
                   <tr>
                     <th 
                       scope="col" 
-                      className="py-3.5 pl-4 pr-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="py-3 pl-4 pr-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-24"
                       onClick={() => requestSort('receipt_no')}
                     >
                       <div className="flex items-center">
@@ -477,7 +475,7 @@ const TripList = () => {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-3 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-24"
                       onClick={() => requestSort('date')}
                     >
                       <div className="flex items-center">
@@ -495,7 +493,7 @@ const TripList = () => {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-3 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32"
                       onClick={() => requestSort('company')}
                     >
                       <div className="flex items-center">
@@ -513,7 +511,7 @@ const TripList = () => {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-3 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32"
                       onClick={() => requestSort('terminal')}
                     >
                       <div className="flex items-center">
@@ -531,11 +529,11 @@ const TripList = () => {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-3 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32"
                       onClick={() => requestSort('drop_off_point')}
                     >
                       <div className="flex items-center">
-                        Drop-off Point
+                        Drop-off
                         {sortConfig.key === 'drop_off_point' && (
                           <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
@@ -549,11 +547,11 @@ const TripList = () => {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-3 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-24"
                       onClick={() => requestSort('tank_capacity')}
                     >
                       <div className="flex items-center">
-                        Tank Capacity
+                        Tank
                         {sortConfig.key === 'tank_capacity' && (
                           <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
@@ -567,7 +565,7 @@ const TripList = () => {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-3 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32"
                       onClick={() => requestSort('driver_name')}
                     >
                       <div className="flex items-center">
@@ -585,7 +583,7 @@ const TripList = () => {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-3 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-24"
                       onClick={() => requestSort('car_no_plate')}
                     >
                       <div className="flex items-center">
@@ -603,7 +601,7 @@ const TripList = () => {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-3 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-24"
                       onClick={() => requestSort('mileage')}
                     >
                       <div className="flex items-center">
@@ -624,14 +622,14 @@ const TripList = () => {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-3 py-3.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-24"
                       onClick={() => requestSort('fee')}
                     >
                       <div className="flex items-center">
                         <svg className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Fee Rate
+                        Fee
                         {sortConfig.key === 'fee' && (
                           <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
@@ -643,7 +641,7 @@ const TripList = () => {
                         )}
                       </div>
                     </th>
-                    <th scope="col" className="relative px-3 py-3.5 text-right">
+                    <th scope="col" className="relative px-3 py-3 text-right w-28">
                       <span className="sr-only">Actions</span>
                     </th>
                   </tr>
@@ -651,7 +649,7 @@ const TripList = () => {
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {isLoading && !trips.length ? (
                     <tr>
-                      <td colSpan="11" className="px-6 py-10 text-center text-sm text-gray-500">
+                      <td colSpan="11" className="px-4 py-8 text-center text-sm text-gray-500">
                         <div className="flex justify-center">
                           <svg className="animate-spin h-6 w-6 text-blue-500 mr-3" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -663,7 +661,7 @@ const TripList = () => {
                     </tr>
                   ) : trips.length === 0 ? (
                     <tr>
-                      <td colSpan="11" className="px-6 py-10 text-center text-sm text-gray-500">
+                      <td colSpan="11" className="px-4 py-8 text-center text-sm text-gray-500">
                         <div className="text-center">
                           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -687,28 +685,28 @@ const TripList = () => {
                   ) : (
                     sortedTrips.map((trip) => (
                       <tr key={trip.ID} className="hover:bg-gray-50">
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 truncate">
                           {trip.receipt_no || '—'}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
                           {trip.date}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
                           {trip.company}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
                           {trip.terminal}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
                           {trip.drop_off_point}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
                           {trip.tank_capacity || '—'}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
                           {trip.driver_name}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
                           {trip.car_no_plate}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
@@ -750,8 +748,7 @@ const TripList = () => {
               </table>
             </div>
           </div>
-          
-          {/* Mobile Trip List */}
+          {/* Mobile Trip List - Improved for better mobile display */}
           <div className="md:hidden">
             {isLoading && !trips.length ? (
               <div className="bg-white rounded-lg shadow overflow-hidden p-4 text-center">
@@ -787,11 +784,11 @@ const TripList = () => {
                 {sortedTrips.map((trip) => (
                   <div key={trip.ID} className="bg-white rounded-md shadow overflow-hidden">
                     <div 
-                      className="px-4 py-3 border-b flex justify-between items-center cursor-pointer hover:bg-gray-50"
+                      className="px-3 py-3 border-b flex justify-between items-center cursor-pointer hover:bg-gray-50"
                       onClick={() => toggleMobileDetails(trip.ID)}
                     >
-                      <div>
-                        <div className="font-medium text-gray-900">
+                      <div className="w-4/5 overflow-hidden">
+                        <div className="font-medium text-gray-900 truncate">
                           {trip.receipt_no ? `#${trip.receipt_no}` : 'No Receipt'} • {trip.date}
                         </div>
                         <div className="text-sm text-gray-500 truncate">
@@ -799,9 +796,9 @@ const TripList = () => {
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <span className="px-2 mr-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                        <span className="px-2 mr-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 whitespace-nowrap">
                           {typeof trip.fee === 'number' ? 
-                            new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(trip.fee) : 
+                            new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(trip.fee) : 
                             trip.fee}
                         </span>
                         <svg className="h-5 w-5 text-gray-400 transform transition-transform duration-200" 
@@ -813,8 +810,8 @@ const TripList = () => {
                     </div>
                     
                     {showMobileDetails === trip.ID && (
-                      <div className="px-4 py-3 bg-gray-50 space-y-3">
-                        <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="px-3 py-3 bg-gray-50 space-y-3 text-sm">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
                             <div className="text-xs font-medium text-gray-500">Company</div>
                             <div className="font-medium">{trip.company}</div>
@@ -855,10 +852,10 @@ const TripList = () => {
                           </div>
                         </div>
                         
-                        <div className="flex justify-end pt-2 border-t border-gray-200 space-x-3">
+                        <div className="flex justify-between pt-2 border-t border-gray-200 space-x-2">
                           <Link
                             to={`/trips/${trip.ID}`}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            className="flex-1 inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           >
                             <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -867,7 +864,7 @@ const TripList = () => {
                           </Link>
                           <button
                             onClick={() => openDeleteModal(trip.ID)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            className="flex-1 inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                           >
                             <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -883,9 +880,9 @@ const TripList = () => {
             )}
           </div>
           
-          {/* Pagination */}
+          {/* Pagination - Improved for mobile */}
           {totalPages > 1 && (
-            <div className="flex justify-center mt-6">
+            <div className="flex justify-center mt-4 sm:mt-6">
               <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
@@ -923,7 +920,7 @@ const TripList = () => {
                     <button
                       key={pageNum}
                       onClick={() => handlePageChange(pageNum)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                      className={`relative inline-flex items-center px-3 sm:px-4 py-2 border text-sm font-medium ${
                         currentPage === pageNum
                           ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                           : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'

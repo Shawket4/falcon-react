@@ -11,7 +11,7 @@ import { useAuth } from './AuthContext';
 // Permission level required for certain operations
 const REQUIRED_PERMISSION_LEVEL = 3;
 
-const DriverDetails = ({ }) => {
+const DriverDetails = () => {  // Remove props completely
   const { id } = useParams();
   const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -148,7 +148,7 @@ const DriverDetails = ({ }) => {
       );
       
       // Refresh driver data
-      window.location.reload();
+      fetchDriverData();
     } catch (err) {
       console.error(err);
       setError("Failed to approve driver");
@@ -190,6 +190,9 @@ const DriverDetails = ({ }) => {
       return false;
     }
   };
+  
+  // Rest of the component rendering remains the same...
+  // (Keeping the entire render section unchanged)
   
   if (loading) {
     return (

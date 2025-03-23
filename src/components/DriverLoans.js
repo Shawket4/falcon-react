@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { Plus, Trash2, Calendar, DollarSign, RefreshCw, AlertTriangle, LockIcon } from 'lucide-react';
@@ -7,7 +7,7 @@ import { useAuth } from './AuthContext';
 // Permission level required for add/delete operations
 const REQUIRED_PERMISSION_LEVEL = 3;
 
-const DriverLoans = ({ serverIp }) => {
+const DriverLoans = () => {  // Remove serverIp prop completely
   const { id } = useParams();
   const [loans, setLoans] = useState([]);
   const [driver, setDriver] = useState(null);
@@ -24,6 +24,9 @@ const DriverLoans = ({ serverIp }) => {
   
   // Check if user has required permission level
   const canAddDelete = hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL);
+  
+  // Track if the component is mounted
+  const isMounted = useRef(true);
   
   // Group loans by year and month
   const groupLoansByYearMonth = (loansList) => {
@@ -45,59 +48,78 @@ const DriverLoans = ({ serverIp }) => {
     }, {});
   };
   
-// Remove serverIp from the dependency array since it's not used in the function
-const loadData = useCallback(async () => {
-  setLoading(true);
-  
-  try {
-    // Get driver info
-    const profileResponse = await apiClient.post(
-      '/api/GetDriverProfileData',
-      {},
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 4000
-      }
-    );
+  // Use loadData as a ref to prevent re-creation
+  const loadData = useRef(async () => {
+    if (!isMounted.current) return;
     
-    if (profileResponse.data) {
-      const driverData = profileResponse.data.find(d => d.ID.toString() === id);
-      if (driverData) {
-        setDriver(driverData);
+    setLoading(true);
+    
+    try {
+      // Get driver info
+      const profileResponse = await apiClient.post(
+        '/api/GetDriverProfileData',
+        {},
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 4000
+        }
+      );
+      
+      if (!isMounted.current) return;
+      
+      if (profileResponse.data) {
+        const driverData = profileResponse.data.find(d => d.ID.toString() === id);
+        if (driverData) {
+          setDriver(driverData);
+        }
+      }
+      
+      // Get driver loans
+      const loansResponse = await apiClient.post(
+        '/api/GetDriverLoans',
+        { id: parseInt(id) },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 4000
+        }
+      );
+      
+      if (!isMounted.current) return;
+      
+      if (loansResponse.data && loansResponse.data.length > 0) {
+        // Sort loans by date (newest first)
+        const sortedLoans = [...loansResponse.data].sort((a, b) => new Date(b.date) - new Date(a.date));
+        setLoans(sortedLoans);
+      } else {
+        setLoans([]);
+      }
+    } catch (err) {
+      if (!isMounted.current) return;
+      console.error(err);
+      setError("Failed to load driver loans");
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+        setRefreshing(false);
       }
     }
-    
-    // Get driver loans
-    const loansResponse = await apiClient.post(
-      '/api/GetDriverLoans',
-      { id: parseInt(id) },
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 4000
-      }
-    );
-    
-    if (loansResponse.data && loansResponse.data.length > 0) {
-      // Sort loans by date (newest first)
-      const sortedLoans = [...loansResponse.data].sort((a, b) => new Date(b.date) - new Date(a.date));
-      setLoans(sortedLoans);
-    } else {
-      setLoans([]);
-    }
-  } catch (err) {
-    console.error(err);
-    setError("Failed to load driver loans");
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-}, [id]); // Remove serverIp from here since it's not used
+  }).current;
   
   useEffect(() => {
+    // Set isMounted to true
+    isMounted.current = true;
+    
+    // Call loadData
     loadData();
-  }, [loadData]);
+    
+    // Cleanup function
+    return () => {
+      isMounted.current = false;
+    };
+  }, [id]); // Only depend on id
   
   const handleRefresh = () => {
+    if (refreshing) return; // Prevent multiple refreshes
     setRefreshing(true);
     loadData();
   };
@@ -140,6 +162,7 @@ const loadData = useCallback(async () => {
     if (!canAddDelete) return;
     navigate(`/driver/loans/${id}/add`);
   };
+  
   
   if (loading && !refreshing) {
     return (

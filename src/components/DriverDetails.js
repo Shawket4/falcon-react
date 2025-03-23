@@ -11,7 +11,7 @@ import { useAuth } from './AuthContext';
 // Permission level required for certain operations
 const REQUIRED_PERMISSION_LEVEL = 3;
 
-const DriverDetails = ({ serverIp }) => {
+const DriverDetails = ({ }) => {
   const { id } = useParams();
   const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,42 +26,62 @@ const DriverDetails = ({ serverIp }) => {
   // Check if user has required permission level
   const canEditDelete = hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL);
   
-  useEffect(() => {
-    const fetchDriverData = async () => {
-      setLoading(true);
-      
-      try {
-        // Fetch driver profile data
-        const profileResponse = await apiClient.post(
-          '/api/GetDriverProfileData',
-          {},
-          {
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            timeout: 4000
-          }
-        );
-        
-        if (profileResponse.data) {
-          const driverData = profileResponse.data.find(d => d.ID.toString() === id);
-          
-          if (driverData) {
-            setDriver(driverData);
-          } else {
-            setError("Driver not found");
-          }
+  // Track if the component is mounted
+  const isMounted = useRef(true);
+  
+  // Use fetchDriverData as a ref to prevent re-creation
+  const fetchDriverData = useRef(async () => {
+    if (!isMounted.current) return;
+    
+    setLoading(true);
+    
+    try {
+      // Fetch driver profile data
+      const profileResponse = await apiClient.post(
+        '/api/GetDriverProfileData',
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 4000
         }
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load driver details");
-      } finally {
+      );
+      
+      if (!isMounted.current) return;
+      
+      if (profileResponse.data) {
+        const driverData = profileResponse.data.find(d => d.ID.toString() === id);
+        
+        if (driverData) {
+          setDriver(driverData);
+        } else {
+          setError("Driver not found");
+        }
+      }
+    } catch (err) {
+      if (!isMounted.current) return;
+      console.error(err);
+      setError("Failed to load driver details");
+    } finally {
+      if (isMounted.current) {
         setLoading(false);
       }
-    };
+    }
+  }).current;
+  
+  useEffect(() => {
+    // Set isMounted to true
+    isMounted.current = true;
     
+    // Call fetchDriverData
     fetchDriverData();
-  }, [id]); // Remove serverIp from here since it's not used
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted.current = false;
+    };
+  }, [id]); // Only depend on id
   
   const handleDelete = async () => {
     if (!canEditDelete) return;

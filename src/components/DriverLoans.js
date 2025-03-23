@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { Plus, Trash2, Calendar, DollarSign, RefreshCw, AlertTriangle, LockIcon } from 'lucide-react';
@@ -26,7 +26,11 @@ const DriverLoans = () => {
   const canAddDelete = hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL);
   
   // Track if the component is mounted
-  const isMounted = React.useRef(true);
+  const isMounted = useRef(true);
+  
+  // Track data loading state
+  const isLoadingRef = useRef(false);
+  const initialLoadDone = useRef(false);
   
   // Group loans by year and month
   const groupLoansByYearMonth = (loansList) => {
@@ -48,15 +52,22 @@ const DriverLoans = () => {
     }, {});
   };
   
-  // Use useCallback instead of useRef for the fetch function
-  const loadData = useCallback(async (forceRefresh = false) => {
-    if (!isMounted.current) return;
+  // Separate implementation to avoid dependency issues
+  const loadDataImpl = async (driverId, shouldForceRefresh = false) => {
+    // Prevent multiple concurrent loads
+    if (isLoadingRef.current && !shouldForceRefresh) return;
+    isLoadingRef.current = true;
+    
+    if (!isMounted.current) {
+      isLoadingRef.current = false;
+      return;
+    }
     
     setLoading(true);
     
     try {
       // Get driver info - only if needed
-      if (!driver || forceRefresh) {
+      if (!driver || shouldForceRefresh) {
         const profileResponse = await apiClient.post(
           '/api/GetDriverProfileData',
           {},
@@ -66,10 +77,13 @@ const DriverLoans = () => {
           }
         );
         
-        if (!isMounted.current) return;
+        if (!isMounted.current) {
+          isLoadingRef.current = false;
+          return;
+        }
         
         if (profileResponse.data) {
-          const driverData = profileResponse.data.find(d => d.ID.toString() === id);
+          const driverData = profileResponse.data.find(d => d.ID.toString() === driverId);
           if (driverData) {
             setDriver(driverData);
           }
@@ -79,14 +93,17 @@ const DriverLoans = () => {
       // Get driver loans
       const loansResponse = await apiClient.post(
         '/api/GetDriverLoans',
-        { id: parseInt(id) },
+        { id: parseInt(driverId) },
         {
           headers: { 'Content-Type': 'application/json' },
           timeout: 4000
         }
       );
       
-      if (!isMounted.current) return;
+      if (!isMounted.current) {
+        isLoadingRef.current = false;
+        return;
+      }
       
       if (loansResponse.data && loansResponse.data.length > 0) {
         // Sort loans by date (newest first)
@@ -96,34 +113,42 @@ const DriverLoans = () => {
         setLoans([]);
       }
     } catch (err) {
-      if (!isMounted.current) return;
+      if (!isMounted.current) {
+        isLoadingRef.current = false;
+        return;
+      }
       console.error(err);
       setError("Failed to load driver loans");
     } finally {
       if (isMounted.current) {
         setLoading(false);
         setRefreshing(false);
+        initialLoadDone.current = true;
       }
+      isLoadingRef.current = false;
     }
-  }, [id, driver]); // Add dependencies
+  };
   
+  // Effect for initial load and ID changes
   useEffect(() => {
-    // Set isMounted to true
+    // Set component as mounted
     isMounted.current = true;
     
-    // Call loadData
-    loadData();
+    // Only load data if we haven't loaded yet or if the ID has changed
+    if (!initialLoadDone.current || id) {
+      loadDataImpl(id);
+    }
     
     // Cleanup function
     return () => {
       isMounted.current = false;
     };
-  }, [loadData]); // Only depend on loadData
+  }, [id]); // Only depend on ID
   
   const handleRefresh = () => {
     if (refreshing) return; // Prevent multiple refreshes
     setRefreshing(true);
-    loadData(true); // Force refresh
+    loadDataImpl(id, true); // Force refresh
   };
   
   const confirmDeleteLoan = (loan) => {
@@ -183,7 +208,7 @@ const DriverLoans = () => {
         <p className="text-gray-800 font-medium">{error}</p>
         <button 
           className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
-          onClick={loadData}
+          onClick={() => loadDataImpl(id)}
         >
           Try Again
         </button>

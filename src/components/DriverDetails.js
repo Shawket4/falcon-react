@@ -1,5 +1,5 @@
 // components/DriverDetails.js
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { 
@@ -19,6 +19,8 @@ const DriverDetails = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
+  const isInitialMount = useRef(true);
+  const isMounted = useRef(true);
   
   // Get auth context to check permissions
   const { hasMinPermissionLevel } = useAuth();
@@ -26,11 +28,9 @@ const DriverDetails = () => {
   // Check if user has required permission level
   const canEditDelete = hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL);
   
-  // Track if the component is mounted
-  const isMounted = useRef(true);
-  
-  // Use useCallback instead of useRef for the fetch function
-  const fetchDriverData = useCallback(async (forceRefresh = false) => {
+  // This function stays outside useEffect and useCallback
+  // Manually pass the parameters instead of capturing from closure
+  const fetchDriverDataImpl = async (driverId, forceRefresh = false) => {
     if (!isMounted.current) return;
     
     setLoading(true);
@@ -51,7 +51,7 @@ const DriverDetails = () => {
       if (!isMounted.current) return;
       
       if (profileResponse.data) {
-        const driverData = profileResponse.data.find(d => d.ID.toString() === id);
+        const driverData = profileResponse.data.find(d => d.ID.toString() === driverId);
         
         if (driverData) {
           setDriver(driverData);
@@ -68,20 +68,26 @@ const DriverDetails = () => {
         setLoading(false);
       }
     }
-  }, [id]); // Add id as a dependency
+  };
   
+  // First effect - only runs once on mount
   useEffect(() => {
-    // Set isMounted to true
     isMounted.current = true;
     
-    // Call fetchDriverData only once when the component mounts
-    fetchDriverData();
-    
-    // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted.current = false;
     };
-  }, [fetchDriverData]); // Include fetchDriverData as a dependency
+  }, []);
+  
+  // Second effect - runs when ID changes
+  useEffect(() => {
+    // Only fetch on initial mount or when ID changes
+    if (isInitialMount.current || id !== driver?.ID.toString()) {
+      fetchDriverDataImpl(id);
+    }
+    
+    isInitialMount.current = false;
+  }, [id]);
   
   const handleDelete = async () => {
     if (!canEditDelete) return;
@@ -148,7 +154,7 @@ const DriverDetails = () => {
       );
       
       // Force refresh driver data
-      fetchDriverData(true);
+      fetchDriverDataImpl(id, true);
     } catch (err) {
       console.error(err);
       setError("Failed to approve driver");

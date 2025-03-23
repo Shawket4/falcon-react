@@ -3,6 +3,16 @@ import { Link } from 'react-router-dom';
 import apiClient from '../apiClient';
 import * as XLSX from 'xlsx';
 
+<style jsx>{`
+  .table-container {
+    overflow-x: auto;
+    width: 100%;
+  }
+  table {
+    min-width: 100%;
+  }
+`}</style>
+
 const TripList = () => {
   // State declarations
   const [trips, setTrips] = useState([]);
@@ -279,7 +289,7 @@ const TripList = () => {
 
   return (
     // Main container - improved max width and padding for mobile/wide screens
-    <div className="w-full max-w-full mx-auto px-2 sm:px-4 md:px-6 py-2 sm:py-4 overflow-hidden">
+    <div className="w-full overflow-auto px-2 sm:px-4 md:px-6 py-2 sm:py-4">
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -348,7 +358,7 @@ const TripList = () => {
           )}
           
           {/* Filter panel - improved mobile layout */}
-          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200 overflow-hidden">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 flex items-center">
               <svg className="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -356,7 +366,7 @@ const TripList = () => {
               Filters
             </h3>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 flex-wrap">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
                 <select
@@ -409,13 +419,13 @@ const TripList = () => {
           </div>
           
           {/* Actions - improved responsive layout */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 sticky top-0 bg-white z-10 pb-2">
             <div className="text-xs sm:text-sm text-gray-500 mb-2 sm:mb-0">
               {isLoading ? 'Loading trips...' : (
                 trips.length > 0 ? `Showing ${trips.length} trips` : 'No trips found'
               )}
             </div>
-            <div className="flex flex-wrap w-full sm:w-auto gap-2 sm:gap-3">
+            <div className="flex flex-wrap gap-2 justify-end">
               <button
                 onClick={exportToExcel}
                 disabled={isExporting}
@@ -450,9 +460,8 @@ const TripList = () => {
             </div>
           </div>
           {/* Desktop Trip list with horizontal scroll for small/mid screens */}
-          <div className="hidden md:block bg-white overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 table-fixed">
+          <div className="hidden lg:block overflow-x-auto border border-gray-200 rounded-lg shadow-sm w-full">
+  <table className="w-full min-w-[800px] divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th 
@@ -749,7 +758,7 @@ const TripList = () => {
             </div>
           </div>
           {/* Mobile Trip List - Improved for better mobile display */}
-          <div className="md:hidden">
+          <div className="block lg:hidden">
             {isLoading && !trips.length ? (
               <div className="bg-white rounded-lg shadow overflow-hidden p-4 text-center">
                 <div className="flex justify-center">
@@ -950,7 +959,6 @@ const TripList = () => {
           )}
         </div>
       </div>
-    </div>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import apiClient from '../apiClient';
@@ -15,17 +15,44 @@ const Breadcrumbs = () => {
   const [truckDetails, setTruckDetails] = useState(null);
   const [tripDetails, setTripDetails] = useState(null);
   
+  // Prevent duplicate API calls
+  const currentPathRef = useRef(location.pathname);
+  const fetchInProgressRef = useRef(false);
+  const driverIDRef = useRef(null);
+  
   useEffect(() => {
+    // If the path hasn't changed, don't do anything
+    if (currentPathRef.current === location.pathname) {
+      return;
+    }
+    
+    // Update current path reference
+    currentPathRef.current = location.pathname;
+    
     // Reset state when path changes
     setDriverName('');
     setTruckDetails(null);
     setTripDetails(null);
     
     const fetchEntityDetails = async () => {
+      // Prevent concurrent fetches
+      if (fetchInProgressRef.current) {
+        return;
+      }
+      
+      fetchInProgressRef.current = true;
+      
       // Fetch driver name when on driver routes
       const driverId = params.id || (pathnames[0] === 'driver' && pathnames[1]);
       
-      if (driverId && (pathnames[0] === 'driver' || pathnames[2] === 'loans')) {
+      // Only fetch if we have a driver ID and we're on a driver-related page
+      // Also prevent duplicate fetches for the same driver
+      if (driverId && 
+          (pathnames[0] === 'driver' || pathnames[2] === 'loans') && 
+          driverIDRef.current !== driverId) {
+        
+        driverIDRef.current = driverId; // Update the current driver ID
+        
         try {
           const response = await apiClient.post(
             '/api/GetDriverProfileData',
@@ -69,10 +96,18 @@ const Breadcrumbs = () => {
           console.error('Error fetching trip details:', error);
         }
       }
+      
+      fetchInProgressRef.current = false;
     };
     
     fetchEntityDetails();
-  }, [location.pathname, params.id, pathnames]);
+    
+    // Clean up function to reset refs when component unmounts
+    return () => {
+      fetchInProgressRef.current = false;
+      driverIDRef.current = null;
+    };
+  }, [location.pathname, params.id]);
 
   // Don't render breadcrumbs on home page
   if (location.pathname === '/') {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, User, AlertTriangle, Search, Menu, X } from 'lucide-react';
 import apiClient from '../apiClient';

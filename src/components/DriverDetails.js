@@ -1,5 +1,5 @@
 // components/DriverDetails.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { 
@@ -29,15 +29,9 @@ const DriverDetails = () => {
   // Track if the component is mounted
   const isMounted = useRef(true);
   
-  // Use fetchDriverData as a ref to prevent re-creation
-  const fetchDriverData = useRef(async (forceRefresh = false) => {
+  // Use useCallback instead of useRef for the fetch function
+  const fetchDriverData = useCallback(async (forceRefresh = false) => {
     if (!isMounted.current) return;
-    
-    // Skip fetching if driver data is already available and not forcing refresh
-    if (driver && !forceRefresh) {
-      setLoading(false);
-      return;
-    }
     
     setLoading(true);
     
@@ -74,20 +68,20 @@ const DriverDetails = () => {
         setLoading(false);
       }
     }
-  }).current;
+  }, [id]); // Add id as a dependency
   
   useEffect(() => {
     // Set isMounted to true
     isMounted.current = true;
     
-    // Call fetchDriverData
+    // Call fetchDriverData only once when the component mounts
     fetchDriverData();
     
     // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted.current = false;
     };
-  }, [id]);
+  }, [fetchDriverData]); // Include fetchDriverData as a dependency
   
   const handleDelete = async () => {
     if (!canEditDelete) return;
@@ -196,9 +190,6 @@ const DriverDetails = () => {
       return false;
     }
   };
-  
-  // Rest of the component rendering remains the same...
-  // (Keeping the entire render section unchanged)
   
   if (loading) {
     return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { Plus, Trash2, Calendar, DollarSign, RefreshCw, AlertTriangle, LockIcon } from 'lucide-react';
@@ -26,7 +26,7 @@ const DriverLoans = () => {
   const canAddDelete = hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL);
   
   // Track if the component is mounted
-  const isMounted = useRef(true);
+  const isMounted = React.useRef(true);
   
   // Group loans by year and month
   const groupLoansByYearMonth = (loansList) => {
@@ -48,16 +48,9 @@ const DriverLoans = () => {
     }, {});
   };
   
-  // Use loadData as a ref to prevent re-creation
-  const loadData = useRef(async (forceRefresh = false) => {
+  // Use useCallback instead of useRef for the fetch function
+  const loadData = useCallback(async (forceRefresh = false) => {
     if (!isMounted.current) return;
-    
-    // Skip fetching if data is already available and not forcing refresh
-    if (driver && loans.length > 0 && !forceRefresh) {
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
     
     setLoading(true);
     
@@ -112,7 +105,7 @@ const DriverLoans = () => {
         setRefreshing(false);
       }
     }
-  }).current;
+  }, [id, driver]); // Add dependencies
   
   useEffect(() => {
     // Set isMounted to true
@@ -125,7 +118,7 @@ const DriverLoans = () => {
     return () => {
       isMounted.current = false;
     };
-  }, [id]); // Only depend on id
+  }, [loadData]); // Only depend on loadData
   
   const handleRefresh = () => {
     if (refreshing) return; // Prevent multiple refreshes

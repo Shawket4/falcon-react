@@ -7,7 +7,7 @@ import { useAuth } from './AuthContext';
 // Permission level required for add/delete operations
 const REQUIRED_PERMISSION_LEVEL = 3;
 
-const DriverLoans = () => {  // Remove serverIp prop completely
+const DriverLoans = () => {
   const { id } = useParams();
   const [loans, setLoans] = useState([]);
   const [driver, setDriver] = useState(null);
@@ -49,28 +49,37 @@ const DriverLoans = () => {  // Remove serverIp prop completely
   };
   
   // Use loadData as a ref to prevent re-creation
-  const loadData = useRef(async () => {
+  const loadData = useRef(async (forceRefresh = false) => {
     if (!isMounted.current) return;
+    
+    // Skip fetching if data is already available and not forcing refresh
+    if (driver && loans.length > 0 && !forceRefresh) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     
     setLoading(true);
     
     try {
-      // Get driver info
-      const profileResponse = await apiClient.post(
-        '/api/GetDriverProfileData',
-        {},
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 4000
-        }
-      );
-      
-      if (!isMounted.current) return;
-      
-      if (profileResponse.data) {
-        const driverData = profileResponse.data.find(d => d.ID.toString() === id);
-        if (driverData) {
-          setDriver(driverData);
+      // Get driver info - only if needed
+      if (!driver || forceRefresh) {
+        const profileResponse = await apiClient.post(
+          '/api/GetDriverProfileData',
+          {},
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 4000
+          }
+        );
+        
+        if (!isMounted.current) return;
+        
+        if (profileResponse.data) {
+          const driverData = profileResponse.data.find(d => d.ID.toString() === id);
+          if (driverData) {
+            setDriver(driverData);
+          }
         }
       }
       
@@ -121,7 +130,7 @@ const DriverLoans = () => {  // Remove serverIp prop completely
   const handleRefresh = () => {
     if (refreshing) return; // Prevent multiple refreshes
     setRefreshing(true);
-    loadData();
+    loadData(true); // Force refresh
   };
   
   const confirmDeleteLoan = (loan) => {
@@ -162,7 +171,6 @@ const DriverLoans = () => {  // Remove serverIp prop completely
     if (!canAddDelete) return;
     navigate(`/driver/loans/${id}/add`);
   };
-  
   
   if (loading && !refreshing) {
     return (

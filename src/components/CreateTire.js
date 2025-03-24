@@ -52,14 +52,14 @@ function CreateTire() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       {/* Back button */}
       <button 
         onClick={() => navigate('/tires')}
-        className="group mb-6 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-900 transition-colors duration-200"
+        className="group mb-8 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-900 transition-colors duration-300"
       >
         <svg 
-          className="mr-2 h-4 w-4 transform transition-transform duration-200 group-hover:-translate-x-1" 
+          className="mr-2 h-5 w-5 transform transition-transform duration-300 group-hover:-translate-x-1" 
           fill="none" 
           viewBox="0 0 24 24" 
           stroke="currentColor"
@@ -70,25 +70,25 @@ function CreateTire() {
       </button>
       
       {/* Main card */}
-      <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Header section */}
-        <div className="relative h-16">
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-white"></div>
+      <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+        {/* Header section with gradient */}
+        <div className="relative h-24 bg-gradient-to-r from-indigo-600 to-purple-600">
+          <div className="absolute bottom-0 left-0 right-0 h-12 bg-white rounded-t-3xl"></div>
         </div>
         
         {/* Form content */}
-        <div className="px-6 py-8 sm:px-10 -mt-8 relative">
-          <div className="mb-8 text-center">
-            <h2 className="text-2xl font-extrabold text-gray-900 sm:text-3xl">
+        <div className="px-8 py-10 sm:px-12 -mt-8 relative">
+          <div className="mb-10 text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
               Add New Tire
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-3 text-base text-gray-600">
               Enter the details for the new tire to add to your inventory
             </p>
           </div>
           
           {error && (
-            <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+            <div className="mb-8 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg animate-pulse">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -96,13 +96,13 @@ function CreateTire() {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
+                  <p className="text-sm text-red-700 font-medium">{error}</p>
                 </div>
               </div>
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-7">
             {/* Serial Number */}
             <div className="relative">
               <input
@@ -113,22 +113,22 @@ function CreateTire() {
                 value={tireData.serial}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`peer block w-full px-4 py-3 rounded-xl border-2 border-gray-200 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200
-                  ${touched.serial && !tireData.serial ? 'border-red-300 focus:ring-red-500' : ''}`}
+                className={`peer block w-full px-4 py-3.5 rounded-xl border-2 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300
+                  ${touched.serial && !tireData.serial ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 hover:border-gray-300'}`}
                 placeholder="Serial Number"
               />
               <label
                 htmlFor="serial"
-                className={`absolute left-2 -top-2.5 px-1 text-sm transition-all duration-200 
+                className={`absolute left-2 -top-2.5 px-1 text-sm font-medium transition-all duration-300 
                   peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-placeholder-shown:top-3.5 peer-placeholder-shown:left-4
-                  peer-focus:-top-2.5 peer-focus:left-2 peer-focus:text-sm peer-focus:text-indigo-600 
+                  peer-focus:-top-2.5 peer-focus:left-2 peer-focus:text-sm peer-focus:text-indigo-600 peer-focus:font-semibold
                   bg-white
                   ${touched.serial && !tireData.serial ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-600'}`}
               >
                 Serial Number *
               </label>
               {touched.serial && !tireData.serial && (
-                <p className="mt-1 text-xs text-red-500">Serial number is required</p>
+                <p className="mt-2 text-xs text-red-500 font-medium">Serial number is required</p>
               )}
             </div>
             
@@ -142,22 +142,22 @@ function CreateTire() {
                 value={tireData.brand}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`peer block w-full px-4 py-3 rounded-xl border-2 border-gray-200 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200
-                  ${touched.brand && !tireData.brand ? 'border-red-300 focus:ring-red-500' : ''}`}
+                className={`peer block w-full px-4 py-3.5 rounded-xl border-2 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300
+                  ${touched.brand && !tireData.brand ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 hover:border-gray-300'}`}
                 placeholder="Brand"
               />
               <label
                 htmlFor="brand"
-                className={`absolute left-2 -top-2.5 px-1 text-sm transition-all duration-200 
+                className={`absolute left-2 -top-2.5 px-1 text-sm font-medium transition-all duration-300 
                   peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-placeholder-shown:top-3.5 peer-placeholder-shown:left-4
-                  peer-focus:-top-2.5 peer-focus:left-2 peer-focus:text-sm peer-focus:text-indigo-600 
+                  peer-focus:-top-2.5 peer-focus:left-2 peer-focus:text-sm peer-focus:text-indigo-600 peer-focus:font-semibold
                   bg-white
                   ${touched.brand && !tireData.brand ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-600'}`}
               >
                 Brand *
               </label>
               {touched.brand && !tireData.brand && (
-                <p className="mt-1 text-xs text-red-500">Brand is required</p>
+                <p className="mt-2 text-xs text-red-500 font-medium">Brand is required</p>
               )}
             </div>
             
@@ -169,14 +169,14 @@ function CreateTire() {
                 type="text"
                 value={tireData.model}
                 onChange={handleChange}
-                className="peer block w-full px-4 py-3 rounded-xl border-2 border-gray-200 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                className="peer block w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 hover:border-gray-300 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                 placeholder="Model"
               />
               <label
                 htmlFor="model"
-                className="absolute left-2 -top-2.5 px-1 text-sm text-gray-600 transition-all duration-200 
+                className="absolute left-2 -top-2.5 px-1 text-sm font-medium text-gray-600 transition-all duration-300 
                   peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-placeholder-shown:top-3.5 peer-placeholder-shown:left-4
-                  peer-focus:-top-2.5 peer-focus:left-2 peer-focus:text-sm peer-focus:text-indigo-600 
+                  peer-focus:-top-2.5 peer-focus:left-2 peer-focus:text-sm peer-focus:text-indigo-600 peer-focus:font-semibold
                   bg-white"
               >
                 Model
@@ -191,14 +191,14 @@ function CreateTire() {
                 type="text"
                 value={tireData.size}
                 onChange={handleChange}
-                className="peer block w-full px-4 py-3 rounded-xl border-2 border-gray-200 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                className="peer block w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 hover:border-gray-300 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                 placeholder="Size"
               />
               <label
                 htmlFor="size"
-                className="absolute left-2 -top-2.5 px-1 text-sm text-gray-600 transition-all duration-200 
+                className="absolute left-2 -top-2.5 px-1 text-sm font-medium text-gray-600 transition-all duration-300 
                   peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-placeholder-shown:top-3.5 peer-placeholder-shown:left-4
-                  peer-focus:-top-2.5 peer-focus:left-2 peer-focus:text-sm peer-focus:text-indigo-600 
+                  peer-focus:-top-2.5 peer-focus:left-2 peer-focus:text-sm peer-focus:text-indigo-600 peer-focus:font-semibold
                   bg-white"
               >
                 Size
@@ -206,7 +206,7 @@ function CreateTire() {
             </div>
             
             {/* Date Fields Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-7">
               {/* Manufacture Date */}
               <div className="relative">
                 <input
@@ -215,11 +215,11 @@ function CreateTire() {
                   type="date"
                   value={tireData.manufacture_date}
                   onChange={handleChange}
-                  className="peer block w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                  className="peer block w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                 />
                 <label
                   htmlFor="manufacture_date"
-                  className="absolute left-2 -top-2.5 px-1 text-sm text-gray-600 bg-white"
+                  className="absolute left-2 -top-2.5 px-1 text-sm font-medium text-gray-600 bg-white peer-focus:text-indigo-600 peer-focus:font-semibold transition-all duration-300"
                 >
                   Manufacture Date
                 </label>
@@ -233,11 +233,11 @@ function CreateTire() {
                   type="date"
                   value={tireData.purchase_date}
                   onChange={handleChange}
-                  className="peer block w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                  className="peer block w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                 />
                 <label
                   htmlFor="purchase_date"
-                  className="absolute left-2 -top-2.5 px-1 text-sm text-gray-600 bg-white"
+                  className="absolute left-2 -top-2.5 px-1 text-sm font-medium text-gray-600 bg-white peer-focus:text-indigo-600 peer-focus:font-semibold transition-all duration-300"
                 >
                   Purchase Date
                 </label>
@@ -251,7 +251,7 @@ function CreateTire() {
                 name="status"
                 value={tireData.status}
                 onChange={handleChange}
-                className="block w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-white"
+                className="block w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300 bg-white appearance-none"
               >
                 <option value="in-use">In Use</option>
                 <option value="spare">Spare</option>
@@ -259,18 +259,24 @@ function CreateTire() {
               </select>
               <label
                 htmlFor="status"
-                className="absolute left-2 -top-2.5 px-1 text-sm text-gray-600 bg-white"
+                className="absolute left-2 -top-2.5 px-1 text-sm font-medium text-gray-600 bg-white peer-focus:text-indigo-600 transition-all duration-300"
               >
                 Status
               </label>
+              {/* Custom dropdown arrow */}
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
             
             {/* Submit button */}
-            <div className="mt-8">
+            <div className="mt-10">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-lg transform transition-all duration-200 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="w-full flex justify-center items-center px-6 py-4 border border-transparent text-base font-medium rounded-xl text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-xl transform transition-all duration-300 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 {loading ? (
                   <>
@@ -290,8 +296,8 @@ function CreateTire() {
       </div>
       
       {/* Footer note */}
-      <p className="mt-6 text-center text-xs text-gray-500">
-        Fields marked with * are required
+      <p className="mt-8 text-center text-sm text-gray-500">
+        Fields marked with <span className="text-indigo-600 font-medium">*</span> are required
       </p>
     </div>
   );

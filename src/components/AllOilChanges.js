@@ -52,7 +52,8 @@ const OilChangeList = ({ jwt }) => {
         CurrentOdometer: parseFloat(event.current_odometer),
         Cost: parseFloat(event.cost),
         Difference: parseFloat(event.current_odometer) - parseFloat(event.odometer_at_change),
-        MileageLeft: parseFloat(event.mileage) - (parseFloat(event.current_odometer) - parseFloat(event.odometer_at_change))
+        MileageLeft: parseFloat(event.mileage) - (parseFloat(event.current_odometer) - parseFloat(event.odometer_at_change)),
+        LastUpdated: event.updated_at // Add this line to include the updated_at field
       }));
       
       setOilChanges(transformedData);
@@ -318,24 +319,42 @@ const OilChangeList = ({ jwt }) => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th 
-                            scope="col" 
-                            className="py-3 pl-4 pr-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                            onClick={() => requestSort('Date')}
-                          >
-                            <div className="flex items-center">
-                              Date
-                              {sortConfig.key === 'Date' && (
-                                <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
-                                    sortConfig.direction === 'ascending' 
-                                      ? "M5 15l7-7 7 7" 
-                                      : "M19 9l-7 7-7-7"
-                                  } />
-                                </svg>
-                              )}
-                            </div>
-                          </th>
+                        <th 
+  scope="col" 
+  className="py-3 pl-4 pr-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+  onClick={() => requestSort('Date')}
+>
+  <div className="flex items-center">
+    Date
+    {sortConfig.key === 'Date' && (
+      <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
+          sortConfig.direction === 'ascending' 
+            ? "M5 15l7-7 7 7" 
+            : "M19 9l-7 7-7-7"
+        } />
+      </svg>
+    )}
+  </div>
+</th>
+<th 
+  scope="col" 
+  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+  onClick={() => requestSort('LastUpdated')}
+>
+  <div className="flex items-center">
+    Last Updated
+    {sortConfig.key === 'LastUpdated' && (
+      <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
+          sortConfig.direction === 'ascending' 
+            ? "M5 15l7-7 7 7" 
+            : "M19 9l-7 7-7-7"
+        } />
+      </svg>
+    )}
+  </div>
+</th>
                           <th 
                             scope="col" 
                             className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"

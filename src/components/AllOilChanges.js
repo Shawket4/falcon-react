@@ -53,7 +53,7 @@ const OilChangeList = ({ jwt }) => {
         Cost: parseFloat(event.cost),
         Difference: parseFloat(event.current_odometer) - parseFloat(event.odometer_at_change),
         MileageLeft: parseFloat(event.mileage) - (parseFloat(event.current_odometer) - parseFloat(event.odometer_at_change)),
-        LastUpdated: event.updated_at // Add this line to include the updated_at field
+        LastUpdated: event.UpdatedAt // Add this line to include the updated_at field
       }));
       
       setOilChanges(transformedData);

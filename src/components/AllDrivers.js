@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, User, AlertTriangle, Search, Menu, X } from 'lucide-react';
+import { RefreshCw, User, AlertTriangle, Search, Menu, X, CreditCard } from 'lucide-react';
 import apiClient from '../apiClient';
+import LoanStatistics from './LoanStatistics'; // Import the new component
 
-// Comprehensive Arabic text normalization
+// Comprehensive Arabic text normalization - unchanged from original
 const normalizeArabicText = (text) => {
   if (!text) return '';
   
@@ -41,6 +42,7 @@ const AllDrivers = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState('drivers'); // New state for tab management
   const navigate = useNavigate();
   
   // Group drivers by transporter
@@ -228,53 +230,85 @@ const AllDrivers = () => {
             </form>
           </div>
         )}
+        
+        {/* Tab Navigation */}
+        <div className="flex mt-3 border-b border-gray-200">
+          <button
+            className={`py-2 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
+              activeTab === 'drivers' 
+                ? 'text-blue-600 border-b-2 border-blue-600' 
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+            onClick={() => setActiveTab('drivers')}
+          >
+            <User size={16} className="inline mr-2" />
+            Drivers
+          </button>
+          <button
+            className={`py-2 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
+              activeTab === 'loans' 
+                ? 'text-blue-600 border-b-2 border-blue-600' 
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+            onClick={() => setActiveTab('loans')}
+          >
+            <CreditCard size={16} className="inline mr-2" />
+            Loan Statistics
+          </button>
+        </div>
       </div>
       
       {/* Content Area - Scrollable */}
       <div className="flex-grow overflow-y-auto p-3 sm:p-4">
-        {Object.keys(filteredGroupedDrivers).length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-4 sm:p-8">
-            <div className="bg-gray-100 p-6 rounded-full text-gray-400 mb-4">
-              <User size={48} />
+        {activeTab === 'drivers' ? (
+          // Drivers Tab Content
+          Object.keys(filteredGroupedDrivers).length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-4 sm:p-8">
+              <div className="bg-gray-100 p-6 rounded-full text-gray-400 mb-4">
+                <User size={48} />
+              </div>
+              <p className="text-lg text-gray-500 font-medium">No drivers found.</p>
+              <p className="text-gray-400 mt-2">Try adjusting your search or refreshing the page.</p>
             </div>
-            <p className="text-lg text-gray-500 font-medium">No drivers found.</p>
-            <p className="text-gray-400 mt-2">Try adjusting your search or refreshing the page.</p>
-          </div>
-        ) : (
-          <div className="space-y-4 sm:space-y-6">
-            {Object.entries(filteredGroupedDrivers).map(([transporter, transporterDrivers]) => (
-              <div key={transporter} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div className="bg-gray-100 px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
-                  <h2 className="font-bold text-gray-700 flex items-center text-sm sm:text-base">
-                    {transporter}
-                    <span className="ml-2 text-xs sm:text-sm bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
-                      {transporterDrivers.length}
-                    </span>
-                  </h2>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-3 sm:gap-4 sm:p-4">
-                  {transporterDrivers.map(driver => (
-                    <div 
-                      key={driver.ID} 
-                      className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer hover:border-blue-300"
-                      onClick={() => navigate(`/driver/${driver.ID}`)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="bg-blue-100 p-2 rounded-full text-blue-500 flex-shrink-0">
-                          <User size={20} className="sm:w-5 sm:h-5" />
-                        </div>
-                        <div className="flex-grow min-w-0">
-                          <h3 className="font-medium text-gray-800 truncate text-sm sm:text-base">{driver.name}</h3>
-                          <p className="text-xs sm:text-sm text-gray-500 mt-0.5 truncate">{driver.mobile_number || 'No phone number'}</p>
+          ) : (
+            <div className="space-y-4 sm:space-y-6">
+              {Object.entries(filteredGroupedDrivers).map(([transporter, transporterDrivers]) => (
+                <div key={transporter} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  <div className="bg-gray-100 px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+                    <h2 className="font-bold text-gray-700 flex items-center text-sm sm:text-base">
+                      {transporter}
+                      <span className="ml-2 text-xs sm:text-sm bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                        {transporterDrivers.length}
+                      </span>
+                    </h2>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-3 sm:gap-4 sm:p-4">
+                    {transporterDrivers.map(driver => (
+                      <div 
+                        key={driver.ID} 
+                        className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer hover:border-blue-300"
+                        onClick={() => navigate(`/driver/${driver.ID}`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="bg-blue-100 p-2 rounded-full text-blue-500 flex-shrink-0">
+                            <User size={20} className="sm:w-5 sm:h-5" />
+                          </div>
+                          <div className="flex-grow min-w-0">
+                            <h3 className="font-medium text-gray-800 truncate text-sm sm:text-base">{driver.name}</h3>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-0.5 truncate">{driver.mobile_number || 'No phone number'}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
+        ) : (
+          // Loan Statistics Tab Content
+          <LoanStatistics />
         )}
       </div>
       

@@ -162,8 +162,10 @@ const FuelEventsList = () => {
           totalLiters: 0,
           totalCost: 0,
           totalDistance: 0,
+          validLitersForAvg: 0,         // Only count liters for valid events in average
+          validDistanceForAvg: 0,       // Only count distance for valid events in average
           avgFuelRate: 0,
-          lastUpdated: null // Track the most recent event date
+          lastUpdated: null             // Track the most recent event date
         };
       }
       
@@ -171,14 +173,21 @@ const FuelEventsList = () => {
       
       const liters = parseFloat(event.liters);
       const fuelRate = parseFloat(event.fuel_rate);
+      const price = parseFloat(event.price);
       
+      // Include all events in these totals
       acc[carPlate].totalLiters += liters;
-      acc[carPlate].totalCost += parseFloat(event.price);
+      acc[carPlate].totalCost += price;
       
       // Calculate distance from fuel rate and liters
-      // distance = liters * km/L
       const distance = liters * fuelRate;
       acc[carPlate].totalDistance += distance;
+      
+      // But only include valid fuel rates in the average calculation
+      if (fuelRate >= 1.0 && fuelRate <= 2.7) {
+        acc[carPlate].validLitersForAvg += liters;
+        acc[carPlate].validDistanceForAvg += distance;
+      }
       
       // Track the most recent event date for sorting
       const eventDate = new Date(event.date);
@@ -189,14 +198,13 @@ const FuelEventsList = () => {
       return acc;
     }, {});
     
-    // Calculate average fuel rate for each car and sort events
+    // Calculate average fuel rate for each car using only valid events and sort events
     Object.keys(groupedEvents).forEach(carPlate => {
       const carData = groupedEvents[carPlate];
       
-      // Avoid division by zero
-      if (carData.totalLiters > 0) {
-        // avgFuelRate = totalDistance / totalLiters
-        carData.avgFuelRate = carData.totalDistance / carData.totalLiters;
+      // Avoid division by zero - Calculate avg using only valid fuel rates
+      if (carData.validLitersForAvg > 0) {
+        carData.avgFuelRate = carData.validDistanceForAvg / carData.validLitersForAvg;
       } else {
         carData.avgFuelRate = 0;
       }
@@ -310,11 +318,15 @@ const FuelEventsList = () => {
               <span>{parseFloat(event.liters).toFixed(2)} L</span>
               <span 
                 className={`flex items-center ${
+                  parseFloat(event.fuel_rate) < 1.0 || parseFloat(event.fuel_rate) > 2.7 ? 'text-gray-400' : 
                   parseFloat(event.fuel_rate) < 1.9 ? parseFloat(event.fuel_rate) < 1.8 ? 'text-red-500' : 'text-orange-500' : 'text-green-500'
                 }`}
               >
                 <Gauge className="w-4 h-4 mr-1 flex-shrink-0" />
                 {parseFloat(event.fuel_rate).toFixed(1)} km/L
+                {(parseFloat(event.fuel_rate) < 1.0 || parseFloat(event.fuel_rate) > 2.7) && 
+                  <span className="ml-1 text-xs italic">(excluded from avg)</span>
+                }
               </span>
             </div>
           </div>

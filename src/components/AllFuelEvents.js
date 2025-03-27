@@ -443,6 +443,60 @@ const FuelEventsList = () => {
           </div>
         )}
         
+        {/* Global Average Stats */}
+        {sortedCarPlates.length > 0 && (
+          <div className="mb-4 bg-white shadow-md rounded-lg p-4">
+            <h2 className="text-lg font-semibold mb-2">Global Statistics</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {/* Calculate global stats from all filtered events */}
+              {(() => {
+                // Calculate global totals and averages
+                let totalLiters = 0;
+                let totalCost = 0;
+                let totalValidLiters = 0;
+                let totalValidDistance = 0;
+                let totalEvents = 0;
+                
+                sortedCarPlates.forEach(plate => {
+                  const carData = processedEvents[plate];
+                  totalLiters += carData.totalLiters;
+                  totalCost += carData.totalCost;
+                  totalValidLiters += carData.validLitersForAvg;
+                  totalValidDistance += carData.validDistanceForAvg;
+                  totalEvents += carData.events.length;
+                });
+                
+                const avgFuelRate = totalValidLiters > 0 ? 
+                  totalValidDistance / totalValidLiters : 0;
+                
+                const avgCostPerLiter = totalLiters > 0 ?
+                  totalCost / totalLiters : 0;
+                
+                return (
+                  <>
+                    <div className="flex flex-col items-center justify-center bg-blue-50 p-3 rounded-lg">
+                      <span className="text-sm text-gray-600">Total Events</span>
+                      <span className="text-xl font-bold text-blue-700">{totalEvents}</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center bg-blue-50 p-3 rounded-lg">
+                      <span className="text-sm text-gray-600">Total Fuel</span>
+                      <span className="text-xl font-bold text-blue-700">{totalLiters.toFixed(1)} L</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center bg-blue-50 p-3 rounded-lg">
+                      <span className="text-sm text-gray-600">Avg Efficiency</span>
+                      <span className="text-xl font-bold text-blue-700">{avgFuelRate.toFixed(1)} km/L</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center bg-blue-50 p-3 rounded-lg">
+                      <span className="text-sm text-gray-600">Avg Cost</span>
+                      <span className="text-xl font-bold text-blue-700">{avgCostPerLiter.toFixed(2)}/L</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+        
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>

@@ -82,7 +82,7 @@ const GlobalStatistics = ({ stats }) => {
           label="Average"
           value={`${formatNumber(totalLiters / totalEvents, 1)}L`}
           color="amber"
-          subvalue="Per refueling"
+          subvalue="Per fuel up"
         />
       </div>
     </div>

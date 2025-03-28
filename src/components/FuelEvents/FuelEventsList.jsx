@@ -298,7 +298,7 @@ const FuelEventsList = () => {
         ) : (
           <div className="flex flex-col gap-4 mt-6">
             {/* Mobile View (Single Column with Collapsible Cards) */}
-            <div className="block md:hidden">
+            <div className="block md:hidden space-y-2">
               {sortedCarPlates.map(carPlate => (
                 <FuelEventCard 
                   key={carPlate}

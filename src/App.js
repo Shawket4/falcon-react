@@ -22,9 +22,7 @@ import DistanceMappings from './components/DistanceMappings';
 import FeeMappings from './components/FeeMappings';
 import AddTripComponent from './components/TripForm';
 import TripDetails from './components/TripDetails';
-import OilChangeList from './components/AllOilChanges';
-import EditOilChange from './components/EditOilChange';
-import AddOilChange from './components/AddOilChange';
+import { AllOilChanges, AddOilChange, EditOilChange } from './components/OilChanges';
 
 // Import the refactored TripList component instead of AllTrips
 import { TripList } from './components/AllTrips';
@@ -228,7 +226,7 @@ function App() {
           <Route path="/oil-changes-list" element={
             <ProtectedRoute>
               <Layout>
-                <OilChangeList />
+                <AllOilChanges />
               </Layout>
             </ProtectedRoute>
           } />

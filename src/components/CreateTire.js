@@ -1,7 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { Camera, X } from 'lucide-react';
+// Import Tesseract.js
+import * as Tesseract from 'tesseract.js';
 
 function CreateTire() {
   const navigate = useNavigate();
@@ -27,7 +29,30 @@ function CreateTire() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setTireData({ ...tireData, [name]: value });
+    
+    // If this is the serial/DOT code field and it has content
+    if (name === 'serial' && value.trim()) {
+      // Check if the input contains "DOT" at the beginning
+      if (value.toUpperCase().startsWith("DOT")) {
+        // Extract just the code part after "DOT" and any spaces
+        const codeOnly = value.substring(3).trim();
+        setTireData({ ...tireData, [name]: codeOnly });
+        
+        // Clear any error message if it was related to missing DOT prefix
+        if (error && error.includes("No DOT prefix detected")) {
+          setError(null);
+        }
+      } else {
+        // If manually entering without DOT prefix, just use as is
+        setTireData({ ...tireData, [name]: value });
+        
+        // Show a warning that DOT prefix is missing
+        setError("Warning: No DOT prefix detected. Please ensure this is a valid tire identification code.");
+      }
+    } else {
+      // For all other fields, just update normally
+      setTireData({ ...tireData, [name]: value });
+    }
   };
 
   const handleBlur = (e) => {
@@ -70,11 +95,19 @@ function CreateTire() {
         throw new Error('Camera API is not supported in this browser or environment');
       }
       
+      // Optimize camera settings for text recognition
       const constraints = {
         video: { 
           facingMode: 'environment', // Use the back camera if available
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920 }, // Higher resolution
+          height: { ideal: 1080 },
+          // Try to optimize for text capture
+          advanced: [
+            { zoom: { ideal: 2.0 } }, // Zoom in if supported
+            { focusMode: { ideal: "continuous" } }, // Continuous autofocus
+            { whiteBalanceMode: { ideal: "continuous" } }, // Auto white balance
+            { exposureMode: { ideal: "continuous" } } // Continuous exposure
+          ]
         }
       };
       
@@ -109,7 +142,7 @@ function CreateTire() {
     setCapturedImage(null);
   };
 
-  // Capture photo from camera
+  // Capture photo from camera with better focus for OCR
   const capturePhoto = () => {
     if (!videoRef.current || !photoRef.current) return;
     
@@ -124,8 +157,30 @@ function CreateTire() {
     // Draw the current frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     
+    // Image processing to improve OCR results
+    try {
+      // Increase contrast to make text more visible
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      // Simple contrast adjustment
+      const contrast = 1.5; // Increase contrast
+      const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+      
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = factor * (data[i] - 128) + 128; // red
+        data[i+1] = factor * (data[i+1] - 128) + 128; // green
+        data[i+2] = factor * (data[i+2] - 128) + 128; // blue
+      }
+      
+      context.putImageData(imageData, 0, 0);
+    } catch (err) {
+      console.error("Error during image processing:", err);
+      // Continue even if image processing fails
+    }
+    
     // Get the captured image as data URL
-    const imageData = canvas.toDataURL('image/jpeg');
+    const imageData = canvas.toDataURL('image/jpeg', 0.95); // High quality JPEG
     setCapturedImage(imageData);
     
     // Stop the camera after capturing
@@ -136,29 +191,66 @@ function CreateTire() {
     setCameraActive(false);
   };
 
-  // Process the captured image to extract DOT code
-  const processImage = () => {
+  // Process the captured image to extract DOT code using Tesseract OCR
+  const processImage = async () => {
     setProcessing(true);
+    setError(null);
     
-    // Simulate OCR processing
-    // In a real implementation, you would:
-    // 1. Send the image to a server with OCR capabilities
-    // 2. Use a client-side OCR library (like Tesseract.js)
-    // 3. Call a cloud OCR API (like Google Cloud Vision)
-    
-    setTimeout(() => {
-      // Extract DOT code from the image captured
-      // For this example, we're simulating finding "DOT J3J9 1001" from the image
-      const extractedDOT = "DOT J3J9 1001";
+    try {
+      // Make sure we have a captured image
+      if (!capturedImage) {
+        throw new Error("No image captured");
+      }
       
-      // Update the serial field with the detected DOT code
-      setTireData(prev => ({ ...prev, serial: extractedDOT }));
+      // Use Tesseract.js to recognize text in the image
+      const result = await Tesseract.recognize(
+        capturedImage,
+        'eng', // Use English language
+        { 
+          logger: m => console.log(m), // Optional logging
+          // Tesseract configuration to improve detection of alphanumeric codes
+          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ', 
+        }
+      );
+      
+      // Get the recognized text
+      const recognizedText = result.data.text.trim();
+      console.log("OCR Result:", recognizedText);
+      
+      // Check if any text was detected
+      if (!recognizedText) {
+        throw new Error("No text detected in image. Please try again with better lighting or focus.");
+      }
+      
+      // Look for DOT pattern in the text
+      // This regex will try to find "DOT" followed by any characters
+      const dotPattern = /DOT\s+([A-Z0-9\s]+)/i;
+      const match = recognizedText.match(dotPattern);
+      
+      let codeOnly = "";
+      
+      if (match && match[1]) {
+        // Found DOT pattern, extract the code part
+        codeOnly = match[1].trim();
+        console.log("Extracted code:", codeOnly);
+      } else {
+        // No DOT pattern found, use the whole text but show a warning
+        codeOnly = recognizedText;
+        setError("Warning: No DOT prefix detected in the scanned code. Please verify the input.");
+      }
+      
+      // Update the serial field with just the code part
+      setTireData(prev => ({ ...prev, serial: codeOnly }));
       
       // Close the camera view
       setShowCamera(false);
       setCapturedImage(null);
+    } catch (err) {
+      console.error("OCR processing error:", err);
+      setError(err.message || "Failed to process image. Please try again or enter manually.");
+    } finally {
       setProcessing(false);
-    }, 2000);
+    }
   };
 
   // Retake photo
@@ -258,7 +350,7 @@ function CreateTire() {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                          Processing...
+                          Processing with OCR...
                         </span>
                       ) : (
                         'Confirm & Extract'
@@ -277,8 +369,8 @@ function CreateTire() {
                       muted
                     />
                     <div className="absolute inset-0 border-2 border-yellow-400 border-dashed opacity-50 pointer-events-none"></div>
-                    <div className="absolute bottom-2 left-2 right-2 text-white text-xs bg-black bg-opacity-50 p-1 rounded">
-                      Position the DOT code within the frame and ensure good lighting
+                    <div className="absolute bottom-2 left-2 right-2 text-white text-xs bg-black bg-opacity-70 p-2 rounded">
+                      Position the DOT code in good lighting with high contrast. Hold steady for best results.
                     </div>
                   </div>
                   <button
@@ -356,7 +448,7 @@ function CreateTire() {
                   <Camera className="h-5 w-5 text-gray-500" />
                 </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">Example format: DOT J3J9 1001</p>
+              <p className="mt-1 text-xs text-gray-500">Enter only the code part (e.g., "J3J9 1001" without "DOT")</p>
               <label
                 htmlFor="serial"
                 className={`absolute left-2 -top-2.5 px-1 text-sm transition-all duration-200 
@@ -365,7 +457,7 @@ function CreateTire() {
                   bg-white
                   ${touched.serial && !tireData.serial ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-600'}`}
               >
-                DOT Code *
+                Tire Code *
               </label>
               {touched.serial && !tireData.serial && (
                 <p className="mt-1 text-xs text-red-500">DOT code is required</p>

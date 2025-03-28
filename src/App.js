@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 // Original imports
 import AddFuelEvent from './components/AddFuelEvent';
-import FuelEventDetails from './components/FuelEventDetails';
 import EditFuelEvent from './components/EditFuelEvent';
 import AllDrivers from './components/AllDrivers';
 import DriverDetails from './components/DriverDetails';
@@ -16,7 +15,7 @@ import CreateTruck from './components/CreateTruck';
 import CreateTire from './components/CreateTire';
 import Login from './components/Login';
 import Layout from './components/Layout';
-import {FuelEventsList} from './components/FuelEvents';
+import {FuelEventsList, FuelEventDetails} from './components/FuelEvents';
 import { AuthProvider } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 

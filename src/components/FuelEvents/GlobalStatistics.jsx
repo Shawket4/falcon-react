@@ -17,21 +17,28 @@ const GlobalStatistics = ({ stats }) => {
     latestDate
   } = stats;
   
-  const dateRangeText = earliestDate && latestDate 
+  // Format date range text for different screen sizes
+  const dateRangeFull = earliestDate && latestDate 
     ? `${format(earliestDate, 'MMM dd, yyyy')} — ${format(latestDate, 'MMM dd, yyyy')}`
     : 'No date range';
+    
+  // Shorter date format for small screens
+  const dateRangeCompact = earliestDate && latestDate 
+    ? `${format(earliestDate, 'MMM d')} — ${format(latestDate, 'MMM d')}`
+    : 'No range';
 
   return (
-    <div className="mb-6 bg-white shadow-sm rounded-lg p-5 border border-gray-100">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Fuel Statistics</h2>
-        <div className="text-sm text-gray-500 flex items-center gap-1">
-          <Calendar size={14} />
-          <span>{dateRangeText}</span>
+    <div className="mb-6 bg-white shadow-sm rounded-lg p-4 sm:p-5 border border-gray-100">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Fuel Statistics</h2>
+        <div className="text-xs sm:text-sm text-gray-500 flex items-center gap-1">
+          <Calendar size={14} className="flex-shrink-0" />
+          <span className="hidden sm:inline">{dateRangeFull}</span>
+          <span className="sm:hidden">{dateRangeCompact}</span>
         </div>
       </div>
       
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         <StatCard 
           icon={Droplet} 
           label="Total Fuel"

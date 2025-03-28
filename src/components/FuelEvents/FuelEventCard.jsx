@@ -164,9 +164,7 @@ const FuelEventCard = ({ carPlate, carData, navigate, isMobile }) => {
             <Gauge className="w-4 h-4 mr-1" />
             {carData.avgFuelRate.toFixed(1)} km/L
           </span>
-          <span className="text-xs px-2 py-1 bg-gray-700 rounded-md flex items-center">
-            Last Fuel Up: {format(carData.lastUpdated, 'MMM d')}
-          </span>
+         
         </div>
       </div>
       

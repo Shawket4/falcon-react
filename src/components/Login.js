@@ -13,7 +13,6 @@ function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   
   // Redirect if already authenticated
   useEffect(() => {
@@ -43,7 +42,7 @@ function Login() {
 
     try {
       // Use the login function from AuthContext
-      const success = await login(credentials.email, credentials.password, rememberMe);
+      const success = await login(credentials.email, credentials.password);
       
       if (success) {
         console.log("Login successful!");
@@ -74,19 +73,6 @@ function Login() {
           <p className="mb-6 text-blue-100">
             Track your vehicles, monitor fuel consumption, and optimize your fleet operations all in one place.
           </p>
-          
-          <div className="bg-white bg-opacity-10 rounded-lg p-6 backdrop-blur-sm">
-            <p className="italic text-blue-50 mb-4">
-              "Apex Fleet has revolutionized how we manage our delivery vehicles. We've reduced fuel costs by 15% in just three months."
-            </p>
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-blue-200 rounded-full mr-3"></div>
-              <div>
-                <p className="font-medium">Sarah Johnson</p>
-                <p className="text-sm text-blue-200">Fleet Manager, Express Logistics</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       
@@ -157,28 +143,6 @@ function Login() {
                   </button>
                 </div>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                    Remember me
-                  </label>
-                </div>
-                
-                <div className="text-sm">
-                  <a href="#" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
-                    Forgot password?
-                  </a>
-                </div>
-              </div>
 
               <div>
                 <button
@@ -203,15 +167,6 @@ function Login() {
                 </button>
               </div>
             </form>
-            
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
-                  Contact your administrator
-                </a>
-              </p>
-            </div>
           </div>
           
           <div className="mt-8 text-center text-sm text-gray-500">

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Calendar, Droplet, Gauge, Car, ChevronDown, ChevronUp } from 'lucide-react';
 import { parseISO, format, formatOdometer } from './DateUtils';
 
-const FuelEventCard = ({ carPlate, carData, navigate }) => {
+const FuelEventCard = ({ carPlate, carData, navigate, isMobile }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Format efficiency value with color coding
@@ -66,83 +66,127 @@ const FuelEventCard = ({ carPlate, carData, navigate }) => {
     setIsExpanded(!isExpanded);
   };
 
-  return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col border border-gray-100 hover:shadow-md transition-all duration-200">
-      {/* Card Header */}
-      <div 
-        className="bg-white text-gray-800 p-4 border-b cursor-pointer"
-        onClick={toggleExpand}
-      >
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Car className="w-5 h-5 text-blue-500" />
-            <h3 className="font-semibold text-lg">{carPlate}</h3>
-          </div>
-          <div className="flex items-center">
-            <div className="bg-blue-50 rounded-lg p-2 text-center mr-3 hidden sm:block">
-              <div className="text-xs text-gray-500">Last Update</div>
-              <div className="font-medium text-blue-700">
-                {format(carData.lastUpdated, 'MMM d')}
-              </div>
+  // Mobile Card View
+  if (isMobile) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col border border-gray-100 hover:shadow-md transition-all duration-200">
+        {/* Card Header */}
+        <div 
+          className="bg-white text-gray-800 p-4 border-b cursor-pointer"
+          onClick={toggleExpand}
+        >
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Car className="w-5 h-5 text-blue-500" />
+              <h3 className="font-semibold text-lg">{carPlate}</h3>
             </div>
-            {isExpanded ? 
-              <ChevronUp className="w-5 h-5 text-gray-500" /> : 
-              <ChevronDown className="w-5 h-5 text-gray-500" />
-            }
+            <div className="flex items-center">
+              <div className="bg-blue-50 rounded-lg p-2 text-center mr-3">
+                <div className="text-xs text-gray-500">Last Fuel Up</div>
+                <div className="font-medium text-blue-700">
+                  {format(carData.lastUpdated, 'MMM d')}
+                </div>
+              </div>
+              {isExpanded ? 
+                <ChevronUp className="w-5 h-5 text-gray-500" /> : 
+                <ChevronDown className="w-5 h-5 text-gray-500" />
+              }
+            </div>
+          </div>
+          
+          {/* Stats Summary - Always visible */}
+          <div className="grid grid-cols-3 gap-3 mt-3">
+            <div className="bg-gray-50 p-2 rounded-lg text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Droplet className="w-3 h-3 text-blue-500" />
+                <span className="text-xs text-gray-500">Total</span>
+              </div>
+              <div className="font-medium">{carData.totalLiters.toFixed(1)}L</div>
+            </div>
+            
+            <div className="bg-gray-50 p-2 rounded-lg text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Gauge className="w-3 h-3 text-green-500" />
+                <span className="text-xs text-gray-500">Efficiency</span>
+              </div>
+              <div className="font-medium">{carData.avgFuelRate.toFixed(1)} km/L</div>
+            </div>
+            
+            <div className="bg-gray-50 p-2 rounded-lg text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Calendar className="w-3 h-3 text-purple-500" />
+                <span className="text-xs text-gray-500">Refuels</span>
+              </div>
+              <div className="font-medium">{carData.events.length}</div>
+            </div>
           </div>
         </div>
         
-        {/* Stats Summary - Always visible */}
-        <div className="grid grid-cols-3 gap-3 mt-3">
-          <div className="bg-gray-50 p-2 rounded-lg text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <Droplet className="w-3 h-3 text-blue-500" />
-              <span className="text-xs text-gray-500">Total</span>
+        {/* Collapsible Content */}
+        {isExpanded && (
+          <>
+            {/* Event List Header */}
+            <div className="flex justify-between items-center bg-gray-50 px-3 py-2 border-b text-xs font-medium text-gray-600">
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                Date
+              </div>
+              <div className="flex items-center gap-1">
+                <Gauge className="w-3 h-3" />
+                Odometer
+              </div>
             </div>
-            <div className="font-medium">{carData.totalLiters.toFixed(1)}L</div>
-          </div>
-          
-          <div className="bg-gray-50 p-2 rounded-lg text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <Gauge className="w-3 h-3 text-green-500" />
-              <span className="text-xs text-gray-500">Efficiency</span>
+            
+            {/* Event List */}
+            <div className="overflow-y-auto flex-1 max-h-64">
+              {carData.events.map(event => (
+                <EventListItem key={event.ID} event={event} />
+              ))}
             </div>
-            <div className="font-medium">{carData.avgFuelRate.toFixed(1)} km/L</div>
-          </div>
-          
-          <div className="bg-gray-50 p-2 rounded-lg text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <Calendar className="w-3 h-3 text-purple-500" />
-              <span className="text-xs text-gray-500">Refuels</span>
-            </div>
-            <div className="font-medium">{carData.events.length}</div>
-          </div>
+          </>
+        )}
+      </div>
+    );
+  }
+  
+  // Desktop/Tablet View - Original card-style layout
+  return (
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col border border-gray-100 hover:shadow-md transition-all duration-200">
+      {/* Card Header */}
+      <div className="bg-gray-800 text-white p-3 flex justify-between items-center">
+        <span className="font-medium truncate">{carPlate}</span>
+        <div className="flex space-x-2">
+          <span className="flex items-center">
+            <Droplet className="w-4 h-4 mr-1" />
+            {carData.totalLiters.toFixed(1)}L
+          </span>
+          <span className="flex items-center">
+            <Gauge className="w-4 h-4 mr-1" />
+            {carData.avgFuelRate.toFixed(1)} km/L
+          </span>
+          <span className="text-xs px-2 py-1 bg-gray-700 rounded-md flex items-center">
+            Last Fuel Up: {format(carData.lastUpdated, 'MMM d')}
+          </span>
         </div>
       </div>
       
-      {/* Collapsible Content */}
-      {isExpanded && (
-        <>
-          {/* Event List Header */}
-          <div className="flex justify-between items-center bg-gray-50 px-3 py-2 border-b text-xs font-medium text-gray-600">
-            <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              Date
-            </div>
-            <div className="flex items-center gap-1">
-              <Gauge className="w-3 h-3" />
-              Odometer
-            </div>
-          </div>
-          
-          {/* Event List */}
-          <div className="overflow-y-auto flex-1 max-h-64">
-            {carData.events.map(event => (
-              <EventListItem key={event.ID} event={event} />
-            ))}
-          </div>
-        </>
-      )}
+      {/* Simple column labels header */}
+      <div className="flex justify-between items-center bg-gray-100 px-3 py-2 border-b text-xs font-medium text-gray-600">
+        <div className="flex items-center">
+          <Calendar className="w-3 h-3 mr-1" />
+          Date
+        </div>
+        <div className="flex items-center">
+          <Gauge className="w-3 h-3 mr-1" />
+          Odometer
+        </div>
+      </div>
+      
+      <div className="overflow-y-auto flex-1 max-h-64">
+        {carData.events.map(event => (
+          <EventListItem key={event.ID} event={event} />
+        ))}
+      </div>
     </div>
   );
 };

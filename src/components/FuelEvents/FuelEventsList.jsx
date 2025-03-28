@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Search, Filter } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { useFuelEventsState } from './FuelEventStates';
-import { parseISO, format, isWithinInterval, normalizeText } from './DateUtils';
+import { parseISO, isWithinInterval, normalizeText } from './DateUtils';
 import ErrorBoundary from './ErrorBoundary';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
@@ -13,6 +13,7 @@ import FuelEventCard from './FuelEventCard';
 import DateFilterModal from './DateFilterModal';
 import GlobalStatistics from './GlobalStatistics';
 import ActiveFilters from './ActiveFilters';
+
 
 const FuelEventsList = () => {
   const navigate = useNavigate();
@@ -296,7 +297,7 @@ const FuelEventsList = () => {
           <EmptyState navigate={navigate} />
         ) : (
           <div className="flex flex-col gap-4 mt-6">
-            {/* Mobile View (Single Column) */}
+            {/* Mobile View (Single Column with Collapsible Cards) */}
             <div className="block md:hidden">
               {sortedCarPlates.map(carPlate => (
                 <FuelEventCard 
@@ -304,11 +305,12 @@ const FuelEventsList = () => {
                   carPlate={carPlate}
                   carData={processedEvents[carPlate]}
                   navigate={navigate}
+                  isMobile={true}
                 />
               ))}
             </div>
             
-            {/* Tablet and Desktop View (Multi-Column Grid) */}
+            {/* Tablet and Desktop View (Original Card Style) */}
             <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedCarPlates.map(carPlate => (
                 <FuelEventCard 
@@ -316,6 +318,7 @@ const FuelEventsList = () => {
                   carPlate={carPlate}
                   carData={processedEvents[carPlate]}
                   navigate={navigate}
+                  isMobile={false}
                 />
               ))}
             </div>

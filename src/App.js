@@ -24,11 +24,13 @@ import ProtectedRoute from './components/ProtectedRoute';
 import DistanceMappings from './components/DistanceMappings';
 import FeeMappings from './components/FeeMappings';
 import AddTripComponent from './components/TripForm';
-import TripsList from './components/AllTrips';
 import TripDetails from './components/TripDetails';
 import OilChangeList from './components/AllOilChanges';
 import EditOilChange from './components/EditOilChange';
 import AddOilChange from './components/AddOilChange';
+
+// Import the refactored TripList component instead of AllTrips
+import { TripList } from './components/AllTrips';
 
 // New Vendor Expense components
 import VendorList from './components/VendorList';
@@ -217,10 +219,11 @@ function App() {
             </ProtectedRoute>
           } />
 
+          {/* Updated: Using the refactored TripList component */}
           <Route path="/trips-list" element={
             <ProtectedRoute>
               <Layout>
-                <TripsList />
+                <TripList />
               </Layout>
             </ProtectedRoute>
           } />

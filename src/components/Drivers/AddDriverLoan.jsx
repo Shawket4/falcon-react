@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
 import { format } from 'date-fns';
-import { Calendar, Save, AlertTriangle, Check, ArrowLeft, DollarSign, CreditCard, User } from 'lucide-react';
+import { Calendar, Save, AlertTriangle, Check, ArrowLeft, DollarSign, CreditCard, User, X } from 'lucide-react';
 import apiClient from '../../apiClient';
 
 const AddDriverLoan = ({ serverIp }) => {
@@ -17,54 +17,8 @@ const AddDriverLoan = ({ serverIp }) => {
   const [error, setError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const navigate = useNavigate();
-  
-  // Custom styles to override react-datepicker default styling
-  const customDatePickerStyles = `
-    .react-datepicker {
-      font-family: inherit;
-      font-size: 0.9rem;
-      border: 1px solid #e5e7eb;
-      border-radius: 0.5rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    .react-datepicker__header {
-      background-color: #f3f4f6;
-      border-bottom: 1px solid #e5e7eb;
-      padding-top: 0.75rem;
-    }
-    .react-datepicker__current-month {
-      font-weight: 600;
-      font-size: 1rem;
-    }
-    .react-datepicker__day--selected {
-      background-color: #3b82f6;
-      border-radius: 0.25rem;
-    }
-    .react-datepicker__day:hover {
-      background-color: #dbeafe;
-      border-radius: 0.25rem;
-    }
-    .react-datepicker__day--keyboard-selected {
-      background-color: #93c5fd;
-      border-radius: 0.25rem;
-    }
-    .react-datepicker__navigation {
-      top: 0.75rem;
-    }
-    .react-datepicker__day {
-      margin: 0.2rem;
-      width: 2rem;
-      line-height: 2rem;
-    }
-    .react-datepicker__day-name {
-      margin: 0.2rem;
-      width: 2rem;
-    }
-    .react-datepicker__month-container {
-      padding: 0.5rem;
-    }
-  `;
   
   useEffect(() => {
     const fetchDriverData = async () => {
@@ -141,6 +95,12 @@ const AddDriverLoan = ({ serverIp }) => {
     navigate(`/driver/loans/${id}`);
   };
   
+  // Format date for display
+  const formatDate = (date) => {
+    if (!date) return '';
+    return format(date, 'MMMM d, yyyy');
+  };
+  
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-64 p-8">
@@ -186,11 +146,6 @@ const AddDriverLoan = ({ serverIp }) => {
           <span>Back to Driver Loans</span>
         </button>
       </div>
-
-      {/* Add custom datepicker styles */}
-      <style>
-        {customDatePickerStyles}
-      </style>
       
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Header */}
@@ -220,19 +175,46 @@ const AddDriverLoan = ({ serverIp }) => {
                     Date*
                   </label>
                   <div className="relative">
-                    <DatePicker
-                      selected={date}
-                      onChange={date => setDate(date)}
-                      dateFormat="MMMM d, yyyy"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      wrapperClassName="w-full"
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                    />
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <button
+                      type="button"
+                      onClick={() => setShowDatePicker(!showDatePicker)}
+                      className="w-full flex items-center justify-between px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                    >
+                      <span>{formatDate(date)}</span>
                       <Calendar size={18} className="text-gray-400" />
-                    </div>
+                    </button>
+                    
+                    {/* Date Picker Popover */}
+                    {showDatePicker && (
+                      <div className="absolute z-20 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-3">
+                        <div className="flex justify-between items-center mb-2 pb-2 border-b">
+                          <h3 className="text-sm font-medium text-gray-700">Select Date</h3>
+                          <button 
+                            type="button"
+                            onClick={() => setShowDatePicker(false)}
+                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                        <DayPicker
+                          mode="single"
+                          selected={date}
+                          onSelect={(selectedDate) => {
+                            setDate(selectedDate);
+                            setShowDatePicker(false);
+                          }}
+                          modifiersClassNames={{
+                            selected: 'bg-blue-600 text-white rounded-md',
+                            today: 'text-red-600 font-bold'
+                          }}
+                          styles={{
+                            caption: { color: '#4b5563' },
+                            day: { margin: '0.15rem' }
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -354,6 +336,14 @@ const AddDriverLoan = ({ serverIp }) => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Backdrop to close date picker when clicking outside */}
+      {showDatePicker && (
+        <div 
+          className="fixed inset-0 z-10" 
+          onClick={() => setShowDatePicker(false)}
+        ></div>
       )}
     </div>
   );

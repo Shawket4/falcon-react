@@ -1,67 +1,51 @@
 // File: components/DateFilterModal.jsx
-import React from 'react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { Calendar, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
+import { format } from 'date-fns';
+import { Calendar, X, Check } from 'lucide-react';
 
 const DateFilterModal = ({ dateRange, setDateRange, resetDateFilter, setShowFilters }) => {
-  // Custom styles to override react-datepicker default styling
-  const customDatePickerStyles = `
-    .react-datepicker {
-      font-family: inherit;
-      font-size: 0.9rem;
-      border: 1px solid #e5e7eb;
-      border-radius: 0.5rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    .react-datepicker__header {
-      background-color: #f3f4f6;
-      border-bottom: 1px solid #e5e7eb;
-      padding-top: 0.75rem;
-    }
-    .react-datepicker__current-month {
-      font-weight: 600;
-      font-size: 1rem;
-    }
-    .react-datepicker__day--selected {
-      background-color: #3b82f6;
-      border-radius: 0.25rem;
-    }
-    .react-datepicker__day:hover {
-      background-color: #dbeafe;
-      border-radius: 0.25rem;
-    }
-    .react-datepicker__day--keyboard-selected {
-      background-color: #93c5fd;
-      border-radius: 0.25rem;
-    }
-    .react-datepicker__navigation {
-      top: 0.75rem;
-    }
-    .react-datepicker__day {
-      margin: 0.2rem;
-      width: 2rem;
-      line-height: 2rem;
-    }
-    .react-datepicker__day-name {
-      margin: 0.2rem;
-      width: 2rem;
-    }
-    .react-datepicker__month-container {
-      padding: 0.5rem;
-    }
-  `;
+  const [selectedRange, setSelectedRange] = useState({
+    from: dateRange.startDate,
+    to: dateRange.endDate
+  });
+
+  // Apply the selected range when clicking the Apply button
+  const handleApplyFilter = () => {
+    setDateRange({
+      startDate: selectedRange.from,
+      endDate: selectedRange.to
+    });
+    setShowFilters(false);
+  };
+
+  // Clear filter values
+  const handleClearFilter = () => {
+    setSelectedRange({ from: undefined, to: undefined });
+    resetDateFilter();
+  };
+
+  // Format the date for display
+  const formatDate = (date) => {
+    if (!date) return '';
+    return format(date, 'MMM d, yyyy');
+  };
+
+  // Update the selected range when the external dateRange prop changes
+  useEffect(() => {
+    setSelectedRange({
+      from: dateRange.startDate,
+      to: dateRange.endDate
+    });
+  }, [dateRange]);
 
   return (
-    <div className="absolute z-10 bg-white shadow-lg rounded-lg p-5 mt-2 right-0 w-80 sm:w-96 border border-gray-200 animate-fadeIn">
-      {/* Add custom styles */}
-      <style>
-        {customDatePickerStyles}
-      </style>
-      
+    <div className="absolute z-10 bg-white shadow-xl rounded-xl p-5 mt-2 right-0 w-80 sm:w-96 border border-gray-200 animate-fadeIn">
+      {/* Header */}
       <div className="flex justify-between items-center mb-4 pb-2 border-b">
         <h3 className="font-medium text-gray-800 flex items-center gap-2">
-          <Calendar size={16} className="text-blue-500" />
+          <Calendar size={16} className="text-blue-600" />
           Filter by Date Range
         </h3>
         <button 
@@ -72,71 +56,60 @@ const DateFilterModal = ({ dateRange, setDateRange, resetDateFilter, setShowFilt
         </button>
       </div>
       
-      <div className="mb-5">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Start Date
-        </label>
-        <div className="relative rounded-md">
-          <DatePicker
-            selected={dateRange.startDate}
-            onChange={date => setDateRange(prev => ({ ...prev, startDate: date }))}
-            selectsStart
-            startDate={dateRange.startDate}
-            endDate={dateRange.endDate}
-            dateFormat="MMMM d, yyyy"
-            placeholderText="Select start date"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-            wrapperClassName="w-full"
-            showMonthDropdown
-            showYearDropdown
-            dropdownMode="select"
-            isClearable
-          />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <Calendar size={18} className="text-gray-400" />
+      {/* Date Range Display */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="col-span-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Start Date
+          </label>
+          <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 text-sm">
+            {formatDate(selectedRange.from) || 'Not set'}
+          </div>
+        </div>
+        <div className="col-span-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            End Date
+          </label>
+          <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 text-sm">
+            {formatDate(selectedRange.to) || 'Not set'}
           </div>
         </div>
       </div>
       
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          End Date
-        </label>
-        <div className="relative rounded-md">
-          <DatePicker
-            selected={dateRange.endDate}
-            onChange={date => setDateRange(prev => ({ ...prev, endDate: date }))}
-            selectsEnd
-            startDate={dateRange.startDate}
-            endDate={dateRange.endDate}
-            minDate={dateRange.startDate}
-            dateFormat="MMMM d, yyyy"
-            placeholderText="Select end date"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-            wrapperClassName="w-full"
-            showMonthDropdown
-            showYearDropdown
-            dropdownMode="select"
-            isClearable
-          />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <Calendar size={18} className="text-gray-400" />
-          </div>
-        </div>
+      {/* Date Picker */}
+      <div className="p-2 border border-gray-100 rounded-lg mb-4 flex justify-center bg-gray-50">
+        <DayPicker
+          mode="range"
+          selected={selectedRange}
+          onSelect={setSelectedRange}
+          modifiersClassNames={{
+            selected: 'bg-blue-600 text-white rounded-md',
+            today: 'text-red-600 font-bold',
+            range_start: 'bg-blue-600 text-white rounded-l-md',
+            range_end: 'bg-blue-600 text-white rounded-r-md',
+            range_middle: 'bg-blue-100'
+          }}
+          styles={{
+            caption: { color: '#4b5563' },
+            day: { margin: '0.15rem' }
+          }}
+        />
       </div>
       
+      {/* Action Buttons */}
       <div className="flex justify-between">
         <button 
-          onClick={resetDateFilter}
-          className="flex items-center text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
+          onClick={handleClearFilter}
+          className="flex items-center text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
         >
           <X size={16} className="mr-1" />
           Clear
         </button>
         <button 
-          onClick={() => setShowFilters(false)}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
+          onClick={handleApplyFilter}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center"
         >
+          <Check size={16} className="mr-1" />
           Apply Filter
         </button>
       </div>

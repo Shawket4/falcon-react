@@ -113,17 +113,15 @@ const FuelEventDetails = ({ serverIp }) => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  // Get fuel efficiency rating
-  const getEfficiencyRating = (rate) => {
-    if (rate === 0) return { label: 'N/A', color: 'text-gray-500' };
-    if (rate < 1.5) return { label: 'Poor', color: 'text-red-600' };
-    if (rate < 1.8) return { label: 'Below Average', color: 'text-orange-500' };
-    if (rate < 2.1) return { label: 'Average', color: 'text-yellow-600' };
-    if (rate < 2.5) return { label: 'Good', color: 'text-green-600' };
-    return { label: 'Excellent', color: 'text-emerald-600' };
+  // Get fuel efficiency color based on value (same as FuelEventList)
+  const getEfficiencyColorClass = (rate) => {
+    if (rate < 1.0 || rate > 2.7) return 'text-gray-400';
+    if (rate < 1.8) return 'text-red-500';
+    if (rate < 1.9) return 'text-orange-500';
+    return 'text-green-500';
   };
-
-  const efficiencyRating = event ? getEfficiencyRating(event.FuelRate) : null;
+  
+  const efficiencyColorClass = event ? getEfficiencyColorClass(event.FuelRate) : 'text-gray-400';
   
   if (loading) {
     return (
@@ -180,17 +178,17 @@ const FuelEventDetails = ({ serverIp }) => {
       </div>
       
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white p-6">
+        {/* Header - Removed gradient background */}
+        <div className="bg-white border-b border-gray-200 p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
             <div>
-              <h1 className="text-2xl font-bold mb-2 flex items-center">
+              <h1 className="text-2xl font-bold mb-2 flex items-center text-gray-800">
                 {event.CarNoPlate}
-                <span className="ml-3 bg-white bg-opacity-20 text-sm px-3 py-1 rounded-full">
+                <span className="ml-3 bg-gray-100 text-gray-600 text-sm px-3 py-1 rounded-full">
                   ID: {event.EventId}
                 </span>
               </h1>
-              <p className="text-gray-300 flex items-center">
+              <p className="text-gray-500 flex items-center">
                 <Calendar size={16} className="mr-2" />
                 {formatDate(event.Date)}
                 {event.DriverName && (
@@ -207,14 +205,14 @@ const FuelEventDetails = ({ serverIp }) => {
             {canEditDelete ? (
               <div className="flex space-x-3 mt-4 md:mt-0">
                 <button 
-                  className="flex items-center px-4 py-2 bg-white bg-opacity-10 hover:bg-opacity-20 text-white rounded-lg transition-colors"
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   onClick={handleEdit}
                 >
                   <Edit size={18} className="mr-2" />
                   <span>Edit</span>
                 </button>
                 <button 
-                  className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   onClick={() => setShowDeleteConfirm(true)}
                 >
                   <Trash2 size={18} className="mr-2" />
@@ -241,11 +239,12 @@ const FuelEventDetails = ({ serverIp }) => {
                     <Droplet size={24} className="text-blue-600" />
                   </div>
                   <div>
-                    <p className={`text-2xl font-bold ${efficiencyRating.color}`}>
-                      {event.FuelRate.toFixed(2)} km/L
+                    <p className={`text-2xl font-bold ${efficiencyColorClass}`}>
+                      {event.FuelRate.toFixed(1)} km/L
                     </p>
-                    <p className={`text-sm ${efficiencyRating.color}`}>
-                      {efficiencyRating.label}
+                    <p className="text-sm text-gray-500">
+                      {parseFloat(event.FuelRate) < 1.0 || parseFloat(event.FuelRate) > 2.7 ? 
+                        "(excluded from avg)" : ""}
                     </p>
                   </div>
                 </div>

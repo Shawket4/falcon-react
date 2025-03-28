@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// File: components/AddDriverLoan.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -18,7 +19,38 @@ const AddDriverLoan = ({ serverIp }) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerButtonRef = useRef(null);
+  const datePickerRef = useRef(null);
   const navigate = useNavigate();
+  
+  // Helper function to calculate position of date picker
+  const calculateDatePickerPosition = () => {
+    if (!datePickerButtonRef.current || !datePickerRef.current) return {};
+    
+    const buttonRect = datePickerButtonRef.current.getBoundingClientRect();
+    const pickerHeight = datePickerRef.current.offsetHeight;
+    const viewportHeight = window.innerHeight;
+    
+    // Check if there's enough space below the button
+    const spaceBelow = viewportHeight - buttonRect.bottom;
+    const spaceAbove = buttonRect.top;
+    
+    if (spaceBelow < pickerHeight && spaceAbove > pickerHeight) {
+      // Position above the button if there's not enough space below
+      return {
+        bottom: '100%',
+        marginBottom: '8px',
+        top: 'auto'
+      };
+    } else {
+      // Position below the button (default)
+      return {
+        top: '100%',
+        marginTop: '8px',
+        bottom: 'auto'
+      };
+    }
+  };
   
   useEffect(() => {
     const fetchDriverData = async () => {
@@ -49,6 +81,23 @@ const AddDriverLoan = ({ serverIp }) => {
     };
     
     fetchDriverData();
+    
+    // Add click outside handler for date picker
+    const handleClickOutside = (event) => {
+      if (
+        datePickerRef.current && 
+        !datePickerRef.current.contains(event.target) &&
+        datePickerButtonRef.current && 
+        !datePickerButtonRef.current.contains(event.target)
+      ) {
+        setShowDatePicker(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [id, serverIp]);
   
   const handleSubmit = async (e) => {
@@ -147,7 +196,7 @@ const AddDriverLoan = ({ serverIp }) => {
         </button>
       </div>
       
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -177,44 +226,13 @@ const AddDriverLoan = ({ serverIp }) => {
                   <div className="relative">
                     <button
                       type="button"
+                      ref={datePickerButtonRef}
                       onClick={() => setShowDatePicker(!showDatePicker)}
                       className="w-full flex items-center justify-between px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                     >
                       <span>{formatDate(date)}</span>
                       <Calendar size={18} className="text-gray-400" />
                     </button>
-                    
-                    {/* Date Picker Popover */}
-                    {showDatePicker && (
-                      <div className="absolute z-20 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-3">
-                        <div className="flex justify-between items-center mb-2 pb-2 border-b">
-                          <h3 className="text-sm font-medium text-gray-700">Select Date</h3>
-                          <button 
-                            type="button"
-                            onClick={() => setShowDatePicker(false)}
-                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                        <DayPicker
-                          mode="single"
-                          selected={date}
-                          onSelect={(selectedDate) => {
-                            setDate(selectedDate);
-                            setShowDatePicker(false);
-                          }}
-                          modifiersClassNames={{
-                            selected: 'bg-blue-600 text-white rounded-md',
-                            today: 'text-red-600 font-bold'
-                          }}
-                          styles={{
-                            caption: { color: '#4b5563' },
-                            day: { margin: '0.15rem' }
-                          }}
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
                 
@@ -289,6 +307,48 @@ const AddDriverLoan = ({ serverIp }) => {
         </div>
       </div>
       
+      {/* Date Picker Portal - Positioned in document body to avoid container clipping */}
+      {showDatePicker && (
+        <div 
+          ref={datePickerRef}
+          className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-3"
+          style={{
+            width: '320px',
+            left: datePickerButtonRef.current?.getBoundingClientRect().left,
+            ...calculateDatePickerPosition()
+          }}
+        >
+          <div className="flex justify-between items-center mb-2 pb-2 border-b">
+            <h3 className="text-sm font-medium text-gray-700">Select Date</h3>
+            <button 
+              type="button"
+              onClick={() => setShowDatePicker(false)}
+              className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <DayPicker
+            mode="single"
+            selected={date}
+            onSelect={(selectedDate) => {
+              if (selectedDate) {
+                setDate(selectedDate);
+                setShowDatePicker(false);
+              }
+            }}
+            modifiersClassNames={{
+              selected: 'bg-blue-600 text-white rounded-md',
+              today: 'text-red-600 font-bold'
+            }}
+            styles={{
+              caption: { color: '#4b5563' },
+              day: { margin: '0.15rem' }
+            }}
+          />
+        </div>
+      )}
+      
       {/* Success Dialog */}
       {showSuccess && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -336,14 +396,6 @@ const AddDriverLoan = ({ serverIp }) => {
             </div>
           </div>
         </div>
-      )}
-      
-      {/* Backdrop to close date picker when clicking outside */}
-      {showDatePicker && (
-        <div 
-          className="fixed inset-0 z-10" 
-          onClick={() => setShowDatePicker(false)}
-        ></div>
       )}
     </div>
   );

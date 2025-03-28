@@ -2,17 +2,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Search, Filter } from 'lucide-react';
-import { useAuth } from './AuthContext';
-import { useFuelEventsState } from './hooks/useFuelEventsState';
-import { parseISO, format, isWithinInterval, normalizeText } from './utils/dateUtils';
-import ErrorBoundary from './components/ErrorBoundary';
-import EmptyState from './components/EmptyState';
-import LoadingState from './components/LoadingState';
-import ErrorState from './components/ErrorState';
-import FuelEventCard from './components/FuelEventCard';
-import DateFilterModal from './components/DateFilterModal';
-import GlobalStatistics from './components/GlobalStatistics';
-import ActiveFilters from './components/ActiveFilters';
+import { useAuth } from '../AuthContext';
+import { useFuelEventsState } from './FuelEventStates';
+import { parseISO, format, isWithinInterval, normalizeText } from './DateUtils';
+import ErrorBoundary from './ErrorBoundary';
+import EmptyState from './EmptyState';
+import LoadingState from './LoadingState';
+import ErrorState from './ErrorState';
+import FuelEventCard from './FuelEventCard';
+import DateFilterModal from './DateFilterModal';
+import GlobalStatistics from './GlobalStatistics';
+import ActiveFilters from './ActiveFilters';
 
 const FuelEventsList = () => {
   const navigate = useNavigate();
@@ -295,15 +295,30 @@ const FuelEventsList = () => {
         ) : sortedCarPlates.length === 0 ? (
           <EmptyState navigate={navigate} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-            {sortedCarPlates.map(carPlate => (
-              <FuelEventCard 
-                key={carPlate}
-                carPlate={carPlate}
-                carData={processedEvents[carPlate]}
-                navigate={navigate}
-              />
-            ))}
+          <div className="flex flex-col gap-4 mt-6">
+            {/* Mobile View (Single Column) */}
+            <div className="block md:hidden">
+              {sortedCarPlates.map(carPlate => (
+                <FuelEventCard 
+                  key={carPlate}
+                  carPlate={carPlate}
+                  carData={processedEvents[carPlate]}
+                  navigate={navigate}
+                />
+              ))}
+            </div>
+            
+            {/* Tablet and Desktop View (Multi-Column Grid) */}
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sortedCarPlates.map(carPlate => (
+                <FuelEventCard 
+                  key={carPlate}
+                  carPlate={carPlate}
+                  carData={processedEvents[carPlate]}
+                  navigate={navigate}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

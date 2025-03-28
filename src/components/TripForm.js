@@ -454,17 +454,29 @@ const TripForm = () => {
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Trip Date</label>
                   <div className="relative">
+                    {/* SAFARI COMPATIBLE DATE INPUT */}
                     <input 
                       type="date"
                       name="date"
                       value={tripData.date}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm h-[38px]"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm h-[38px] appearance-none"
                       required
+                      style={{
+                        // Hide the default calendar icon in Safari/Chrome
+                        '::-webkit-calendar-picker-indicator': {
+                          opacity: 0,
+                          position: 'absolute',
+                          width: '100%',
+                          height: '100%',
+                          cursor: 'pointer'
+                        }
+                      }}
                     />
-                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                    {/* We use a span instead to position the calendar icon */}
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                       <Calendar className="h-4 w-4 text-gray-500" />
-                    </div>
+                    </span>
                   </div>
                 </div>
               </div>

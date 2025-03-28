@@ -16,7 +16,7 @@ import CreateTruck from './components/CreateTruck';
 import CreateTire from './components/CreateTire';
 import Login from './components/Login';
 import Layout from './components/Layout';
-import AllFuelEvents from './components/AllFuelEvents';
+import {FuelEventsList} from './components/FuelEvents';
 import { AuthProvider } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -79,7 +79,7 @@ function App() {
           <Route path="/" element={
             <ProtectedRoute>
               <Layout>
-                <AllFuelEvents />
+                <FuelEventsList />
               </Layout>
             </ProtectedRoute>
           } />

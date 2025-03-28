@@ -30,6 +30,11 @@ module.exports = {
       borderRadius: {
         'card': '8px',
       },
+      animation: {
+        'fadeIn': 'fadeIn 0.3s ease-out',
+        'slideInRight': 'slideInRight 0.3s ease-out',
+        'pulse': 'pulse 2s infinite',
+      }
     },
   },
   plugins: [],

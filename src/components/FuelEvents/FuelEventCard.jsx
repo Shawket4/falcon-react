@@ -1,11 +1,10 @@
 // File: components/FuelEventCard.jsx
-import React from 'react';
-import { Calendar, Droplet, Gauge, Car, TrendingUp } from 'lucide-react';
-import { parseISO, format, formatOdometer } from './DateUtils';
+import React, { useState } from 'react';
+import { Calendar, Droplet, Gauge, Car, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { parseISO, format, formatOdometer } from '../utils/dateUtils';
 
 const FuelEventCard = ({ carPlate, carData, navigate }) => {
-  // Fixed card dimensions
-  const CARD_HEADER_HEIGHT = 120;
+  const [isExpanded, setIsExpanded] = useState(false);
   
   // Format efficiency value with color coding
   const formatEfficiency = (value) => {
@@ -63,68 +62,90 @@ const FuelEventCard = ({ carPlate, carData, navigate }) => {
     );
   };
 
+  const toggleExpand = (e) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col border border-gray-100 hover:shadow-md transition-all duration-200">
-      {/* Card Header */}
-      <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white p-4" style={{ height: `${CARD_HEADER_HEIGHT}px` }}>
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col border border-gray-200 hover:shadow-md transition-all duration-200">
+      {/* Card Header - Clickable on mobile to expand */}
+      <div 
+        className="bg-white text-gray-800 p-4 border-b cursor-pointer"
+        onClick={toggleExpand}
+      >
         <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Car className="w-5 h-5" />
-              <h3 className="font-semibold text-lg">{carPlate}</h3>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <Car className="w-5 h-5 text-gray-600" />
+              <h3 className="font-semibold text-lg text-gray-800">{carPlate}</h3>
+              
+              {/* Mobile-only expand/collapse button */}
+              <button 
+                className="md:hidden ml-auto text-gray-500 p-1 hover:bg-gray-100 rounded-full"
+                onClick={toggleExpand}
+                aria-label={isExpanded ? "Collapse" : "Expand"}
+              >
+                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4">
+            
+            <div className="grid grid-cols-3 gap-x-3 gap-y-2 mt-3">
               <div className="flex items-center gap-1">
-                <Droplet className="w-4 h-4 opacity-70" />
+                <Droplet className="w-4 h-4 text-blue-500" />
                 <span className="text-sm">{carData.totalLiters.toFixed(1)}L total</span>
               </div>
               <div className="flex items-center gap-1">
-                <Gauge className="w-4 h-4 opacity-70" />
+                <Gauge className="w-4 h-4 text-green-500" />
                 <span className="text-sm">{carData.avgFuelRate.toFixed(1)} km/L avg</span>
               </div>
               <div className="flex items-center gap-1">
-                <TrendingUp className="w-4 h-4 opacity-70" />
+                <TrendingUp className="w-4 h-4 text-purple-500" />
                 <span className="text-sm">{carData.events.length} refuels</span>
               </div>
             </div>
           </div>
           
-          <div className="bg-white bg-opacity-20 rounded-lg p-2 text-center">
-            <div className="text-xs opacity-80">Last Update</div>
-            <div className="font-medium">
+          <div className="hidden md:block bg-gray-100 rounded-lg p-2 text-center ml-4">
+            <div className="text-xs text-gray-500">Last Update</div>
+            <div className="font-medium text-gray-700">
               {format(carData.lastUpdated, 'MMM d')}
             </div>
           </div>
         </div>
       </div>
       
-      {/* Event List Header */}
-      <div className="flex justify-between items-center bg-gray-50 px-3 py-2 border-b text-xs font-medium text-gray-600">
-        <div className="flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
-          Date
+      {/* Content section - Always visible on desktop, toggleable on mobile */}
+      <div className={`${isExpanded ? 'block' : 'hidden md:block'}`}>
+        {/* Event List Header */}
+        <div className="flex justify-between items-center bg-gray-50 px-3 py-2 border-b text-xs font-medium text-gray-600">
+          <div className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            Date
+          </div>
+          <div className="flex items-center gap-1">
+            <Gauge className="w-3 h-3" />
+            Odometer
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Gauge className="w-3 h-3" />
-          Odometer
+        
+        {/* Event List */}
+        <div className="overflow-y-auto max-h-60">
+          {carData.events.length > 0 ? (
+            carData.events.map(event => (
+              <EventListItem key={event.ID} event={event} />
+            ))
+          ) : (
+            <div className="p-4 text-center text-gray-500">
+              No fuel events found for this vehicle
+            </div>
+          )}
         </div>
       </div>
       
-      {/* Event List */}
-      <div className="overflow-y-auto flex-1 max-h-64">
-        {carData.events.map(event => (
-          <EventListItem key={event.ID} event={event} />
-        ))}
-      </div>
-      
-      {/* Card Footer */}
-      <div className="bg-gray-50 p-3 text-center border-t">
-        <button 
-          className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
-          onClick={() => navigate(`/vehicle/${encodeURIComponent(carPlate)}`)}
-        >
-          View Complete History
-        </button>
+      {/* Mobile-only indicator for expandable content */}
+      <div className="md:hidden text-center text-xs text-gray-400 py-1 border-t">
+        {isExpanded ? "Tap to collapse" : "Tap to view fuel events"}
       </div>
     </div>
   );

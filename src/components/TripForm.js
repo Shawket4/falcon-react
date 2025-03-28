@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { debounce } from 'lodash'; // Import lodash for debouncing
+import { Calendar } from 'lucide-react';
 
 const TripForm = () => {
   const { id } = useParams();
@@ -445,21 +446,26 @@ const TripForm = () => {
                     value={tripData.receipt_no}
                     onChange={handleChange}
                     placeholder="Enter receipt number"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-[38px]"
                     required
                   />
                 </div>
                 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Trip Date</label>
-                  <input 
-                    type="date"
-                    name="date"
-                    value={tripData.date}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
+                  <div className="relative">
+                    <input 
+                      type="date"
+                      name="date"
+                      value={tripData.date}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm h-[38px]"
+                      required
+                    />
+                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -478,7 +484,7 @@ const TripForm = () => {
                         onChange={(e) => setCarSearch(e.target.value)}
                         onFocus={() => setCarDropdownVisible(true)}
                         placeholder="Search for a vehicle..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-[38px]"
                       />
                       <button
                         type="button"
@@ -529,7 +535,7 @@ const TripForm = () => {
                         onChange={(e) => setDriverSearch(e.target.value)}
                         onFocus={() => setDriverDropdownVisible(true)}
                         placeholder="Search for a driver..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-[38px]"
                       />
                       <button
                         type="button"
@@ -574,7 +580,7 @@ const TripForm = () => {
                     <input 
                       type="text"
                       value={tripData.car_no_plate}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed h-[38px]"
                       readOnly
                     />
                   </div>
@@ -583,7 +589,7 @@ const TripForm = () => {
                     <input 
                       type="text"
                       value={tripData.driver_name}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed h-[38px]"
                       readOnly
                     />
                   </div>
@@ -594,7 +600,7 @@ const TripForm = () => {
                       name="tank_capacity"
                       value={tripData.tank_capacity}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-[38px]"
                       required
                     />
                   </div>
@@ -603,7 +609,7 @@ const TripForm = () => {
                     <input 
                       type="text"
                       value="Apex"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed h-[38px]"
                       readOnly
                     />
                   </div>
@@ -625,7 +631,7 @@ const TripForm = () => {
                         onChange={(e) => setCompanySearch(e.target.value)}
                         onFocus={() => setCompanyDropdownVisible(true)}
                         placeholder="Search for a company..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-[38px]"
                       />
                       <button
                         type="button"
@@ -680,214 +686,214 @@ const TripForm = () => {
                               : "Search for a terminal..."
                         }
                         disabled={!tripData.company || terminals.length === 0}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500 h-[38px]"
                       />
                       <button
                         type="button"
                         onClick={() => tripData.company && terminals.length > 0 && setTerminalDropdownVisible(!terminalDropdownVisible)}
                         disabled={!tripData.company || terminals.length === 0}
                         className="absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 disabled:text-gray-400"
-                      >
-                        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </button>
+                        >
+                          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      {terminalDropdownVisible && (
+                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto">
+                          {filteredTerminals.length > 0 ? (
+                            filteredTerminals.map((terminal, idx) => (
+                              <div
+                                key={idx}
+                                className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
+                                onClick={() => handleTerminalSelect(terminal)}
+                              >
+                                {terminal}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-4 py-2 text-gray-500">No terminals found</div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {tripData.terminal && (
+                        <div className="mt-2 text-sm text-blue-600">
+                          Selected: {tripData.terminal}
+                        </div>
+                      )}
                     </div>
-                    
-                    {terminalDropdownVisible && (
-                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto">
-                        {filteredTerminals.length > 0 ? (
-                          filteredTerminals.map((terminal, idx) => (
-                            <div
-                              key={idx}
-                              className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
-                              onClick={() => handleTerminalSelect(terminal)}
-                            >
-                              {terminal}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="px-4 py-2 text-gray-500">No terminals found</div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {tripData.terminal && (
-                      <div className="mt-2 text-sm text-blue-600">
-                        Selected: {tripData.terminal}
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
-
-              {/* Drop-off Locations */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Drop-off Location</h3>
-                <p className="text-sm text-gray-600 mb-4">Select a drop-off location for this trip.</p>
-                
-                {/* Drop-off Search Bar */}
-                {dropOffPoints.length > 0 && (
-                  <div className="mb-4">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+  
+                {/* Drop-off Locations */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Drop-off Location</h3>
+                  <p className="text-sm text-gray-600 mb-4">Select a drop-off location for this trip.</p>
+                  
+                  {/* Drop-off Search Bar */}
+                  {dropOffPoints.length > 0 && (
+                    <div className="mb-4">
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                        </div>
+                        <input
+                          type="search"
+                          placeholder="Search drop-off points..."
+                          value={dropOffSearch}
+                          onChange={(e) => setDropOffSearch(e.target.value)}
+                          className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-[38px]"
+                        />
                       </div>
-                      <input
-                        type="search"
-                        placeholder="Search drop-off points..."
-                        value={dropOffSearch}
-                        onChange={(e) => setDropOffSearch(e.target.value)}
-                        className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    </div>
+                  )}
+                  
+                  {isMappingLoading ? (
+                    <div className="flex flex-col items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+                      <p className="mt-4 text-gray-600">Loading locations...</p>
+                    </div>
+                  ) : !tripData.company || !tripData.terminal ? (
+                    <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-md">
+                      Select a company and terminal to view drop-off locations
+                    </div>
+                  ) : dropOffPoints.length === 0 ? (
+                    <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-md">
+                      No drop-off locations available for this terminal
+                    </div>
+                  ) : filteredDropOffPoints.length === 0 ? (
+                    <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-md">
+                      No drop-off locations match your search
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredDropOffPoints.map((point) => {
+                          const details = mappingDetails[point] || { fee: 0, distance: 0 };
+                          return (
+                            <div
+                              key={point}
+                              onClick={() => handleDropOffPointSelect(point)}
+                              className={`border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer ${
+                                tripData.drop_off_point === point 
+                                  ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500' 
+                                  : 'border-gray-200 hover:border-blue-300'
+                              }`}
+                            >
+                              <div className="p-4">
+                                <div className="flex justify-between items-center mb-2">
+                                  <h4 className="font-medium text-gray-900">{point}</h4>
+                                  <input 
+                                    type="radio"
+                                    checked={tripData.drop_off_point === point}
+                                    onChange={() => {}} // Handled by the div click
+                                    onClick={e => e.stopPropagation()}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div className="bg-gray-100 p-2 rounded">
+                                    <span className="text-gray-500">Fee:</span> {details.fee?.toFixed(2) || "0.00"}
+                                  </div>
+                                  <div className="bg-gray-100 p-2 rounded">
+                                    <span className="text-gray-500">Distance:</span> {details.distance?.toFixed(2) || "0.00"} km
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Pagination controls */}
+                      {totalPages > 1 && (
+                        <div className="flex justify-center items-center mt-6 space-x-4">
+                          <button 
+                            onClick={handlePrevPage} 
+                            disabled={currentPage === 1}
+                            className="px-4 py-2 bg-blue-100 text-blue-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Previous
+                          </button>
+                          <div className="text-gray-700">
+                            Page {currentPage} of {totalPages}
+                          </div>
+                          <button 
+                            onClick={handleNextPage} 
+                            disabled={currentPage === totalPages}
+                            className="px-4 py-2 bg-blue-100 text-blue-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+  
+                {/* Auto-calculated fields */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Generated Values</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Revenue (Auto-calculated)</label>
+                      <input 
+                        type="text"
+                        value={parseFloat(tripData.revenue).toFixed(2)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed h-[38px]"
+                        readOnly
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Mileage (Auto-calculated)</label>
+                      <input 
+                        type="text"
+                        value={parseFloat(tripData.mileage).toFixed(2)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed h-[38px]"
+                        readOnly
                       />
                     </div>
                   </div>
-                )}
-                
-                {isMappingLoading ? (
-                  <div className="flex flex-col items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
-                    <p className="mt-4 text-gray-600">Loading locations...</p>
-                  </div>
-                ) : !tripData.company || !tripData.terminal ? (
-                  <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-md">
-                    Select a company and terminal to view drop-off locations
-                  </div>
-                ) : dropOffPoints.length === 0 ? (
-                  <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-md">
-                    No drop-off locations available for this terminal
-                  </div>
-                ) : filteredDropOffPoints.length === 0 ? (
-                  <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-md">
-                    No drop-off locations match your search
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredDropOffPoints.map((point) => {
-                        const details = mappingDetails[point] || { fee: 0, distance: 0 };
-                        return (
-                          <div
-                            key={point}
-                            onClick={() => handleDropOffPointSelect(point)}
-                            className={`border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer ${
-                              tripData.drop_off_point === point 
-                                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500' 
-                                : 'border-gray-200 hover:border-blue-300'
-                            }`}
-                          >
-                            <div className="p-4">
-                              <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-medium text-gray-900">{point}</h4>
-                                <input 
-                                  type="radio"
-                                  checked={tripData.drop_off_point === point}
-                                  onChange={() => {}} // Handled by the div click
-                                  onClick={e => e.stopPropagation()}
-                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div className="bg-gray-100 p-2 rounded">
-                                  <span className="text-gray-500">Fee:</span> {details.fee?.toFixed(2) || "0.00"}
-                                </div>
-                                <div className="bg-gray-100 p-2 rounded">
-                                  <span className="text-gray-500">Distance:</span> {details.distance?.toFixed(2) || "0.00"} km
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* Pagination controls */}
-                    {totalPages > 1 && (
-                      <div className="flex justify-center items-center mt-6 space-x-4">
-                        <button 
-                          onClick={handlePrevPage} 
-                          disabled={currentPage === 1}
-                          className="px-4 py-2 bg-blue-100 text-blue-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Previous
-                        </button>
-                        <div className="text-gray-700">
-                          Page {currentPage} of {totalPages}
-                        </div>
-                        <button 
-                          onClick={handleNextPage} 
-                          disabled={currentPage === totalPages}
-                          className="px-4 py-2 bg-blue-100 text-blue-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Auto-calculated fields */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Generated Values</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Revenue (Auto-calculated)</label>
-                    <input 
-                      type="text"
-                      value={parseFloat(tripData.revenue).toFixed(2)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
-                      readOnly
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mileage (Auto-calculated)</label>
-                    <input 
-                      type="text"
-                      value={parseFloat(tripData.mileage).toFixed(2)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
-                      readOnly
-                    />
-                  </div>
                 </div>
-              </div>
-
-              {/* Submit Button */}
-              <button 
-                type="submit"
-                disabled={isLoading || !tripData.company || !tripData.terminal || !tripData.drop_off_point || !tripData.car_no_plate || !tripData.driver_name || !tripData.receipt_no}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    {id ? 'Updating Trip...' : 'Creating Trip...'}
-                  </>
-                ) : (
-                  <>
-                    <svg className="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    {id ? 'Update Trip' : 'Create Trip'}
-                  </>
-                )}
-              </button>
-            </form>
-          )}
+  
+                {/* Submit Button */}
+                <button 
+                  type="submit"
+                  disabled={isLoading || !tripData.company || !tripData.terminal || !tripData.drop_off_point || !tripData.car_no_plate || !tripData.driver_name || !tripData.receipt_no}
+                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      {id ? 'Updating Trip...' : 'Creating Trip...'}
+                    </>
+                  ) : (
+                    <>
+                      <svg className="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      {id ? 'Update Trip' : 'Create Trip'}
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+        
+        {/* Copyright footer */}
+        <div className="py-3 px-6 mt-6 bg-white border border-gray-200 rounded-md text-center text-gray-500 text-sm">
+          © {new Date().getFullYear()} Shawket Ibrahim. All rights reserved.
         </div>
       </div>
-      
-      {/* Copyright footer */}
-      <div className="py-3 px-6 mt-6 bg-white border border-gray-200 rounded-md text-center text-gray-500 text-sm">
-        © {new Date().getFullYear()} Shawket Ibrahim. All rights reserved.
-      </div>
-    </div>
-  );
-};
-
-export default TripForm;
+    );
+  };
+  
+  export default TripForm;

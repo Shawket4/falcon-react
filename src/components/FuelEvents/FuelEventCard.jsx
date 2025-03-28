@@ -81,21 +81,25 @@ const FuelEventCard = ({ carPlate, carData, navigate, isMobile }) => {
               <h3 className="font-semibold text-lg">{carPlate}</h3>
             </div>
             <div className="flex items-center">
-              <div className="bg-blue-50 rounded-lg p-2 text-center mr-3">
-                <div className="text-xs text-gray-500">Last Fuel Up</div>
-                <div className="font-medium text-blue-700">
-                  {format(carData.lastUpdated, 'MMM d')}
-                </div>
+              <div className="flex items-center">
+                {isExpanded ? 
+                  <ChevronUp className="w-5 h-5 text-gray-500" /> : 
+                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                }
               </div>
-              {isExpanded ? 
-                <ChevronUp className="w-5 h-5 text-gray-500" /> : 
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-              }
             </div>
           </div>
           
           {/* Stats Summary - Always visible */}
-          <div className="grid grid-cols-3 gap-3 mt-3">
+          <div className="grid grid-cols-4 gap-3 mt-3">
+            <div className="bg-gray-50 p-2 rounded-lg text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Calendar className="w-3 h-3 text-purple-500" />
+                <span className="text-xs text-gray-500">Last</span>
+              </div>
+              <div className="font-medium">{format(carData.lastUpdated, 'MMM d')}</div>
+            </div>
+            
             <div className="bg-gray-50 p-2 rounded-lg text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Droplet className="w-3 h-3 text-blue-500" />

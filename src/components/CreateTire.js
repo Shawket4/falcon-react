@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
+import { Camera, X } from 'lucide-react';
 
 function CreateTire() {
   const navigate = useNavigate();
+  const videoRef = useRef(null);
+  const photoRef = useRef(null);
   const [tireData, setTireData] = useState({
     serial: '',
     brand: '',
@@ -16,6 +19,11 @@ function CreateTire() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({});
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [stream, setStream] = useState(null);
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [processing, setProcessing] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,6 +59,142 @@ function CreateTire() {
     }
   };
 
+  // Start the camera
+  const startCamera = async () => {
+    try {
+      setShowCamera(true);
+      setCameraActive(true);
+      
+      // Check if camera API is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API is not supported in this browser or environment');
+      }
+      
+      const constraints = {
+        video: { 
+          facingMode: 'environment', // Use the back camera if available
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(mediaStream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play();
+      }
+    } catch (err) {
+      console.error('Camera error:', err);
+      setError('Failed to access camera: ' + (err.message || 'Camera not available'));
+      setShowCamera(false);
+      setCameraActive(false);
+      
+      // Fallback to manual entry mode
+      setTimeout(() => {
+        setError('Please enter the DOT code manually');
+      }, 3000);
+    }
+  };
+
+  // Stop the camera
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+    setCameraActive(false);
+    setCapturedImage(null);
+  };
+
+  // Capture photo from camera
+  const capturePhoto = () => {
+    if (!videoRef.current || !photoRef.current) return;
+    
+    const video = videoRef.current;
+    const canvas = photoRef.current;
+    const context = canvas.getContext('2d');
+    
+    // Set canvas dimensions to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw the current frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Get the captured image as data URL
+    const imageData = canvas.toDataURL('image/jpeg');
+    setCapturedImage(imageData);
+    
+    // Stop the camera after capturing
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setCameraActive(false);
+  };
+
+  // Process the captured image to extract DOT code
+  const processImage = () => {
+    setProcessing(true);
+    
+    // Simulate OCR processing
+    // In a real implementation, you would:
+    // 1. Send the image to a server with OCR capabilities
+    // 2. Use a client-side OCR library (like Tesseract.js)
+    // 3. Call a cloud OCR API (like Google Cloud Vision)
+    
+    setTimeout(() => {
+      // Extract DOT code from the image captured
+      // For this example, we're simulating finding "DOT J3J9 1001" from the image
+      const extractedDOT = "DOT J3J9 1001";
+      
+      // Update the serial field with the detected DOT code
+      setTireData(prev => ({ ...prev, serial: extractedDOT }));
+      
+      // Close the camera view
+      setShowCamera(false);
+      setCapturedImage(null);
+      setProcessing(false);
+    }, 2000);
+  };
+
+  // Retake photo
+  const retakePhoto = async () => {
+    setCapturedImage(null);
+    
+    try {
+      // Check if camera API is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API is not supported in this browser or environment');
+      }
+      
+      // Restart the camera
+      const constraints = {
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(mediaStream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play();
+        setCameraActive(true);
+      }
+    } catch (err) {
+      console.error('Camera restart error:', err);
+      setError('Failed to restart camera: ' + (err.message || 'Camera not available'));
+      stopCamera(); // Close camera modal on error
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       {/* Back button */}
@@ -68,6 +212,91 @@ function CreateTire() {
         </svg>
         Back to Tire Inventory
       </button>
+      
+      {/* Camera Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="bg-white rounded-lg shadow-xl overflow-hidden w-full max-w-lg">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">
+                {capturedImage ? 'Confirm DOT Code' : 'Capture DOT Code'}
+              </h3>
+              <button 
+                onClick={stopCamera}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              {capturedImage ? (
+                <div className="space-y-4">
+                  <div className="bg-black flex justify-center">
+                    <img 
+                      src={capturedImage} 
+                      alt="Captured DOT code" 
+                      className="max-h-64 max-w-full object-contain"
+                    />
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={retakePhoto}
+                      disabled={processing}
+                      className="flex-1 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Retake
+                    </button>
+                    <button
+                      onClick={processImage}
+                      disabled={processing}
+                      className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      {processing ? (
+                        <span className="flex items-center justify-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </span>
+                      ) : (
+                        'Confirm & Extract'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-black relative flex justify-center">
+                    <video 
+                      ref={videoRef} 
+                      className="max-h-64 max-w-full"
+                      autoPlay
+                      playsInline
+                      muted
+                    />
+                    <div className="absolute inset-0 border-2 border-yellow-400 border-dashed opacity-50 pointer-events-none"></div>
+                    <div className="absolute bottom-2 left-2 right-2 text-white text-xs bg-black bg-opacity-50 p-1 rounded">
+                      Position the DOT code within the frame and ensure good lighting
+                    </div>
+                  </div>
+                  <button
+                    onClick={capturePhoto}
+                    disabled={!cameraActive}
+                    className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Capture DOT Code
+                  </button>
+                </div>
+              )}
+              
+              {/* Hidden canvas for capturing still image */}
+              <canvas ref={photoRef} style={{ display: 'none' }} />
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Main card */}
       <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -103,20 +332,31 @@ function CreateTire() {
           )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Serial Number */}
+            {/* Serial Number with Camera Button */}
             <div className="relative">
-              <input
-                id="serial"
-                name="serial"
-                type="text"
-                required
-                value={tireData.serial}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`peer block w-full px-4 py-3 rounded-xl border-2 border-gray-200 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200
-                  ${touched.serial && !tireData.serial ? 'border-red-300 focus:ring-red-500' : ''}`}
-                placeholder="Serial Number"
-              />
+              <div className="flex">
+                <input
+                  id="serial"
+                  name="serial"
+                  type="text"
+                  required
+                  value={tireData.serial}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`peer block w-full px-4 py-3 rounded-l-xl border-2 border-r-0 border-gray-200 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200
+                    ${touched.serial && !tireData.serial ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  placeholder="DOT Code"
+                />
+                <button 
+                  type="button"
+                  onClick={startCamera}
+                  className="flex items-center justify-center px-4 border-2 border-gray-200 border-l-0 rounded-r-xl bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
+                  title="Scan DOT code with camera (if available)"
+                >
+                  <Camera className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">Example format: DOT J3J9 1001</p>
               <label
                 htmlFor="serial"
                 className={`absolute left-2 -top-2.5 px-1 text-sm transition-all duration-200 
@@ -125,10 +365,10 @@ function CreateTire() {
                   bg-white
                   ${touched.serial && !tireData.serial ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-600'}`}
               >
-                Serial Number *
+                DOT Code *
               </label>
               {touched.serial && !tireData.serial && (
-                <p className="mt-1 text-xs text-red-500">Serial number is required</p>
+                <p className="mt-1 text-xs text-red-500">DOT code is required</p>
               )}
             </div>
             

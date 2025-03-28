@@ -9,3 +9,5 @@ export { default as LoadingState } from './LoadingState';
 export { default as ErrorState } from './ErrorState';
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as FuelEventDetails } from './FuelEventDetails';
+export { default as AddFuelEvent } from './AddFuelEvent';
+export { default as EditFuelEvent } from './EditFuelEvent';

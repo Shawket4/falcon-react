@@ -2,10 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Original imports
-import AllDrivers from './components/AllDrivers';
-import DriverDetails from './components/DriverDetails';
-import DriverLoans from './components/DriverLoans';
-import AddDriverLoan from './components/AddDriverLoan';
 import TruckList from './components/TruckList';
 import TruckDetail from './components/TruckDetail';
 import TireList from './components/TireList';
@@ -13,6 +9,7 @@ import CreateTruck from './components/CreateTruck';
 import CreateTire from './components/CreateTire';
 import Login from './components/Login';
 import Layout from './components/Layout';
+import { AllDrivers, DriverDetails, DriverLoans, AddDriverLoan } from './components/Drivers';
 import {FuelEventsList, FuelEventDetails, AddFuelEvent, EditFuelEvent} from './components/FuelEvents';
 import { AuthProvider } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';

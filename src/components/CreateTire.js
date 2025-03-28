@@ -142,7 +142,7 @@ function CreateTire() {
     setCapturedImage(null);
   };
 
-  // Capture photo from camera with better focus for OCR
+  // Capture photo from camera with enhanced image processing for OCR
   const capturePhoto = () => {
     if (!videoRef.current || !photoRef.current) return;
     
@@ -157,30 +157,56 @@ function CreateTire() {
     // Draw the current frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    // Image processing to improve OCR results
+    // Advanced image processing to improve OCR results for embossed DOT codes
     try {
-      // Increase contrast to make text more visible
+      // Get image data
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
       
-      // Simple contrast adjustment
-      const contrast = 1.5; // Increase contrast
-      const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-      
+      // Convert to grayscale first (helps with contrast enhancement)
       for (let i = 0; i < data.length; i += 4) {
-        data[i] = factor * (data[i] - 128) + 128; // red
-        data[i+1] = factor * (data[i+1] - 128) + 128; // green
-        data[i+2] = factor * (data[i+2] - 128) + 128; // blue
+        const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+        data[i] = avg;     // red
+        data[i+1] = avg;   // green
+        data[i+2] = avg;   // blue
       }
       
+      // Apply contrast enhancement
+      const contrast = 2.5; // Stronger contrast for embossed text
+      const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+      
+      // Find average brightness to determine if we need to invert
+      let totalBrightness = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        totalBrightness += data[i]; // Just use red channel since we've grayscaled
+      }
+      const avgBrightness = totalBrightness / (data.length / 4);
+      
+      // Apply contrast adjustment
+      for (let i = 0; i < data.length; i += 4) {
+        // Apply contrast
+        data[i] = factor * (data[i] - 128) + 128;    // red
+        data[i+1] = factor * (data[i+1] - 128) + 128; // green
+        data[i+2] = factor * (data[i+2] - 128) + 128; // blue
+        
+        // Threshold to make more black and white
+        const threshold = 140;
+        if (data[i] > threshold) {
+          data[i] = data[i+1] = data[i+2] = 255; // white
+        } else {
+          data[i] = data[i+1] = data[i+2] = 0;   // black
+        }
+      }
+      
+      // Put processed image back
       context.putImageData(imageData, 0, 0);
     } catch (err) {
       console.error("Error during image processing:", err);
       // Continue even if image processing fails
     }
     
-    // Get the captured image as data URL
-    const imageData = canvas.toDataURL('image/jpeg', 0.95); // High quality JPEG
+    // Get the captured image as data URL (high quality)
+    const imageData = canvas.toDataURL('image/jpeg', 1.0); 
     setCapturedImage(imageData);
     
     // Stop the camera after capturing
@@ -214,33 +240,56 @@ function CreateTire() {
       );
       
       // Get the recognized text
-      const recognizedText = result.data.text.trim();
-      console.log("OCR Result:", recognizedText);
+      let recognizedText = result.data.text.trim();
+      console.log("Raw OCR Result:", recognizedText);
       
       // Check if any text was detected
       if (!recognizedText) {
         throw new Error("No text detected in image. Please try again with better lighting or focus.");
       }
       
-      // Look for DOT pattern in the text
-      // This regex will try to find "DOT" followed by any characters
-      const dotPattern = /DOT\s+([A-Z0-9\s]+)/i;
-      const match = recognizedText.match(dotPattern);
+      // Clean up the text - remove line breaks and extra spaces
+      recognizedText = recognizedText.replace(/\\n/g, " ").replace(/\s+/g, " ");
       
+      // Try different patterns to find a DOT-like code
       let codeOnly = "";
       
-      if (match && match[1]) {
+      // Pattern 1: Look for "DOT" followed by characters
+      const dotPattern = /DOT\s+([A-Z0-9\s]+)/i;
+      const dotMatch = recognizedText.match(dotPattern);
+      
+      // Pattern 2: Look for groups of letters and numbers that match typical DOT format (e.g., "J3J9 1001")
+      const codePattern = /([A-Z][0-9][A-Z][0-9][\s]*[0-9]{3,4})/i;
+      const codeMatch = recognizedText.match(codePattern);
+      
+      if (dotMatch && dotMatch[1]) {
         // Found DOT pattern, extract the code part
-        codeOnly = match[1].trim();
-        console.log("Extracted code:", codeOnly);
-      } else {
-        // No DOT pattern found, use the whole text but show a warning
-        codeOnly = recognizedText;
-        setError("Warning: No DOT prefix detected in the scanned code. Please verify the input.");
+        codeOnly = dotMatch[1].trim();
+        console.log("Extracted DOT code:", codeOnly);
+      } 
+      else if (codeMatch && codeMatch[1]) {
+        // Found a pattern that looks like a DOT code
+        codeOnly = codeMatch[1].trim();
+        console.log("Extracted code pattern:", codeOnly);
+        setError("No DOT prefix found, but extracted a likely code. Please verify.");
+      } 
+      else {
+        // No recognizable pattern, take our best guess
+        // Remove common OCR errors and non-alphanumeric characters
+        codeOnly = recognizedText
+          .replace(/[^A-Z0-9\s]/gi, '')  // Remove non-alphanumeric chars
+          .trim();
+          
+        setError("Could not identify a clear DOT code pattern. Please verify or enter manually.");
       }
       
-      // Update the serial field with just the code part
-      setTireData(prev => ({ ...prev, serial: codeOnly }));
+      // Only update if we found something reasonable (at least 4 chars)
+      if (codeOnly && codeOnly.length >= 4) {
+        // Update the serial field with our best extraction
+        setTireData(prev => ({ ...prev, serial: codeOnly }));
+      } else {
+        throw new Error("Could not extract a valid code. Please try again or enter manually.");
+      }
       
       // Close the camera view
       setShowCamera(false);
@@ -368,9 +417,11 @@ function CreateTire() {
                       playsInline
                       muted
                     />
-                    <div className="absolute inset-0 border-2 border-yellow-400 border-dashed opacity-50 pointer-events-none"></div>
+                    <div className="absolute inset-0 border-2 border-yellow-400 border-dashed opacity-50 pointer-events-none flex items-center justify-center">
+                      <div className="w-1/2 h-16 border-2 border-red-500 border-solid opacity-70"></div>
+                    </div>
                     <div className="absolute bottom-2 left-2 right-2 text-white text-xs bg-black bg-opacity-70 p-2 rounded">
-                      Position the DOT code in good lighting with high contrast. Hold steady for best results.
+                      Position the DOT code inside the red box. Make sure it's well lit and the camera is steady.
                     </div>
                   </div>
                   <button

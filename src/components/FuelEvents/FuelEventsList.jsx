@@ -1,10 +1,9 @@
-// File: FuelEventsList.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Search, Filter } from 'lucide-react';
+import { PlusCircle, Search, Filter, Calendar } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { useFuelEventsState } from './FuelEventStates';
-import { parseISO, isWithinInterval, normalizeText } from './DateUtils';
+import { parseISO, isWithinInterval, normalizeText, format } from './DateUtils';
 import ErrorBoundary from './ErrorBoundary';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
@@ -14,58 +13,89 @@ import DateFilterModal from './DateFilterModal';
 import GlobalStatistics from './GlobalStatistics';
 import ActiveFilters from './ActiveFilters';
 
-
 const FuelEventsList = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [dateRange, setDateRange] = useState({
+  const [localDateRange, setLocalDateRange] = useState({
     startDate: null,
     endDate: null
   });
   
-  const { events, loading, error, fetchEvents } = useFuelEventsState();
+  const { 
+    events, 
+    loading, 
+    error, 
+    fetchEvents, 
+    activeFilter, 
+    setActiveFilter 
+  } = useFuelEventsState();
   
   // Fetch events on component mount if authenticated
   useEffect(() => {
     if (isAuthenticated) {
+      // Initial fetch will use default date range (current month) from backend
       fetchEvents();
     }
   }, [fetchEvents, isAuthenticated]);
 
-  // Reset date range filter
-  const resetDateFilter = () => {
-    setDateRange({ startDate: null, endDate: null });
+  // Update local date range when active filter changes
+  useEffect(() => {
+    setLocalDateRange(activeFilter);
+  }, [activeFilter]);
+
+  // Apply date filter
+  const applyDateFilter = (dateRange) => {
+    // Send the new date range to fetch data from the backend
+    fetchEvents(dateRange);
   };
 
-  // Memoized filtering and grouping
-  const processedEvents = useMemo(() => {
+  // Reset date range filter
+  const resetDateFilter = () => {
+    const emptyDateRange = { startDate: null, endDate: null };
+    setLocalDateRange(emptyDateRange);
+    // Fetch with null values to use backend defaults (current month)
+    fetchEvents(emptyDateRange);
+  };
+
+  // Apply current month filter
+  const applyCurrentMonthFilter = () => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    const currentMonthRange = {
+      startDate: firstDay,
+      endDate: lastDay
+    };
+    
+    setLocalDateRange(currentMonthRange);
+    applyDateFilter(currentMonthRange);
+  };
+
+  // Memoized filtering for client-side search
+  const filteredEvents = useMemo(() => {
     // Normalize search term
     const normalizedSearch = normalizeText(searchTerm);
     
-    // Filter events based on search and date range
-    const filteredEvents = events.filter(event => {
+    // If no search term, return all events
+    if (!normalizedSearch) return events;
+    
+    // Filter events based on search
+    return events.filter(event => {
       // Normalize event details for searching
       const normalizedPlate = normalizeText(event.car_no_plate);
       const normalizedDriver = normalizeText(event.driver_name);
       
       // Search filter
-      const matchesSearch = 
-        normalizedPlate.includes(normalizedSearch) ||
-        normalizedDriver.includes(normalizedSearch);
-      
-      // Date range filter
-      const eventDate = parseISO(event.date);
-      const isWithinDateRange = !dateRange.startDate || !dateRange.endDate || 
-        isWithinInterval(eventDate, {
-          start: dateRange.startDate,
-          end: dateRange.endDate
-        });
-      
-      return matchesSearch && isWithinDateRange;
+      return normalizedPlate.includes(normalizedSearch) ||
+             normalizedDriver.includes(normalizedSearch);
     });
-    
+  }, [events, searchTerm]);
+
+  // Group events by car plate
+  const processedEvents = useMemo(() => {
     // Group by car plate and calculate stats
     const groupedEvents = filteredEvents.reduce((acc, event) => {
       const carPlate = event.car_no_plate;
@@ -142,7 +172,7 @@ const FuelEventsList = () => {
     });
     
     return groupedEvents;
-  }, [events, searchTerm, dateRange]);
+  }, [filteredEvents]);
 
   // Get sorted car plates based on most recent event date
   const sortedCarPlates = useMemo(() => {
@@ -216,6 +246,11 @@ const FuelEventsList = () => {
     };
   }, [sortedCarPlates, processedEvents]);
 
+  // Check if custom filter is active (not the default current month)
+  const isCustomFilter = useMemo(() => {
+    return localDateRange.startDate !== null || localDateRange.endDate !== null;
+  }, [localDateRange]);
+
   return (
     <ErrorBoundary>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
@@ -245,7 +280,7 @@ const FuelEventsList = () => {
             <button 
               onClick={() => setShowFilters(!showFilters)}
               className={`p-2 rounded-lg transition-colors ${
-                showFilters 
+                showFilters || isCustomFilter
                   ? 'bg-blue-500 text-white hover:bg-blue-600' 
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
@@ -268,18 +303,21 @@ const FuelEventsList = () => {
         {/* Date Filter Modal */}
         {showFilters && (
           <DateFilterModal 
-            dateRange={dateRange} 
-            setDateRange={setDateRange} 
+            dateRange={localDateRange} 
+            setDateRange={setLocalDateRange}
+            applyDateFilter={applyDateFilter}
             resetDateFilter={resetDateFilter} 
+            applyCurrentMonthFilter={applyCurrentMonthFilter}
             setShowFilters={setShowFilters}
           />
         )}
         
         {/* Active Filters Display */}
-        {(dateRange.startDate || dateRange.endDate) && (
+        {isCustomFilter && (
           <ActiveFilters 
-            dateRange={dateRange}
+            dateRange={localDateRange}
             resetDateFilter={resetDateFilter}
+            applyCurrentMonthFilter={applyCurrentMonthFilter}
           />
         )}
         

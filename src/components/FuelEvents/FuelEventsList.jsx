@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Search, Filter, Calendar } from 'lucide-react';
+import { PlusCircle, Search, Filter } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { useFuelEventsState } from './FuelEventStates';
-import { parseISO, isWithinInterval, normalizeText, format } from './DateUtils';
+import { parseISO, normalizeText, format } from './DateUtils';
 import ErrorBoundary from './ErrorBoundary';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';

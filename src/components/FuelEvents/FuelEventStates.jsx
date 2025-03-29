@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import apiClient from '../../apiClient';
-import { format } from '../utils/dateUtils';
+import { format } from './DateUtils';
 
 export const useFuelEventsState = () => {
   const [events, setEvents] = useState([]);

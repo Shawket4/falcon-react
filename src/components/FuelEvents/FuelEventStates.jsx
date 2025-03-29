@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '../AuthContext';
 import apiClient from '../../apiClient';
-import { format } from './DateUtils';
+import { format } from '../utils/dateUtils';
 
 export const useFuelEventsState = () => {
   const [events, setEvents] = useState([]);
@@ -25,13 +25,13 @@ export const useFuelEventsState = () => {
     setLoading(true);
     setError(null);
     
-    // Update active filter if dateRange is provided
+    // Use the date range for the request (either from the parameter or from state)
+    const filterToUse = dateRange || activeFilter;
+    
+    // Update active filter if dateRange is provided (but after using it to avoid race conditions)
     if (dateRange) {
       setActiveFilter(dateRange);
     }
-    
-    // Use the date range for the request (either from the parameter or from state)
-    const filterToUse = dateRange || activeFilter;
     
     try {
       // Build query parameters

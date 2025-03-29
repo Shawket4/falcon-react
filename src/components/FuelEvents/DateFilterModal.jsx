@@ -24,7 +24,7 @@ const DateFilterModal = ({
       endDate: selectedRange.to
     };
     
-    setDateRange(newRange);
+    // Just call applyDateFilter which will update both the UI and fetch data
     applyDateFilter(newRange);
     setShowFilters(false);
   };

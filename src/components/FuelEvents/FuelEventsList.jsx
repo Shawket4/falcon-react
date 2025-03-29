@@ -54,8 +54,8 @@ const FuelEventsList = () => {
   // Reset date range filter
   const resetDateFilter = () => {
     const emptyDateRange = { startDate: null, endDate: null };
-    setLocalDateRange(emptyDateRange);
     // Fetch with null values to use backend defaults (current month)
+    // This will also update localDateRange through activeFilter changes
     fetchEvents(emptyDateRange);
   };
 
@@ -70,7 +70,7 @@ const FuelEventsList = () => {
       endDate: lastDay
     };
     
-    setLocalDateRange(currentMonthRange);
+    // No need to set local date range here, it will be updated by the fetchEvents call
     applyDateFilter(currentMonthRange);
   };
 

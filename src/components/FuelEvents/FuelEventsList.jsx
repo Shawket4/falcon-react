@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Search, Filter } from 'lucide-react';
+import { PlusCircle, Search, Filter, Calendar } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { useFuelEventsState } from './FuelEventStates';
-import { parseISO, normalizeText, format } from './DateUtils';
+import { parseISO, isWithinInterval, normalizeText, format } from './DateUtils';
 import ErrorBoundary from './ErrorBoundary';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
@@ -38,7 +38,9 @@ const FuelEventsList = () => {
       // Initial fetch will use default date range (current month) from backend
       fetchEvents();
     }
-  }, [fetchEvents, isAuthenticated]);
+    // Only run this effect once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   // Update local date range when active filter changes
   useEffect(() => {
@@ -46,21 +48,20 @@ const FuelEventsList = () => {
   }, [activeFilter]);
 
   // Apply date filter
-  const applyDateFilter = (dateRange) => {
+  const applyDateFilter = useCallback((dateRange) => {
     // Send the new date range to fetch data from the backend
     fetchEvents(dateRange);
-  };
+  }, [fetchEvents]);
 
   // Reset date range filter
-  const resetDateFilter = () => {
+  const resetDateFilter = useCallback(() => {
     const emptyDateRange = { startDate: null, endDate: null };
     // Fetch with null values to use backend defaults (current month)
-    // This will also update localDateRange through activeFilter changes
     fetchEvents(emptyDateRange);
-  };
+  }, [fetchEvents]);
 
   // Apply current month filter
-  const applyCurrentMonthFilter = () => {
+  const applyCurrentMonthFilter = useCallback(() => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -71,8 +72,8 @@ const FuelEventsList = () => {
     };
     
     // No need to set local date range here, it will be updated by the fetchEvents call
-    applyDateFilter(currentMonthRange);
-  };
+    fetchEvents(currentMonthRange);
+  }, [fetchEvents]);
 
   // Memoized filtering for client-side search
   const filteredEvents = useMemo(() => {

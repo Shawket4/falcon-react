@@ -19,13 +19,20 @@ const DateFilterModal = ({
   
   // Apply the selected range when clicking the Apply button
   const handleApplyFilter = () => {
-    const newRange = {
-      startDate: selectedRange.from,
-      endDate: selectedRange.to
-    };
+    // Only apply the filter if there's an actual change
+    if (
+      (selectedRange.from !== dateRange.startDate) || 
+      (selectedRange.to !== dateRange.endDate)
+    ) {
+      const newRange = {
+        startDate: selectedRange.from,
+        endDate: selectedRange.to
+      };
+      
+      // Call applyDateFilter which will update both the UI and fetch data
+      applyDateFilter(newRange);
+    }
     
-    // Just call applyDateFilter which will update both the UI and fetch data
-    applyDateFilter(newRange);
     setShowFilters(false);
   };
   

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import apiClient from '../../apiClient';
 import { format } from './DateUtils';
@@ -15,6 +15,9 @@ export const useFuelEventsState = () => {
     endDate: null
   });
   
+  // Use a ref to track the current request to prevent duplicate calls
+  const currentRequestRef = useRef(null);
+  
   const fetchEvents = useCallback(async (dateRange = null) => {
     // Don't fetch if not authenticated
     if (!isAuthenticated) {
@@ -22,32 +25,43 @@ export const useFuelEventsState = () => {
       return;
     }
     
-    setLoading(true);
-    setError(null);
-    
     // Use the date range for the request (either from the parameter or from state)
     const filterToUse = dateRange || activeFilter;
     
-    // Update active filter if dateRange is provided (but after using it to avoid race conditions)
-    if (dateRange) {
-      setActiveFilter(dateRange);
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (filterToUse.startDate) {
+      params.append('startDate', format(filterToUse.startDate, 'yyyy-MM-dd'));
+    }
+    if (filterToUse.endDate) {
+      params.append('endDate', format(filterToUse.endDate, 'yyyy-MM-dd'));
     }
     
+    // Create a unique request ID based on the params
+    const requestId = params.toString();
+    
+    // Check if this is a duplicate request
+    if (currentRequestRef.current === requestId) {
+      return; // Skip duplicate request
+    }
+    
+    // Store current request ID
+    currentRequestRef.current = requestId;
+    
+    setLoading(true);
+    setError(null);
+    
     try {
-      // Build query parameters
-      const params = new URLSearchParams();
-      if (filterToUse.startDate) {
-        params.append('startDate', format(filterToUse.startDate, 'yyyy-MM-dd'));
-      }
-      if (filterToUse.endDate) {
-        params.append('endDate', format(filterToUse.endDate, 'yyyy-MM-dd'));
-      }
-      
       // Use apiClient which already handles the auth headers and error intercepting
       const response = await apiClient.get(
-        `/api/protected/GetFuelEvents${params.toString() ? '?' + params.toString() : ''}`
+        `/api/protected/GetFuelEvents${requestId ? '?' + requestId : ''}`
       );
       setEvents(response.data);
+      
+      // Update active filter after successful request
+      if (dateRange) {
+        setActiveFilter(dateRange);
+      }
     } catch (err) {
       // The axios interceptor will handle 401 errors automatically
       setError(err.response?.data?.error || 'Failed to fetch events');

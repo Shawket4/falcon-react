@@ -1,7 +1,7 @@
-// File: components/trips/TripList.jsx
 import React, { useState, useEffect } from 'react';
 import apiClient from '../../apiClient';
 
+// Import existing trip components
 import SearchBar from './SearchBar';
 import FilterPanel from './FilterPanel';
 import ActiveFilters from './ActiveFilters';
@@ -11,9 +11,16 @@ import MobileTripList from './MobileTripList';
 import Pagination from './Pagination';
 import ListActions from './ListActions';
 import NoResultsAlert from './NoResultsAlert';
+import TripStatistics from './TripStatistics'; // Import the new statistics component
+
+// Import icons
+import { List, BarChart3 } from 'lucide-react';
 
 const TripList = () => {
-  // State declarations
+  // State for tab management
+  const [activeTab, setActiveTab] = useState('list'); // 'list' or 'statistics'
+
+  // State declarations for trip list
   const [trips, setTrips] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,8 +49,12 @@ const TripList = () => {
 
   useEffect(() => {
     fetchCompanies();
-    fetchTrips();
-  }, [currentPage, filters, searchTerm]);
+    
+    // Only fetch trips when on the list tab
+    if (activeTab === 'list') {
+      fetchTrips();
+    }
+  }, [currentPage, filters, searchTerm, activeTab]);
 
   const fetchCompanies = async () => {
     try {
@@ -280,7 +291,35 @@ const TripList = () => {
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-3 sm:px-4 py-3 sm:py-4">
-          <h2 className="text-lg sm:text-xl font-bold text-white">Trip Management</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="text-lg sm:text-xl font-bold text-white">Trip Management</h2>
+            
+            {/* Tab Switch Buttons */}
+            <div className="flex bg-blue-700 rounded-md">
+              <button
+                className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'list' 
+                    ? 'bg-white text-blue-700' 
+                    : 'text-white hover:bg-blue-600'
+                }`}
+                onClick={() => setActiveTab('list')}
+              >
+                <List size={16} className="mr-1.5" />
+                Trip List
+              </button>
+              <button
+                className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'statistics' 
+                    ? 'bg-white text-blue-700' 
+                    : 'text-white hover:bg-blue-600'
+                }`}
+                onClick={() => setActiveTab('statistics')}
+              >
+                <BarChart3 size={16} className="mr-1.5" />
+                Statistics
+              </button>
+            </div>
+          </div>
         </div>
         
         <div className="p-3 sm:p-4 md:p-6 space-y-4">
@@ -291,77 +330,97 @@ const TripList = () => {
             </div>
           )}
           
-          {/* Global Search Bar */}
-          <SearchBar
-            searchTerm={searchTerm}
-            isSearching={isSearching}
-            onChange={handleSearchChange}
-            onSearch={handleSearch}
-            onKeyPress={handleSearchKeyPress}
-            onClear={() => setSearchTerm('')}
-          />
-          
-          {/* Filter panel */}
+          {/* Shared filter panel for both tabs */}
           <FilterPanel
             companies={companies}
             filters={filters}
             onChange={handleFilterChange}
             onReset={handleResetFilters}
           />
-          
-          {/* Active filters/search tags */}
-          {(searchTerm || filters.company || filters.startDate || filters.endDate) && (
-            <ActiveFilters
-              searchTerm={searchTerm}
-              filters={filters}
-              onClearSearch={() => setSearchTerm('')}
-              onClearCompany={() => setFilters({...filters, company: ''})}
-              onClearDates={() => setFilters({...filters, startDate: '', endDate: ''})}
-            />
-          )}
-          
-          {/* Actions */}
-          <ListActions
-            isLoading={isLoading}
-            isExporting={isExporting}
-            tripsCount={trips.length}
-            onExport={fetchAllTrips}
-          />
-          
-          {/* Search and filter results indicator */}
-          {(searchTerm || filters.company || filters.startDate || filters.endDate) && trips.length === 0 && !isLoading && (
-            <NoResultsAlert />
-          )}
-          
-          {/* Desktop Trip list */}
-          <div className="hidden lg:block">
-            <TripTable
-              isLoading={isLoading}
-              trips={sortedTrips}
-              sortConfig={sortConfig}
-              onSort={requestSort}
-              onDelete={openDeleteModal}
-            />
-          </div>
-          
-          {/* Mobile Trip List */}
-          <div className="block lg:hidden">
-            <MobileTripList
-              isLoading={isLoading}
-              trips={sortedTrips}
-              visibleDetailId={showMobileDetails}
-              onToggleDetails={toggleMobileDetails}
-              onDelete={openDeleteModal}
-            />
-          </div>
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
+
+          {/* Display content based on active tab */}
+          {activeTab === 'list' ? (
+            // Trip List Tab Content
+            <>
+              {/* Global Search Bar - only visible in list view */}
+              <SearchBar
+                searchTerm={searchTerm}
+                isSearching={isSearching}
+                onChange={handleSearchChange}
+                onSearch={handleSearch}
+                onKeyPress={handleSearchKeyPress}
+                onClear={() => setSearchTerm('')}
+              />
+              
+              {/* Active filters/search tags */}
+              {(searchTerm || filters.company || filters.startDate || filters.endDate) && (
+                <ActiveFilters
+                  searchTerm={searchTerm}
+                  filters={filters}
+                  onClearSearch={() => setSearchTerm('')}
+                  onClearCompany={() => setFilters({...filters, company: ''})}
+                  onClearDates={() => setFilters({...filters, startDate: '', endDate: ''})}
+                />
+              )}
+              
+              {/* Actions */}
+              <ListActions
+                isLoading={isLoading}
+                isExporting={isExporting}
+                tripsCount={trips.length}
+                onExport={fetchAllTrips}
+              />
+              
+              {/* Search and filter results indicator */}
+              {(searchTerm || filters.company || filters.startDate || filters.endDate) && trips.length === 0 && !isLoading && (
+                <NoResultsAlert />
+              )}
+              
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex justify-center p-8">
+                  <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              
+              {/* Desktop Trip list */}
+              {!isLoading && (
+                <div className="hidden lg:block">
+                  <TripTable
+                    isLoading={isLoading}
+                    trips={sortedTrips}
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                    onDelete={openDeleteModal}
+                  />
+                </div>
+              )}
+              
+              {/* Mobile Trip List */}
+              {!isLoading && (
+                <div className="block lg:hidden">
+                  <MobileTripList
+                    isLoading={isLoading}
+                    trips={sortedTrips}
+                    visibleDetailId={showMobileDetails}
+                    onToggleDetails={toggleMobileDetails}
+                    onDelete={openDeleteModal}
+                  />
+                </div>
+              )}
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              )}
+            </>
+          ) : (
+            // Statistics Tab Content
+            <TripStatistics filters={filters} />
           )}
         </div>
       </div>

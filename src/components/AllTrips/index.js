@@ -11,3 +11,4 @@ export { default as MobileTripList } from './MobileTripList';
 export { default as Pagination } from './Pagination';
 export { default as ListActions } from './ListActions';
 export { default as NoResultsAlert } from './NoResultsAlert';
+export { default as TripStatistics } from './TripStatistics';

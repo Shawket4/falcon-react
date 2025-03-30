@@ -1,8 +1,29 @@
 import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import apiClient from '../../apiClient';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer, 
+  Cell, 
+  PieChart, 
+  Pie 
+} from 'recharts';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const COLORS = [
+  '#3B82F6', // Blue
+  '#10B981', // Green
+  '#F59E0B', // Yellow
+  '#6366F1', // Indigo
+  '#EC4899', // Pink
+  '#8B5CF6'  // Purple
+];
+
 
 const TripStatistics = ({ filters }) => {
   // Function to get the first day of current month
@@ -203,13 +224,13 @@ const TripStatistics = ({ filters }) => {
   const hasCarRental = activeCompanyData && activeCompanyData.company === "TAQA";
 
   return (
-    <div className="space-y-4">
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 sm:p-4 rounded" role="alert">
-          <p className="font-medium">Error</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
+    <div className="container mx-auto px-4 py-6 space-y-6">
+    {/* Error Handling */}
+    {error && (
+      <div className="bg-red-50 border-l-4 border-red-500 p-4">
+        <p className="text-red-700 font-medium">{error}</p>
+      </div>
+    )}
       
       {/* Permission notification */}
       {!hasFinancialAccess && (
@@ -229,10 +250,10 @@ const TripStatistics = ({ filters }) => {
         </div>
       )}
       
-      {/* Loading indicator */}
-      {isLoading && (
-        <div className="flex justify-center p-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+       {/* Loading Indicator */}
+       {isLoading && (
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-600"></div>
         </div>
       )}
 

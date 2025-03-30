@@ -11,7 +11,7 @@ import MobileTripList from './MobileTripList';
 import Pagination from './Pagination';
 import ListActions from './ListActions';
 import NoResultsAlert from './NoResultsAlert';
-import TripStatistics from './TripStatistics'; // Import the statistics component
+import ResponsiveTripStatistics from './TripStatsController'; // Import the statistics component
 
 // Import icons
 import { List, BarChart3 } from 'lucide-react';
@@ -432,7 +432,7 @@ const TripList = () => {
             </>
           ) : (
             // Statistics Tab Content
-            <TripStatistics filters={filters} />
+            <ResponsiveTripStatistics filters={filters} />
           )}
         </div>
       </div>

@@ -11,12 +11,23 @@ import MobileTripList from './MobileTripList';
 import Pagination from './Pagination';
 import ListActions from './ListActions';
 import NoResultsAlert from './NoResultsAlert';
-import TripStatistics from './TripStatistics'; // Import the new statistics component
+import TripStatistics from './TripStatistics'; // Import the statistics component
 
 // Import icons
 import { List, BarChart3 } from 'lucide-react';
 
 const TripList = () => {
+  // Function to get the first day of current month
+  const getFirstDayOfMonth = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  };
+
+  // Function to get today's date
+  const getToday = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
   // State for tab management
   const [activeTab, setActiveTab] = useState('list'); // 'list' or 'statistics'
 
@@ -34,8 +45,8 @@ const TripList = () => {
   });
   const [filters, setFilters] = useState({
     company: '',
-    startDate: '',
-    endDate: ''
+    startDate: getFirstDayOfMonth(), // Default to first day of current month
+    endDate: getToday() // Default to today
   });
   // Global search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -168,6 +179,7 @@ const TripList = () => {
   };
 
   const handleResetFilters = () => {
+    // Reset to completely empty values
     setFilters({
       company: '',
       startDate: '',

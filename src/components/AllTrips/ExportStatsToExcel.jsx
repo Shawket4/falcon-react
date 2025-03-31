@@ -261,7 +261,9 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
         dateHeaderRow.getCell(i).style = dateHeaderStyle;
       }
       
-      const dateValueRow = worksheet.addRow(['', filters?.startDate || '', filters?.endDate || '']);
+      const startDate = filters && filters.startDate ? filters.startDate : '';
+      const endDate = filters && filters.endDate ? filters.endDate : '';
+      const dateValueRow = worksheet.addRow(['', startDate, endDate]);
       for (let i = 2; i <= 3; i++) {
         dateValueRow.getCell(i).style = dateValueStyle;
       }

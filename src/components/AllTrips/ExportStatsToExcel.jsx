@@ -45,7 +45,9 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
     'From': 'من',
     'To': 'إلى',
     'Statistics Report': 'تقرير الإحصائيات',
-    'Summary': 'ملخص'
+    'Summary': 'ملخص',
+    'Company Summary': 'ملخص الشركات',
+    'Details': 'تفاصيل'
   };
 
   // Translate text based on selected language
@@ -80,39 +82,6 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
     }).format(num);
   };
 
-  // Format as currency
-  const formatCurrency = (num) => {
-    if (num === undefined || num === null) return '$0.00';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(num);
-  };
-
-  // Apply cell styles to a range
-  const applyCellStyle = (ws, range, style) => {
-    const [startCell, endCell] = range.split(':');
-    const startCol = startCell.replace(/[0-9]/g, '');
-    const startRow = parseInt(startCell.replace(/[A-Z]/g, ''));
-    const endCol = endCell.replace(/[0-9]/g, '');
-    const endRow = parseInt(endCell.replace(/[A-Z]/g, ''));
-    
-    // Convert column letters to indices
-    const startColIndex = XLSX.utils.decode_col(startCol);
-    const endColIndex = XLSX.utils.decode_col(endCol);
-    
-    // Apply styles to each cell in the range
-    for (let row = startRow; row <= endRow; row++) {
-      for (let col = startColIndex; col <= endColIndex; col++) {
-        const cellRef = XLSX.utils.encode_cell({ r: row - 1, c: col });
-        if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' };
-        ws[cellRef].s = style;
-      }
-    }
-  };
-
   const exportToExcel = () => {
     if (!statistics || statistics.length === 0) {
       alert(language === 'arabic' ? 'لا توجد بيانات للتصدير' : 'No data to export');
@@ -122,157 +91,6 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
     try {
       // Create workbook
       const wb = XLSX.utils.book_new();
-      
-      // Set RTL for the entire workbook if Arabic
-      if (language === 'arabic') {
-        if (!wb.Workbook) wb.Workbook = {};
-        if (!wb.Workbook.Views) wb.Workbook.Views = [];
-        if (!wb.Workbook.Views[0]) wb.Workbook.Views[0] = {};
-        wb.Workbook.Views[0].RTL = true;
-      }
-      
-      // Styles
-      const reportTitleStyle = {
-        font: { bold: true, sz: 18, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "3B82F6" } },
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'center'
-        },
-        border: {
-          bottom: { style: 'medium', color: { rgb: "000000" } }
-        }
-      };
-      
-      const sectionTitleStyle = {
-        font: { bold: true, sz: 16, color: { rgb: "000000" } },
-        fill: { fgColor: { rgb: "E5E7EB" } },
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'center'
-        },
-        border: {
-          top: { style: 'thin', color: { rgb: "000000" } },
-          bottom: { style: 'thin', color: { rgb: "000000" } }
-        }
-      };
-      
-      const dateHeaderStyle = {
-        font: { bold: true, italic: true, sz: 12, color: { rgb: "4B5563" } },
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'center'
-        }
-      };
-      
-      const dateValueStyle = {
-        font: { sz: 12, color: { rgb: "4B5563" } },
-        alignment: { 
-          horizontal: 'center', 
-          vertical: 'center'
-        }
-      };
-      
-      const tableHeaderStyle = {
-        font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "3B82F6" } },
-        alignment: { 
-          horizontal: 'center', 
-          vertical: 'center',
-          wrapText: true
-        },
-        border: {
-          top: { style: 'thin', color: { rgb: "000000" } },
-          bottom: { style: 'thin', color: { rgb: "000000" } },
-          left: { style: 'thin', color: { rgb: "000000" } },
-          right: { style: 'thin', color: { rgb: "000000" } }
-        }
-      };
-      
-      const companyHeaderStyle = {
-        font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "10B981" } }, // Green
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'center'
-        },
-        border: {
-          top: { style: 'thin', color: { rgb: "000000" } },
-          bottom: { style: 'thin', color: { rgb: "000000" } }
-        }
-      };
-      
-      const cellStyle = {
-        alignment: { 
-          horizontal: 'center', 
-          vertical: 'center'
-        },
-        border: {
-          top: { style: 'thin', color: { rgb: "D1D5DB" } },
-          bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
-          left: { style: 'thin', color: { rgb: "D1D5DB" } },
-          right: { style: 'thin', color: { rgb: "D1D5DB" } }
-        }
-      };
-      
-      const groupStyle = {
-        font: { bold: true },
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'center'
-        },
-        border: {
-          top: { style: 'thin', color: { rgb: "D1D5DB" } },
-          bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
-          left: { style: 'thin', color: { rgb: "D1D5DB" } },
-          right: { style: 'thin', color: { rgb: "D1D5DB" } }
-        }
-      };
-      
-      const numberCellStyle = {
-        ...cellStyle,
-        numFmt: '#,##0.00'
-      };
-      
-      const currencyCellStyle = {
-        ...cellStyle,
-        numFmt: '$#,##0.00'
-      };
-      
-      const companyTotalStyle = {
-        font: { bold: true, sz: 12 },
-        fill: { fgColor: { rgb: "F3F4F6" } },
-        alignment: { 
-          horizontal: 'center', 
-          vertical: 'center'
-        },
-        border: {
-          top: { style: 'thin', color: { rgb: "000000" } },
-          bottom: { style: 'thin', color: { rgb: "000000" } },
-          left: { style: 'thin', color: { rgb: "000000" } },
-          right: { style: 'thin', color: { rgb: "000000" } }
-        }
-      };
-      
-      const grandTotalStyle = {
-        font: { bold: true, sz: 14 },
-        fill: { fgColor: { rgb: "E2E8F0" } },
-        alignment: { 
-          horizontal: 'center', 
-          vertical: 'center'
-        },
-        border: {
-          top: { style: 'double', color: { rgb: "000000" } },
-          bottom: { style: 'double', color: { rgb: "000000" } },
-          left: { style: 'thin', color: { rgb: "000000" } },
-          right: { style: 'thin', color: { rgb: "000000" } }
-        }
-      };
-
-      // Get date range for report header
-      const dateRange = filters ? 
-        `${filters.startDate || ''} to ${filters.endDate || ''}` : 
-        new Date().toLocaleDateString();
       
       // Create summary sheet with all data
       const summaryData = [];
@@ -372,7 +190,7 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
       statistics.forEach((company, companyIndex) => {
         if (company.details && company.details.length > 0) {
           // Add company heading
-          summaryData.push([translateCompanyName(company.company) + ' ' + translate('Details')]);
+          summaryData.push([`${translateCompanyName(company.company)} ${translate('Details')}`]);
           
           // Define column headers based on company type
           const hasVAT = company.company === "Watanya" || company.company === "TAQA";
@@ -520,128 +338,23 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
       // Create summary worksheet
       const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
       
-      // Set column widths
-      const summaryColWidths = [
-        { wch: 22 }, // Company/Group name
-        { wch: 12 }, // Trips
-        { wch: 14 }, // Volume
-        { wch: 14 }, // Distance
-      ];
+      // Add column width settings
+      const maxCols = hasFinancialAccess ? 11 : 4;
+      const wscols = Array(maxCols).fill({ wch: 15 }); // Default width
+      wscols[0] = { wch: 25 }; // Company/Group name column wider
       
-      if (hasFinancialAccess) {
-        summaryColWidths.push(
-          { wch: 12 }, // Fee
-          { wch: 16 }, // Base Revenue
-          { wch: 14 }, // VAT/Cars
-          { wch: 14 }, // Car Rental/Days
-          { wch: 18 }, // Total Amount/Car Rental
-          { wch: 16 }, // VAT
-          { wch: 16 }  // Total
-        );
-      }
+      // Apply column widths
+      summaryWs['!cols'] = wscols;
       
-      summaryWs['!cols'] = summaryColWidths;
-      
-      // Apply styles to summary sheet
-      applyCellStyle(summaryWs, 'A1:A1', reportTitleStyle);
-      
-      // Style date range
-      applyCellStyle(summaryWs, 'A3:C3', dateHeaderStyle);
-      applyCellStyle(summaryWs, 'B4:C4', dateValueStyle);
-      
-      // Style company summary section
-      applyCellStyle(summaryWs, 'A6:A6', sectionTitleStyle);
-      
-      // Style company summary headers
-      const summaryHeaderRange = `A7:${hasFinancialAccess ? 'H7' : 'D7'}`;
-      applyCellStyle(summaryWs, summaryHeaderRange, tableHeaderStyle);
-      
-      // Style company summary data rows
-      for (let i = 0; i < statistics.length; i++) {
-        const rowIndex = i + 8; // +8 because data starts at row 8
-        // Style text column
-        applyCellStyle(summaryWs, `A${rowIndex}:A${rowIndex}`, groupStyle);
-        // Style numeric columns
-        applyCellStyle(summaryWs, `B${rowIndex}:D${rowIndex}`, numberCellStyle);
-        
-        if (hasFinancialAccess) {
-          applyCellStyle(summaryWs, `E${rowIndex}:H${rowIndex}`, currencyCellStyle);
-        }
-      }
-      
-      // Style company totals row
-      const companyTotalsRow = statistics.length + 8;
-      const companyTotalsRange = `A${companyTotalsRow}:${hasFinancialAccess ? 'H' : 'D'}${companyTotalsRow}`;
-      applyCellStyle(summaryWs, companyTotalsRange, companyTotalStyle);
-      
-      // Now style each company's detailed section
-      let currentRow = companyTotalsRow + 3; // +3 for empty rows
-      
-      statistics.forEach(company => {
-        if (company.details && company.details.length > 0) {
-          // Style company header
-          applyCellStyle(summaryWs, `A${currentRow}:A${currentRow}`, companyHeaderStyle);
-          currentRow++;
-          
-          // Determine columns based on company type
-          const hasVAT = company.company === "Watanya" || company.company === "TAQA";
-          const hasCarRental = company.company === "TAQA";
-          
-          // Calculate last column
-          let lastCol = 'D'; // Minimum (Group, Trips, Volume, Distance)
-          if (hasFinancialAccess) {
-            lastCol = 'F'; // Add Fee, Revenue
-            if (hasCarRental) lastCol = String.fromCharCode(lastCol.charCodeAt(0) + 3); // Add Cars, Days, Car Rental
-            if (hasVAT) lastCol = String.fromCharCode(lastCol.charCodeAt(0) + 1); // Add VAT
-            if (hasVAT || hasCarRental) lastCol = String.fromCharCode(lastCol.charCodeAt(0) + 1); // Add Total
-          }
-          
-          // Style table headers for this company
-          applyCellStyle(summaryWs, `A${currentRow}:${lastCol}${currentRow}`, tableHeaderStyle);
-          currentRow++;
-          
-          // Style data rows
-          for (let i = 0; i < company.details.length; i++) {
-            // Style group name column
-            applyCellStyle(summaryWs, `A${currentRow}:A${currentRow}`, groupStyle);
-            
-            // Style numeric columns
-            applyCellStyle(summaryWs, `B${currentRow}:D${currentRow}`, numberCellStyle);
-            
-            if (hasFinancialAccess) {
-              // Style fee and revenue
-              applyCellStyle(summaryWs, `E${currentRow}:F${currentRow}`, currencyCellStyle);
-              
-              if (hasCarRental) {
-                // Style cars and days as numbers, car rental as currency
-                applyCellStyle(summaryWs, `G${currentRow}:H${currentRow}`, numberCellStyle);
-                applyCellStyle(summaryWs, `I${currentRow}:I${currentRow}`, currencyCellStyle);
-              }
-              
-              if (hasVAT) {
-                // VAT column follows either revenue (F) or car rental (I)
-                const vatCol = hasCarRental ? 'J' : 'G';
-                applyCellStyle(summaryWs, `${vatCol}${currentRow}:${vatCol}${currentRow}`, currencyCellStyle);
-              }
-              
-              if (hasVAT || hasCarRental) {
-                // Total column is last
-                applyCellStyle(summaryWs, `${lastCol}${currentRow}:${lastCol}${currentRow}`, currencyCellStyle);
-              }
-            }
-            
-            currentRow++;
-          }
-          
-          // Style company total row
-          applyCellStyle(summaryWs, `A${currentRow}:${lastCol}${currentRow}`, companyTotalStyle);
-          currentRow += 3; // +3 for the total row and empty rows
-        }
-      });
-      
-      // Add the summary sheet to workbook
+      // Add the worksheet to the workbook
       XLSX.utils.book_append_sheet(wb, summaryWs, translate('Summary'));
       
+      // Try to add some basic formatting using the XLSX package (limited compared to sheetjs)
+      // This is a simplified approach for the xlsx package
+
+      // Note: To add proper styling with the xlsx package, you'll need to use the xlsx-style extension 
+      // or consider using ExcelJS as an alternative package which offers better styling support
+       
       // Export workbook with appropriate filename
       const fileName = language === 'arabic' ? 'تقرير_الإحصائيات.xlsx' : 'Statistics_Report.xlsx';
       XLSX.writeFile(wb, fileName);

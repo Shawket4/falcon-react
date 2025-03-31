@@ -1,67 +1,148 @@
 // File: components/trips/ListActions.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 const ListActions = ({ isLoading, isExporting, tripsCount, onExport }) => {
   const exportToExcel = async () => {
     const trips = await onExport();
     if (!trips.length) return;
 
-    // Format data for Excel
-    const worksheet = XLSX.utils.json_to_sheet(
-      trips.map(trip => ({
-        'Receipt No': trip.receipt_no || '',
-        'Date': trip.date || '',
-        'Company': trip.company || '',
-        'Terminal': trip.terminal || '',
-        'Drop-off Point': trip.drop_off_point || '',
-        'Tank Capacity': trip.tank_capacity || '',
-        'Driver': trip.driver_name || '',
-        'Car': trip.car_no_plate || '',
-        'Distance (km)': typeof trip.mileage === 'number' ? trip.mileage.toFixed(2) : trip.mileage || '',
-        'Fee': typeof trip.fee === 'number' ? trip.fee : trip.fee || ''
-      }))
-    );
+    // Create a new workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Trips');
 
-    // Set column widths
-    const columnWidths = [
-      { wch: 12 }, // Receipt No
-      { wch: 12 }, // Date
-      { wch: 20 }, // Company
-      { wch: 20 }, // Terminal
-      { wch: 20 }, // Drop-off Point
-      { wch: 15 }, // Tank Capacity
-      { wch: 20 }, // Driver
-      { wch: 15 }, // Car
-      { wch: 15 }, // Distance
-      { wch: 12 }  // Fee
+    // Set columns with custom widths and header styling
+    worksheet.columns = [
+      { header: 'Receipt No', key: 'receipt_no', width: 12 },
+      { header: 'Date', key: 'date', width: 12 },
+      { header: 'Company', key: 'company', width: 20 },
+      { header: 'Terminal', key: 'terminal', width: 20 },
+      { header: 'Drop-off Point', key: 'drop_off_point', width: 20 },
+      { header: 'Tank Capacity', key: 'tank_capacity', width: 15 },
+      { header: 'Driver', key: 'driver_name', width: 20 },
+      { header: 'Car', key: 'car_no_plate', width: 15 },
+      { header: 'Distance (km)', key: 'mileage', width: 15 },
+      { header: 'Fee', key: 'fee', width: 12 }
     ];
-    
-    worksheet['!cols'] = columnWidths;
 
-    // Create workbook and add the worksheet
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Trips');
+    // Style the header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 20;
+    headerRow.font = {
+      name: 'Arial',
+      size: 12,
+      bold: true,
+      color: { argb: 'FFFFFF' }
+    };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: '3B82F6' } // Blue color
+    };
+    headerRow.alignment = {
+      horizontal: 'center',
+      vertical: 'middle'
+    };
     
+    // Add borders to header cells
+    headerRow.eachCell({ includeEmpty: true }, cell => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+
+    // Add data rows with proper formatting
+    trips.forEach(trip => {
+      const row = worksheet.addRow({
+        receipt_no: trip.receipt_no || '',
+        date: trip.date || '',
+        company: trip.company || '',
+        terminal: trip.terminal || '',
+        drop_off_point: trip.drop_off_point || '',
+        tank_capacity: trip.tank_capacity || '',
+        driver_name: trip.driver_name || '',
+        car_no_plate: trip.car_no_plate || '',
+        mileage: typeof trip.mileage === 'number' ? trip.mileage : (trip.mileage || ''),
+        fee: typeof trip.fee === 'number' ? trip.fee : (trip.fee || '')
+      });
+
+      // Style data cells
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        // Add borders to all cells
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'D1D5DB' } },
+          left: { style: 'thin', color: { argb: 'D1D5DB' } },
+          bottom: { style: 'thin', color: { argb: 'D1D5DB' } },
+          right: { style: 'thin', color: { argb: 'D1D5DB' } }
+        };
+        
+        // Set alignment based on cell type
+        if (colNumber === 1) { // Receipt No
+          cell.alignment = { horizontal: 'center' };
+        } else if (colNumber === 2) { // Date
+          cell.alignment = { horizontal: 'center' };
+        } else if (colNumber === 9 || colNumber === 10) { // Distance and Fee
+          cell.alignment = { horizontal: 'right' };
+          
+          // Apply number formatting
+          if (colNumber === 9 && typeof cell.value === 'number') {
+            cell.numFmt = '#,##0.00';
+          } else if (colNumber === 10 && typeof cell.value === 'number') {
+            cell.numFmt = '#,##0.00';
+          }
+        } else {
+          cell.alignment = { horizontal: 'left' };
+        }
+      });
+    });
+
+    // Apply zebra striping to rows
+    const rowCount = worksheet.rowCount;
+    for (let i = 2; i <= rowCount; i++) { // Start from 2 to skip header
+      if (i % 2 === 0) { // Even rows
+        const row = worksheet.getRow(i);
+        row.eachCell({ includeEmpty: true }, cell => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'F9FAFB' } // Light gray
+          };
+        });
+      }
+    }
+
+    // Add a footer row with total count
+    const footerRow = worksheet.addRow(['Total Trips:', trips.length]);
+    footerRow.font = { bold: true };
+    footerRow.getCell(1).alignment = { horizontal: 'right' };
+    footerRow.getCell(2).alignment = { horizontal: 'left' };
+    
+    // Merge some cells in the footer for a cleaner look
+    worksheet.mergeCells(`A${rowCount + 1}:B${rowCount + 1}`);
+    
+    // Add a border at the top of the footer
+    footerRow.eachCell({ includeEmpty: true }, cell => {
+      cell.border = {
+        top: { style: 'medium' }
+      };
+    });
+
     // Generate Excel file
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
     
-    // Create download link
+    // Create filename
     const fileName = `trips_export_${new Date().toISOString().split('T')[0]}.xlsx`;
     
-    // Create a temporary download link and trigger the download
-    const url = window.URL.createObjectURL(data);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    
-    // Clean up
-    setTimeout(() => {
-      window.URL.revokeObjectURL(url);
-    }, 100);
+    // Save file using file-saver
+    saveAs(blob, fileName);
   };
 
   return (

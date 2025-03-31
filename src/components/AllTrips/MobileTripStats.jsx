@@ -308,12 +308,19 @@ const MobileTripStatistics = ({ filters }) => {
       )}
       
             {/* Export to Excel Component */}
-{!isLoading && statistics.length > 0 && (
-  <ExportToExcel 
-    statistics={statistics} 
-    hasFinancialAccess={hasFinancialAccess} 
-    filters={internalFilters} // Make sure this is the correct filters object
-  />
+            {!isLoading && statistics.length > 0 && (
+  <div className="flex flex-col sm:flex-row gap-4 mb-4">
+    <ExportToExcel 
+      statistics={statistics} 
+      hasFinancialAccess={hasFinancialAccess} 
+      filters={internalFilters}
+    />
+    <ExportToPDF 
+      statistics={statistics} 
+      hasFinancialAccess={hasFinancialAccess} 
+      filters={internalFilters}
+    />
+  </div>
 )}
 
       {/* Loading Indicator */}

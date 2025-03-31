@@ -122,6 +122,13 @@ const ExportToPDF = ({ statistics, hasFinancialAccess, filters }) => {
               .page-break {
                 page-break-before: always;
               }
+              /* Force each section onto its own page */
+              .summary-section {
+                page-break-after: always;
+              }
+              .company-detail-section {
+                page-break-before: always;
+              }
             }
             
             body {
@@ -162,15 +169,9 @@ const ExportToPDF = ({ statistics, hasFinancialAccess, filters }) => {
               border-bottom: 2px solid #D1D5DB;
             }
             
-            .company-header {
+            .detail-header {
               background-color: #10B981;
               color: white;
-              padding: 10px;
-              margin: 30px 0 10px 0;
-              font-size: 18pt;
-              font-weight: bold;
-              border-top: 2px solid #D1D5DB;
-              border-bottom: 2px solid #D1D5DB;
             }
             
             table {
@@ -226,10 +227,11 @@ const ExportToPDF = ({ statistics, hasFinancialAccess, filters }) => {
             ${translate('Date Range')}: ${translate('From')} ${startDate} ${translate('To')} ${endDate}
           </div>
           
-          <h2>${translate('Company Summary')}</h2>
+          <div class="summary-section">
+            <h2>${translate('Company Summary')}</h2>
           
-          <table>
-            <thead>
+            <table>
+              <thead>
               <tr>
                 <th style="width: 20%;">${translate('Company')}</th>
                 <th style="width: 10%;">${translate('Trips')}</th>
@@ -303,6 +305,7 @@ const ExportToPDF = ({ statistics, hasFinancialAccess, filters }) => {
           </tr>
         </tbody>
       </table>
+      </div>
       `;
       
       // Company details
@@ -333,7 +336,7 @@ const ExportToPDF = ({ statistics, hasFinancialAccess, filters }) => {
           
           detailsHTML += `
             <div class="company-detail-section">
-              <div class="company-header">${translateCompanyName(company.company)} ${translate('Details')}</div>
+              <h2>${translateCompanyName(company.company)} ${translate('Details')}</h2>
               
               <table class="detail-table">
                 <thead>
@@ -400,8 +403,25 @@ const ExportToPDF = ({ statistics, hasFinancialAccess, filters }) => {
       // Combine all content
       const finalHtml = htmlContent + companiesHTML + detailsHTML + `
           <script>
+            // Add page numbers
+            let addPageNumbers = function() {
+              // Get all the pages
+              var pages = document.querySelectorAll('.summary-section, .company-detail-section');
+              
+              // Add page number containers to each page
+              pages.forEach(function(page, index) {
+                var pageNumberDiv = document.createElement('div');
+                pageNumberDiv.className = 'page-number';
+                pageNumberDiv.textContent = (index + 1) + ' / ' + pages.length;
+                page.appendChild(pageNumberDiv);
+              });
+            };
+            
             // Auto print and close when done
             window.onload = function() {
+              // Add page numbers first
+              addPageNumbers();
+              
               // Allow time for rendering and fonts to load
               setTimeout(function() {
                 window.print();

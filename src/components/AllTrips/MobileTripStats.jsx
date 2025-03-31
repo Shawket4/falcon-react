@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import ExportToExcel from './ExportStatsToExcel';
 import apiClient from '../../apiClient';
 import { 
   BarChart, 
@@ -8,7 +9,6 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  Legend, 
   ResponsiveContainer, 
   Cell, 
   PieChart, 

@@ -307,6 +307,14 @@ const MobileTripStatistics = ({ filters }) => {
         </div>
       )}
       
+            {/* Export to Excel Component */}
+{!isLoading && statistics.length > 0 && (
+  <ExportToExcel 
+    statistics={statistics} 
+    hasFinancialAccess={hasFinancialAccess} 
+  />
+)}
+
       {/* Loading Indicator */}
       {isLoading && (
         <div className="flex justify-center py-4">

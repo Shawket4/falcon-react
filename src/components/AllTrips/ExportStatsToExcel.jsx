@@ -12,6 +12,20 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
     'Watanya': 'وطنية'
   };
 
+  // Group name translations
+  const groupTranslations = {
+    'Beni Sweif': 'بني سويف',
+    'Fayoum': 'الفيوم',
+    'Qena': 'قنا',
+    'Alex': 'اسكندرية',
+    'Suez': 'السويس',
+    'Fee 1': 'الفئة الاولي',
+    'Fee 2': 'الفئة التانية',
+    'Fee 3': 'الفئة التالتة',
+    'Fee 4': 'الفئة الرابعة',
+    'Fee 5': 'الفئة الخامسة'
+  };
+
   // Column header translations
   const headerTranslations = {
     'Company': 'الشركة',
@@ -30,7 +44,8 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
     'Date Range': 'النطاق الزمني',
     'From': 'من',
     'To': 'إلى',
-    'Statistics Report': 'تقرير الإحصائيات'
+    'Statistics Report': 'تقرير الإحصائيات',
+    'Summary': 'ملخص'
   };
 
   // Translate text based on selected language
@@ -45,6 +60,14 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
   const translateCompanyName = (name) => {
     if (language === 'arabic' && companyTranslations[name]) {
       return companyTranslations[name];
+    }
+    return name;
+  };
+
+  // Translate group name based on selected language
+  const translateGroupName = (name) => {
+    if (language === 'arabic' && groupTranslations[name]) {
+      return groupTranslations[name];
     }
     return name;
   };
@@ -100,22 +123,63 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
       // Create workbook
       const wb = XLSX.utils.book_new();
       
+      // Set RTL for the entire workbook if Arabic
+      if (language === 'arabic') {
+        if (!wb.Workbook) wb.Workbook = {};
+        if (!wb.Workbook.Views) wb.Workbook.Views = [];
+        if (!wb.Workbook.Views[0]) wb.Workbook.Views[0] = {};
+        wb.Workbook.Views[0].RTL = true;
+      }
+      
       // Styles
-      const titleStyle = {
+      const reportTitleStyle = {
+        font: { bold: true, sz: 18, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "3B82F6" } },
+        alignment: { 
+          horizontal: language === 'arabic' ? 'right' : 'left', 
+          vertical: 'center'
+        },
+        border: {
+          bottom: { style: 'medium', color: { rgb: "000000" } }
+        }
+      };
+      
+      const sectionTitleStyle = {
         font: { bold: true, sz: 16, color: { rgb: "000000" } },
-        fill: { fgColor: { rgb: "EFEFEF" } },
+        fill: { fgColor: { rgb: "E5E7EB" } },
+        alignment: { 
+          horizontal: language === 'arabic' ? 'right' : 'left', 
+          vertical: 'center'
+        },
+        border: {
+          top: { style: 'thin', color: { rgb: "000000" } },
+          bottom: { style: 'thin', color: { rgb: "000000" } }
+        }
+      };
+      
+      const dateHeaderStyle = {
+        font: { bold: true, italic: true, sz: 12, color: { rgb: "4B5563" } },
         alignment: { 
           horizontal: language === 'arabic' ? 'right' : 'left', 
           vertical: 'center'
         }
       };
       
-      const headerStyle = {
+      const dateValueStyle = {
+        font: { sz: 12, color: { rgb: "4B5563" } },
+        alignment: { 
+          horizontal: 'center', 
+          vertical: 'center'
+        }
+      };
+      
+      const tableHeaderStyle = {
         font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
         fill: { fgColor: { rgb: "3B82F6" } },
         alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'center', 
-          vertical: 'center'
+          horizontal: 'center', 
+          vertical: 'center',
+          wrapText: true
         },
         border: {
           top: { style: 'thin', color: { rgb: "000000" } },
@@ -125,18 +189,36 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
         }
       };
       
-      const subHeaderStyle = {
-        font: { bold: true, sz: 11, color: { rgb: "000000" } },
-        fill: { fgColor: { rgb: "E5E7EB" } },
+      const companyHeaderStyle = {
+        font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "10B981" } }, // Green
         alignment: { 
           horizontal: language === 'arabic' ? 'right' : 'left', 
           vertical: 'center'
+        },
+        border: {
+          top: { style: 'thin', color: { rgb: "000000" } },
+          bottom: { style: 'thin', color: { rgb: "000000" } }
         }
       };
       
       const cellStyle = {
         alignment: { 
           horizontal: 'center', 
+          vertical: 'center'
+        },
+        border: {
+          top: { style: 'thin', color: { rgb: "D1D5DB" } },
+          bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
+          left: { style: 'thin', color: { rgb: "D1D5DB" } },
+          right: { style: 'thin', color: { rgb: "D1D5DB" } }
+        }
+      };
+      
+      const groupStyle = {
+        font: { bold: true },
+        alignment: { 
+          horizontal: language === 'arabic' ? 'right' : 'left', 
           vertical: 'center'
         },
         border: {
@@ -157,8 +239,8 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
         numFmt: '$#,##0.00'
       };
       
-      const totalRowStyle = {
-        font: { bold: true },
+      const companyTotalStyle = {
+        font: { bold: true, sz: 12 },
         fill: { fgColor: { rgb: "F3F4F6" } },
         alignment: { 
           horizontal: 'center', 
@@ -171,43 +253,42 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
           right: { style: 'thin', color: { rgb: "000000" } }
         }
       };
+      
+      const grandTotalStyle = {
+        font: { bold: true, sz: 14 },
+        fill: { fgColor: { rgb: "E2E8F0" } },
+        alignment: { 
+          horizontal: 'center', 
+          vertical: 'center'
+        },
+        border: {
+          top: { style: 'double', color: { rgb: "000000" } },
+          bottom: { style: 'double', color: { rgb: "000000" } },
+          left: { style: 'thin', color: { rgb: "000000" } },
+          right: { style: 'thin', color: { rgb: "000000" } }
+        }
+      };
 
       // Get date range for report header
       const dateRange = filters ? 
         `${filters.startDate || ''} to ${filters.endDate || ''}` : 
         new Date().toLocaleDateString();
       
-      // Create summary sheet
+      // Create summary sheet with all data
       const summaryData = [];
       
       // Add title and date range
       summaryData.push([translate('Statistics Report')]);
+      summaryData.push([]);
       summaryData.push([translate('Date Range'), translate('From'), translate('To')]);
       summaryData.push(['', filters?.startDate || '', filters?.endDate || '']);
-      summaryData.push([]); // Empty row
-
-      // Calculate totals for summary
-      const totals = statistics.reduce((acc, company) => {
-        acc.totalTrips += (company.total_trips || 0);
-        acc.totalVolume += (company.total_volume || 0);
-        acc.totalDistance += (company.total_distance || 0);
-        acc.totalRevenue += (company.total_revenue || 0);
-        acc.totalVAT += (company.total_vat || 0);
-        acc.totalCarRent += (company.total_car_rent || 0);
-        return acc;
-      }, { 
-        totalTrips: 0, 
-        totalVolume: 0, 
-        totalDistance: 0, 
-        totalRevenue: 0,
-        totalVAT: 0,
-        totalCarRent: 0
-      });
+      summaryData.push([]);
       
-      totals.totalAmount = totals.totalRevenue + totals.totalVAT + totals.totalCarRent;
+      // Add company summary header section
+      summaryData.push([translate('Company Summary')]);
       
-      // Headers for summary
-      const summaryHeaders = [
+      // Headers for company summary
+      const companyHeaders = [
         translate('Company'), 
         translate('Trips'), 
         translate('Volume (L)'), 
@@ -215,7 +296,7 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
       ];
       
       if (hasFinancialAccess) {
-        summaryHeaders.push(
+        companyHeaders.push(
           translate('Base Revenue'),
           translate('VAT (14%)'),
           translate('Car Rental Fees'),
@@ -223,7 +304,17 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
         );
       }
       
-      summaryData.push(summaryHeaders);
+      summaryData.push(companyHeaders);
+      
+      // Calculate company totals
+      const companyTotals = {
+        totalTrips: 0, 
+        totalVolume: 0, 
+        totalDistance: 0, 
+        totalRevenue: 0,
+        totalVAT: 0,
+        totalCarRent: 0
+      };
       
       // Add summary data for each company
       statistics.forEach(company => {
@@ -234,6 +325,11 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
           company.total_distance || 0
         ];
         
+        // Update totals
+        companyTotals.totalTrips += (company.total_trips || 0);
+        companyTotals.totalVolume += (company.total_volume || 0);
+        companyTotals.totalDistance += (company.total_distance || 0);
+        
         if (hasFinancialAccess) {
           row.push(
             company.total_revenue || 0,
@@ -241,95 +337,42 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
             company.total_car_rent || 0,
             (company.total_revenue || 0) + (company.total_vat || 0) + (company.total_car_rent || 0)
           );
+          
+          companyTotals.totalRevenue += (company.total_revenue || 0);
+          companyTotals.totalVAT += (company.total_vat || 0);
+          companyTotals.totalCarRent += (company.total_car_rent || 0);
         }
         
         summaryData.push(row);
       });
       
-      // Add totals row
-      const totalsRow = [
+      // Add grand total for companies
+      const companyTotalRow = [
         translate('Total'),
-        totals.totalTrips,
-        totals.totalVolume,
-        totals.totalDistance
+        companyTotals.totalTrips,
+        companyTotals.totalVolume,
+        companyTotals.totalDistance
       ];
       
       if (hasFinancialAccess) {
-        totalsRow.push(
-          totals.totalRevenue,
-          totals.totalVAT,
-          totals.totalCarRent,
-          totals.totalAmount
+        const totalAmount = companyTotals.totalRevenue + companyTotals.totalVAT + companyTotals.totalCarRent;
+        companyTotalRow.push(
+          companyTotals.totalRevenue,
+          companyTotals.totalVAT,
+          companyTotals.totalCarRent,
+          totalAmount
         );
       }
       
-      summaryData.push(totalsRow);
+      summaryData.push(companyTotalRow);
+      summaryData.push([]);
+      summaryData.push([]);
       
-      // Create summary worksheet
-      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-      
-      // Set column widths
-      const summaryColWidths = [
-        { wch: 20 }, // Company name
-        { wch: 12 }, // Trips
-        { wch: 14 }, // Volume
-        { wch: 14 }, // Distance
-      ];
-      
-      if (hasFinancialAccess) {
-        summaryColWidths.push(
-          { wch: 16 }, // Base Revenue
-          { wch: 14 }, // VAT
-          { wch: 18 }, // Car Rental
-          { wch: 16 }  // Total
-        );
-      }
-      
-      summaryWs['!cols'] = summaryColWidths;
-      
-      // Apply styles to summary sheet
-      applyCellStyle(summaryWs, 'A1:A1', titleStyle);
-      applyCellStyle(summaryWs, 'A2:C2', subHeaderStyle);
-      
-      // Style the headers (row 5)
-      const headerRange = `A5:${hasFinancialAccess ? 'H5' : 'D5'}`;
-      applyCellStyle(summaryWs, headerRange, headerStyle);
-      
-      // Style the data rows
-      for (let i = 0; i < statistics.length; i++) {
-        const rowIndex = i + 6; // +6 because summary data starts at row 6
-        const dataRange = `A${rowIndex}:${hasFinancialAccess ? 'H' : 'D'}${rowIndex}`;
-        applyCellStyle(summaryWs, dataRange, cellStyle);
-        
-        // Apply number format to numeric columns
-        applyCellStyle(summaryWs, `B${rowIndex}:D${rowIndex}`, numberCellStyle);
-        
-        if (hasFinancialAccess) {
-          applyCellStyle(summaryWs, `E${rowIndex}:H${rowIndex}`, currencyCellStyle);
-        }
-      }
-      
-      // Style the totals row
-      const totalsRowIndex = statistics.length + 6;
-      const totalsRange = `A${totalsRowIndex}:${hasFinancialAccess ? 'H' : 'D'}${totalsRowIndex}`;
-      applyCellStyle(summaryWs, totalsRange, totalRowStyle);
-      
-      // Add the summary sheet to workbook
-      XLSX.utils.book_append_sheet(wb, summaryWs, translate('Summary'));
-      
-      // Create detailed sheets for each company
-      statistics.forEach(company => {
+      // Add detailed sections for each company
+      statistics.forEach((company, companyIndex) => {
         if (company.details && company.details.length > 0) {
-          const detailsData = [];
-          
-          // Add company name as title
-          detailsData.push([translateCompanyName(company.company)]);
-          detailsData.push([]); // Empty row
-          
-          // Add date range
-          detailsData.push([translate('Date Range'), translate('From'), translate('To')]);
-          detailsData.push(['', filters?.startDate || '', filters?.endDate || '']);
-          detailsData.push([]); // Empty row
+          // Add company heading
+          summaryData.push([translateCompanyName(company.company) + ' ' + translate('Details')]);
           
           // Define column headers based on company type
           const hasVAT = company.company === "Watanya" || company.company === "TAQA";
@@ -364,16 +407,35 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
             }
           }
           
-          detailsData.push(detailHeaders);
+          summaryData.push(detailHeaders);
+          
+          // Group totals for this company
+          const groupTotals = {
+            totalTrips: 0, 
+            totalVolume: 0, 
+            totalDistance: 0, 
+            totalFee: 0,
+            totalRevenue: 0, 
+            totalCars: 0, 
+            totalDays: 0, 
+            totalCarRental: 0, 
+            totalVAT: 0, 
+            totalAmount: 0
+          };
           
           // Add details data
           company.details.forEach(detail => {
             const row = [
-              detail.group_name,
+              translateGroupName(detail.group_name),
               detail.total_trips || 0,
               detail.total_volume || 0,
               detail.total_distance || 0
             ];
+            
+            // Update totals
+            groupTotals.totalTrips += (detail.total_trips || 0);
+            groupTotals.totalVolume += (detail.total_volume || 0);
+            groupTotals.totalDistance += (detail.total_distance || 0);
             
             if (hasFinancialAccess) {
               row.push(
@@ -381,165 +443,204 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
                 detail.total_revenue || 0
               );
               
+              groupTotals.totalFee += (detail.fee || 0);
+              groupTotals.totalRevenue += (detail.total_revenue || 0);
+              
               if (hasCarRental) {
                 row.push(
                   detail.distinct_cars || 0,
                   detail.distinct_days || 0,
                   detail.car_rental || 0
                 );
+                
+                groupTotals.totalCars += (detail.distinct_cars || 0);
+                groupTotals.totalDays += (detail.distinct_days || 0);
+                groupTotals.totalCarRental += (detail.car_rental || 0);
               }
               
               if (hasVAT) {
                 row.push(detail.vat || 0);
+                groupTotals.totalVAT += (detail.vat || 0);
               }
               
               if (hasVAT || hasCarRental) {
-                row.push(
-                  detail.total_with_vat || 
-                  ((detail.total_revenue || 0) + (detail.vat || 0) + (detail.car_rental || 0))
-                );
+                const totalAmount = (detail.total_revenue || 0) + 
+                                    (detail.vat || 0) + 
+                                    (detail.car_rental || 0);
+                                    
+                row.push(totalAmount);
+                groupTotals.totalAmount += totalAmount;
               }
             }
             
-            detailsData.push(row);
+            summaryData.push(row);
           });
           
-          // Add totals row
-          const detailTotals = company.details.reduce((acc, detail) => {
-            acc.totalTrips += (detail.total_trips || 0);
-            acc.totalVolume += (detail.total_volume || 0);
-            acc.totalDistance += (detail.total_distance || 0);
-            acc.totalFee += (detail.fee || 0);
-            acc.totalRevenue += (detail.total_revenue || 0);
-            acc.totalCars += (detail.distinct_cars || 0);
-            acc.totalDays += (detail.distinct_days || 0);
-            acc.totalCarRental += (detail.car_rental || 0);
-            acc.totalVAT += (detail.vat || 0);
-            acc.totalAmount += (detail.total_with_vat || 
-              ((detail.total_revenue || 0) + (detail.vat || 0) + (detail.car_rental || 0)));
-            return acc;
-          }, { 
-            totalTrips: 0, totalVolume: 0, totalDistance: 0, totalFee: 0, 
-            totalRevenue: 0, totalCars: 0, totalDays: 0, 
-            totalCarRental: 0, totalVAT: 0, totalAmount: 0 
-          });
-          
-          const totalRow = [
+          // Add total row for this company
+          const groupTotalRow = [
             translate('Total'),
-            detailTotals.totalTrips,
-            detailTotals.totalVolume,
-            detailTotals.totalDistance
+            groupTotals.totalTrips,
+            groupTotals.totalVolume,
+            groupTotals.totalDistance
           ];
           
           if (hasFinancialAccess) {
-            totalRow.push(
-              detailTotals.totalFee,
-              detailTotals.totalRevenue
+            groupTotalRow.push(
+              groupTotals.totalFee,
+              groupTotals.totalRevenue
             );
             
             if (hasCarRental) {
-              totalRow.push(
-                detailTotals.totalCars,
-                detailTotals.totalDays,
-                detailTotals.totalCarRental
+              groupTotalRow.push(
+                groupTotals.totalCars,
+                groupTotals.totalDays,
+                groupTotals.totalCarRental
               );
             }
             
             if (hasVAT) {
-              totalRow.push(detailTotals.totalVAT);
+              groupTotalRow.push(groupTotals.totalVAT);
             }
             
             if (hasVAT || hasCarRental) {
-              totalRow.push(detailTotals.totalAmount);
+              groupTotalRow.push(groupTotals.totalAmount);
             }
           }
           
-          detailsData.push(totalRow);
+          summaryData.push(groupTotalRow);
           
-          // Create worksheet for company details
-          const detailsWs = XLSX.utils.aoa_to_sheet(detailsData);
-          
-          // Set column widths for detail sheet
-          const detailColWidths = [
-            { wch: 22 }, // Group name
-            { wch: 10 }, // Trips
-            { wch: 13 }, // Volume
-            { wch: 13 }, // Distance
-          ];
-          
-          if (hasFinancialAccess) {
-            detailColWidths.push(
-              { wch: 10 }, // Fee
-              { wch: 14 } // Base Revenue
-            );
-            
-            if (hasCarRental) {
-              detailColWidths.push(
-                { wch: 10 }, // Cars
-                { wch: 10 }, // Days
-                { wch: 16 } // Car Rental
-              );
-            }
-            
-            if (hasVAT) {
-              detailColWidths.push({ wch: 12 }); // VAT
-            }
-            
-            if (hasVAT || hasCarRental) {
-              detailColWidths.push({ wch: 14 }); // Total
-            }
+          // Add empty rows between companies
+          if (companyIndex < statistics.length - 1) {
+            summaryData.push([]);
+            summaryData.push([]);
           }
-          
-          detailsWs['!cols'] = detailColWidths;
-          
-          // Apply styles to details sheet
-          applyCellStyle(detailsWs, 'A1:A1', titleStyle);
-          applyCellStyle(detailsWs, 'A3:C3', subHeaderStyle);
-          
-          // Determine how many columns we have based on company type
-          let lastCol = 'D'; // Minimum 4 columns
-          if (hasFinancialAccess) {
-            lastCol = 'F'; // Add 2 more (Fee, Revenue)
-            if (hasCarRental) lastCol = String.fromCharCode(lastCol.charCodeAt(0) + 3); // Add 3 more
-            if (hasVAT) lastCol = String.fromCharCode(lastCol.charCodeAt(0) + 1); // Add 1 more
-            if (hasVAT || hasCarRental) lastCol = String.fromCharCode(lastCol.charCodeAt(0) + 1); // Add 1 more
-          }
-          
-          // Style the headers
-          applyCellStyle(detailsWs, `A6:${lastCol}6`, headerStyle);
-          
-          // Style the data rows
-          for (let i = 0; i < company.details.length; i++) {
-            const rowIndex = i + 7; // +7 because details data starts at row 7
-            applyCellStyle(detailsWs, `A${rowIndex}:${lastCol}${rowIndex}`, cellStyle);
-            
-            // Apply number format to numeric columns
-            applyCellStyle(detailsWs, `B${rowIndex}:D${rowIndex}`, numberCellStyle);
-            
-            if (hasFinancialAccess) {
-              // Style the numeric financial columns
-              const financialStartCol = 'E';
-              applyCellStyle(detailsWs, `${financialStartCol}${rowIndex}:${lastCol}${rowIndex}`, currencyCellStyle);
-              
-              // Exception for non-financial columns in financial area
-              if (hasCarRental) {
-                applyCellStyle(detailsWs, `G${rowIndex}:H${rowIndex}`, numberCellStyle);
-              }
-            }
-          }
-          
-          // Style the totals row
-          const detailTotalsRowIndex = company.details.length + 7;
-          applyCellStyle(detailsWs, `A${detailTotalsRowIndex}:${lastCol}${detailTotalsRowIndex}`, totalRowStyle);
-          
-          // Add the details sheet to workbook
-          XLSX.utils.book_append_sheet(
-            wb, 
-            detailsWs, 
-            translateCompanyName(company.company).substring(0, 31)
-          );
         }
       });
+      
+      // Create summary worksheet
+      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+      
+      // Set column widths
+      const summaryColWidths = [
+        { wch: 22 }, // Company/Group name
+        { wch: 12 }, // Trips
+        { wch: 14 }, // Volume
+        { wch: 14 }, // Distance
+      ];
+      
+      if (hasFinancialAccess) {
+        summaryColWidths.push(
+          { wch: 12 }, // Fee
+          { wch: 16 }, // Base Revenue
+          { wch: 14 }, // VAT/Cars
+          { wch: 14 }, // Car Rental/Days
+          { wch: 18 }, // Total Amount/Car Rental
+          { wch: 16 }, // VAT
+          { wch: 16 }  // Total
+        );
+      }
+      
+      summaryWs['!cols'] = summaryColWidths;
+      
+      // Apply styles to summary sheet
+      applyCellStyle(summaryWs, 'A1:A1', reportTitleStyle);
+      
+      // Style date range
+      applyCellStyle(summaryWs, 'A3:C3', dateHeaderStyle);
+      applyCellStyle(summaryWs, 'B4:C4', dateValueStyle);
+      
+      // Style company summary section
+      applyCellStyle(summaryWs, 'A6:A6', sectionTitleStyle);
+      
+      // Style company summary headers
+      const summaryHeaderRange = `A7:${hasFinancialAccess ? 'H7' : 'D7'}`;
+      applyCellStyle(summaryWs, summaryHeaderRange, tableHeaderStyle);
+      
+      // Style company summary data rows
+      for (let i = 0; i < statistics.length; i++) {
+        const rowIndex = i + 8; // +8 because data starts at row 8
+        // Style text column
+        applyCellStyle(summaryWs, `A${rowIndex}:A${rowIndex}`, groupStyle);
+        // Style numeric columns
+        applyCellStyle(summaryWs, `B${rowIndex}:D${rowIndex}`, numberCellStyle);
+        
+        if (hasFinancialAccess) {
+          applyCellStyle(summaryWs, `E${rowIndex}:H${rowIndex}`, currencyCellStyle);
+        }
+      }
+      
+      // Style company totals row
+      const companyTotalsRow = statistics.length + 8;
+      const companyTotalsRange = `A${companyTotalsRow}:${hasFinancialAccess ? 'H' : 'D'}${companyTotalsRow}`;
+      applyCellStyle(summaryWs, companyTotalsRange, companyTotalStyle);
+      
+      // Now style each company's detailed section
+      let currentRow = companyTotalsRow + 3; // +3 for empty rows
+      
+      statistics.forEach(company => {
+        if (company.details && company.details.length > 0) {
+          // Style company header
+          applyCellStyle(summaryWs, `A${currentRow}:A${currentRow}`, companyHeaderStyle);
+          currentRow++;
+          
+          // Determine columns based on company type
+          const hasVAT = company.company === "Watanya" || company.company === "TAQA";
+          const hasCarRental = company.company === "TAQA";
+          
+          // Calculate last column
+          let lastCol = 'D'; // Minimum (Group, Trips, Volume, Distance)
+          if (hasFinancialAccess) {
+            lastCol = 'F'; // Add Fee, Revenue
+            if (hasCarRental) lastCol = String.fromCharCode(lastCol.charCodeAt(0) + 3); // Add Cars, Days, Car Rental
+            if (hasVAT) lastCol = String.fromCharCode(lastCol.charCodeAt(0) + 1); // Add VAT
+            if (hasVAT || hasCarRental) lastCol = String.fromCharCode(lastCol.charCodeAt(0) + 1); // Add Total
+          }
+          
+          // Style table headers for this company
+          applyCellStyle(summaryWs, `A${currentRow}:${lastCol}${currentRow}`, tableHeaderStyle);
+          currentRow++;
+          
+          // Style data rows
+          for (let i = 0; i < company.details.length; i++) {
+            // Style group name column
+            applyCellStyle(summaryWs, `A${currentRow}:A${currentRow}`, groupStyle);
+            
+            // Style numeric columns
+            applyCellStyle(summaryWs, `B${currentRow}:D${currentRow}`, numberCellStyle);
+            
+            if (hasFinancialAccess) {
+              // Style fee and revenue
+              applyCellStyle(summaryWs, `E${currentRow}:F${currentRow}`, currencyCellStyle);
+              
+              if (hasCarRental) {
+                // Style cars and days as numbers, car rental as currency
+                applyCellStyle(summaryWs, `G${currentRow}:H${currentRow}`, numberCellStyle);
+                applyCellStyle(summaryWs, `I${currentRow}:I${currentRow}`, currencyCellStyle);
+              }
+              
+              if (hasVAT) {
+                // VAT column follows either revenue (F) or car rental (I)
+                const vatCol = hasCarRental ? 'J' : 'G';
+                applyCellStyle(summaryWs, `${vatCol}${currentRow}:${vatCol}${currentRow}`, currencyCellStyle);
+              }
+              
+              if (hasVAT || hasCarRental) {
+                // Total column is last
+                applyCellStyle(summaryWs, `${lastCol}${currentRow}:${lastCol}${currentRow}`, currencyCellStyle);
+              }
+            }
+            
+            currentRow++;
+          }
+          
+          // Style company total row
+          applyCellStyle(summaryWs, `A${currentRow}:${lastCol}${currentRow}`, companyTotalStyle);
+          currentRow += 3; // +3 for the total row and empty rows
+        }
+      });
+      
+      // Add the summary sheet to workbook
+      XLSX.utils.book_append_sheet(wb, summaryWs, translate('Summary'));
       
       // Export workbook with appropriate filename
       const fileName = language === 'arabic' ? 'تقرير_الإحصائيات.xlsx' : 'Statistics_Report.xlsx';
@@ -577,7 +678,9 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
         dir={language === 'arabic' ? 'rtl' : 'ltr'}
       >
         <Download className="h-5 w-5" />
-        <span>{language === 'arabic' ? 'تصدير إلى Excel' : 'Export to Excel'}</span>
+        <span className={language === 'arabic' ? 'mr-2' : 'ml-2'}>
+          {language === 'arabic' ? 'تصدير إلى Excel' : 'Export to Excel'}
+        </span>
       </button>
     </div>
   );

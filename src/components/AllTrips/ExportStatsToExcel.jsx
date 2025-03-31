@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import * as XLSX from 'sheetjs';
+import * as XLSX from 'xlsx';
 import { Download, Languages } from 'lucide-react';
 
 const ExportToExcel = ({ statistics, hasFinancialAccess }) => {

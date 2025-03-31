@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Languages } from 'lucide-react';
 import apiClient from '../../apiClient';
-import * as XLSX from 'sheetjs';
 import ExportToExcel from './ExportStatsToExcel';
 
 import { 

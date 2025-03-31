@@ -4,7 +4,8 @@ import { saveAs } from 'file-saver';
 import { Download, Languages } from 'lucide-react';
 
 const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
-  const [language, setLanguage] = useState('english'); // Default language is English
+  const [language, setLanguage] = useState('english');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Company name translations
   const companyTranslations = {
@@ -48,7 +49,10 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
     'Statistics Report': 'تقرير الإحصائيات',
     'Summary': 'ملخص',
     'Company Summary': 'ملخص الشركات',
-    'Details': 'تفاصيل'
+    'Details': 'تفاصيل',
+    'Export to Excel': 'تصدير إلى Excel',
+    'Generating Excel...': 'جاري إنشاء ملف Excel...',
+    'Page': 'صفحة'
   };
 
   // Translate text based on selected language
@@ -82,202 +86,218 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
       maximumFractionDigits: 2 
     }).format(num);
   };
-  const exportToExcel = async () => {
-  if (!statistics || statistics.length === 0) {
-    alert(language === 'arabic' ? 'لا توجد بيانات للتصدير' : 'No data to export');
-    return;
-  }
 
-  try {
-    // Create a new workbook
-    const workbook = new ExcelJS.Workbook();
-    
-    // Set RTL direction if in Arabic
-    if (language === 'arabic') {
-      workbook.views = [
-        {
-          x: 0, y: 0, width: 10000, height: 20000,
-          firstSheet: 0, activeTab: 0, visibility: 'visible',
-          rightToLeft: true
-        }
-      ];
+  const exportToExcel = async () => {
+    if (!statistics || statistics.length === 0) {
+      alert(language === 'arabic' ? 'لا توجد بيانات للتصدير' : 'No data to export');
+      return;
     }
-    
-    // Add a worksheet
-    const worksheet = workbook.addWorksheet(translate('Summary'), {
-      views: [{ rightToLeft: language === 'arabic' }]
-    });
-    
-    // Define styles with updated border treatments
-    const reportTitleStyle = {
-      font: { bold: true, size: 18, color: { argb: 'FFFFFF' } },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } },
-      alignment: { 
-        horizontal: language === 'arabic' ? 'right' : 'left', 
-        vertical: 'middle'
-      },
-      border: {
-        bottom: { style: 'medium', color: { argb: 'D1D5DB' } }
-      }
-    };
-    
-    const sectionTitleStyle = {
-      font: { bold: true, size: 16 },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E5E7EB' } },
-      alignment: { 
-        horizontal: language === 'arabic' ? 'right' : 'left', 
-        vertical: 'middle'
-      },
-      border: {
-        top: { style: 'medium', color: { argb: 'D1D5DB' } },
-        bottom: { style: 'medium', color: { argb: 'D1D5DB' } }
-      }
-    };
-    
-    const dateHeaderStyle = {
-      font: { bold: true, italic: true, size: 12, color: { argb: '4B5563' } },
-      alignment: { 
-        horizontal: language === 'arabic' ? 'right' : 'left', 
-        vertical: 'middle'
-      }
-    };
-    
-    const dateValueStyle = {
-      font: { size: 12, color: { argb: '4B5563' } },
-      alignment: { 
-        horizontal: 'center', 
-        vertical: 'middle'
-      }
-    };
-    
-    const tableHeaderStyle = {
-      font: { bold: true, size: 12, color: { argb: 'FFFFFF' } },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } },
-      alignment: { 
-        horizontal: 'center', 
-        vertical: 'middle',
-        wrapText: true,
-        textRotation: 0 // Ensure text is not rotated
-      },
-      border: {
-        top: { style: 'medium', color: { argb: 'D1D5DB' } },
-        bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
-        left: { style: 'medium', color: { argb: 'D1D5DB' } },
-        right: { style: 'medium', color: { argb: 'D1D5DB' } }
-      }
-    };
-    
-    const companyHeaderStyle = {
-      font: { bold: true, size: 14, color: { argb: 'FFFFFF' } },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '10B981' } }, // Green
-      alignment: { 
-        horizontal: language === 'arabic' ? 'right' : 'left', 
-        vertical: 'middle'
-      },
-      border: {
-        top: { style: 'medium', color: { argb: 'D1D5DB' } },
-        bottom: { style: 'medium', color: { argb: 'D1D5DB' } }
-      }
-    };
-    
-    const cellStyle = {
-      alignment: { 
-        horizontal: 'center', 
-        vertical: 'middle',
-        wrapText: true,
-        textRotation: 0 // Ensure text is not rotated
-      },
-      border: {
-        top: { style: 'medium', color: { argb: 'D1D5DB' } },
-        bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
-        left: { style: 'medium', color: { argb: 'D1D5DB' } },
-        right: { style: 'medium', color: { argb: 'D1D5DB' } }
-      }
-    };
-    
-    const groupStyle = {
-      font: { bold: true },
-      alignment: { 
-        horizontal: language === 'arabic' ? 'right' : 'left', 
-        vertical: 'middle'
-      },
-      border: {
-        top: { style: 'medium', color: { argb: 'D1D5DB' } },
-        bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
-        left: { style: 'medium', color: { argb: 'D1D5DB' } },
-        right: { style: 'medium', color: { argb: 'D1D5DB' } }
-      }
-    };
-    
-    const companyTotalStyle = {
-      font: { bold: true, size: 12 },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F3F4F6' } },
-      alignment: { 
-        horizontal: 'center', 
-        vertical: 'middle'
-      },
-      border: {
-        top: { style: 'medium', color: { argb: 'D1D5DB' } },
-        bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
-        left: { style: 'medium', color: { argb: 'D1D5DB' } },
-        right: { style: 'medium', color: { argb: 'D1D5DB' } }
-      }
-    };
+
+    setIsGenerating(true);
+
+    try {
+      // Create a new workbook
+      const workbook = new ExcelJS.Workbook();
       
-      // Set column widths
+      // Set RTL direction if in Arabic
+      if (language === 'arabic') {
+        workbook.views = [
+          {
+            x: 0, y: 0, width: 10000, height: 20000,
+            firstSheet: 0, activeTab: 0, visibility: 'visible',
+            rightToLeft: true
+          }
+        ];
+      }
+      
+      // ====== SUMMARY SHEET - Create on its own sheet ======
+      const summarySheet = workbook.addWorksheet(translate('Summary'), {
+        views: [{ rightToLeft: language === 'arabic' }],
+        pageSetup: {
+          paperSize: 9, // A4
+          orientation: 'landscape',
+          fitToPage: true,
+          fitToWidth: 1,
+          fitToHeight: 0,
+          margins: {
+            left: 0.5, right: 0.5,
+            top: 0.5, bottom: 0.5,
+            header: 0.3, footer: 0.3
+          }
+        }
+      });
+      
+      // Define enhanced styles with larger text and bold formatting
+      const reportTitleStyle = {
+        font: { bold: true, size: 22, color: { argb: 'FFFFFF' } },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } },
+        alignment: { 
+          horizontal: language === 'arabic' ? 'right' : 'left', 
+          vertical: 'middle'
+        },
+        border: {
+          bottom: { style: 'medium', color: { argb: 'D1D5DB' } }
+        }
+      };
+      
+      const sectionTitleStyle = {
+        font: { bold: true, size: 18 },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E5E7EB' } },
+        alignment: { 
+          horizontal: language === 'arabic' ? 'right' : 'left', 
+          vertical: 'middle'
+        },
+        border: {
+          top: { style: 'medium', color: { argb: 'D1D5DB' } },
+          bottom: { style: 'medium', color: { argb: 'D1D5DB' } }
+        }
+      };
+      
+      const dateHeaderStyle = {
+        font: { bold: true, italic: true, size: 14, color: { argb: '4B5563' } },
+        alignment: { 
+          horizontal: language === 'arabic' ? 'right' : 'left', 
+          vertical: 'middle'
+        }
+      };
+      
+      const dateValueStyle = {
+        font: { size: 14, color: { argb: '4B5563' }, bold: true },
+        alignment: { 
+          horizontal: 'center', 
+          vertical: 'middle'
+        }
+      };
+      
+      const tableHeaderStyle = {
+        font: { bold: true, size: 16, color: { argb: 'FFFFFF' } },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } },
+        alignment: { 
+          horizontal: 'center', 
+          vertical: 'middle',
+          wrapText: true
+        },
+        border: {
+          top: { style: 'medium', color: { argb: 'D1D5DB' } },
+          bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+          left: { style: 'medium', color: { argb: 'D1D5DB' } },
+          right: { style: 'medium', color: { argb: 'D1D5DB' } }
+        }
+      };
+      
+      const cellStyle = {
+        font: { bold: true, size: 14 },
+        alignment: { 
+          horizontal: 'center', 
+          vertical: 'middle',
+          wrapText: true
+        },
+        border: {
+          top: { style: 'medium', color: { argb: 'D1D5DB' } },
+          bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+          left: { style: 'medium', color: { argb: 'D1D5DB' } },
+          right: { style: 'medium', color: { argb: 'D1D5DB' } }
+        }
+      };
+      
+      const companyNameStyle = {
+        font: { bold: true, size: 14 },
+        alignment: { 
+          horizontal: language === 'arabic' ? 'right' : 'left', 
+          vertical: 'middle'
+        },
+        border: {
+          top: { style: 'medium', color: { argb: 'D1D5DB' } },
+          bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+          left: { style: 'medium', color: { argb: 'D1D5DB' } },
+          right: { style: 'medium', color: { argb: 'D1D5DB' } }
+        }
+      };
+      
+      const totalRowStyle = {
+        font: { bold: true, size: 16 },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F3F4F6' } },
+        alignment: { 
+          horizontal: 'center', 
+          vertical: 'middle'
+        },
+        border: {
+          top: { style: 'medium', color: { argb: 'D1D5DB' } },
+          bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+          left: { style: 'medium', color: { argb: 'D1D5DB' } },
+          right: { style: 'medium', color: { argb: 'D1D5DB' } }
+        }
+      };
+      
+      const totalLabelStyle = {
+        font: { bold: true, size: 16 },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F3F4F6' } },
+        alignment: { 
+          horizontal: language === 'arabic' ? 'right' : 'left', 
+          vertical: 'middle'
+        },
+        border: {
+          top: { style: 'medium', color: { argb: 'D1D5DB' } },
+          bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+          left: { style: 'medium', color: { argb: 'D1D5DB' } },
+          right: { style: 'medium', color: { argb: 'D1D5DB' } }
+        }
+      };
+      
+      // Set column widths for better readability
       const columnWidths = [
-        { width: 22.5 }, // Company/Group name
-        { width: 22.5 }, // Trips
-        { width: 16 }, // Volume
-        { width: 16 }, // Distance
+        { width: 25 }, // Company/Group name
+        { width: 20 }, // Trips
+        { width: 20 }, // Volume
+        { width: 20 }, // Distance
       ];
       
       if (hasFinancialAccess) {
         columnWidths.push(
-          { width: 20 }, // Fee
-          { width: 22.5 }, // Base Revenue - INCREASED from 16 to 20
-          { width: 22.5 }, // VAT/Cars
-          { width: 16 }, // Car Rental/Days
-          { width: 20 }, // Total Amount/Car Rental
-          { width: 22.5 }, // VAT
-          { width: 20 }  // Total
+          { width: 20 }, // Base Revenue
+          { width: 20 }, // VAT
+          { width: 20 }, // Car Rental
+          { width: 20 }  // Total Amount
         );
       }
       
       // Apply column widths
-      worksheet.columns = columnWidths;
+      summarySheet.columns = columnWidths;
       
       // Add report title
-      const titleRow = worksheet.addRow([translate('Statistics Report')]);
-      titleRow.height = 30;
+      const titleRow = summarySheet.addRow([translate('Statistics Report')]);
+      titleRow.height = 40;
       const titleCell = titleRow.getCell(1);
       titleCell.style = reportTitleStyle;
-      worksheet.mergeCells(`A1:${hasFinancialAccess ? 'H1' : 'D1'}`);
+      const lastCol = hasFinancialAccess ? 8 : 4;
+      summarySheet.mergeCells(`A1:${String.fromCharCode(64 + lastCol)}1`);
       
       // Add empty row
-      worksheet.addRow([]);
+      summarySheet.addRow([]);
       
       // Add date range
-      const dateHeaderRow = worksheet.addRow([translate('Date Range'), translate('From'), translate('To')]);
+      const dateHeaderRow = summarySheet.addRow([translate('Date Range'), translate('From'), translate('To')]);
+      dateHeaderRow.height = 30;
       for (let i = 1; i <= 3; i++) {
         dateHeaderRow.getCell(i).style = dateHeaderStyle;
       }
       
       const startDate = filters && (filters.startDate || filters.start_date) ? (filters.startDate || filters.start_date) : '';
-const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endDate || filters.end_date) : '';
-      const dateValueRow = worksheet.addRow(['', startDate, endDate]);
+      const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endDate || filters.end_date) : '';
+      const dateValueRow = summarySheet.addRow(['', startDate, endDate]);
+      dateValueRow.height = 30;
       for (let i = 2; i <= 3; i++) {
         dateValueRow.getCell(i).style = dateValueStyle;
       }
       
       // Add empty row
-      worksheet.addRow([]);
+      summarySheet.addRow([]);
       
       // Add company summary section title
-      const companySummaryTitleRow = worksheet.addRow([translate('Company Summary')]);
-      companySummaryTitleRow.height = 24;
+      const companySummaryTitleRow = summarySheet.addRow([translate('Company Summary')]);
+      companySummaryTitleRow.height = 35;
       companySummaryTitleRow.getCell(1).style = sectionTitleStyle;
-      worksheet.mergeCells(`A6:${hasFinancialAccess ? 'H6' : 'D6'}`);
+      summarySheet.mergeCells(`A6:${String.fromCharCode(64 + lastCol)}6`);
       
       // Add company summary headers
       const companyHeaders = [
@@ -296,8 +316,8 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
         );
       }
       
-      const companyHeaderRow = worksheet.addRow(companyHeaders);
-      companyHeaderRow.height = 20;
+      const companyHeaderRow = summarySheet.addRow(companyHeaders);
+      companyHeaderRow.height = 35;
       for (let i = 1; i <= companyHeaders.length; i++) {
         companyHeaderRow.getCell(i).style = tableHeaderStyle;
       }
@@ -313,7 +333,7 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
       };
       
       // Add summary data for each company
-      statistics.forEach(company => {
+      statistics.forEach((company, index) => {
         const companyData = [
           translateCompanyName(company.company),
           company.total_trips || 0,
@@ -339,10 +359,11 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
           companyTotals.totalCarRent += (company.total_car_rent || 0);
         }
         
-        const companyRow = worksheet.addRow(companyData);
+        const companyRow = summarySheet.addRow(companyData);
+        companyRow.height = 30;
         
         // Style the company row
-        companyRow.getCell(1).style = groupStyle;
+        companyRow.getCell(1).style = companyNameStyle;
         
         for (let i = 2; i <= 4; i++) {
           const cell = companyRow.getCell(i);
@@ -355,6 +376,17 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
             const cell = companyRow.getCell(i);
             cell.style = cellStyle;
             cell.numFmt = '$#,##0.00';
+          }
+        }
+        
+        // Add alternating row colors
+        if (index % 2 === 1) {
+          for (let i = 1; i <= lastCol; i++) {
+            companyRow.getCell(i).fill = { 
+              type: 'pattern', 
+              pattern: 'solid', 
+              fgColor: { argb: 'F9FAFB' } 
+            };
           }
         }
       });
@@ -378,12 +410,14 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
         );
       }
       
-      const companyTotalRow = worksheet.addRow(companyTotalData);
-      companyTotalRow.height = 22;
+      const companyTotalRow = summarySheet.addRow(companyTotalData);
+      companyTotalRow.height = 35;
       
       // Style the totals row
-      for (let i = 1; i <= companyTotalData.length; i++) {
-        companyTotalRow.getCell(i).style = companyTotalStyle;
+      companyTotalRow.getCell(1).style = totalLabelStyle;
+      
+      for (let i = 2; i <= companyTotalData.length; i++) {
+        companyTotalRow.getCell(i).style = totalRowStyle;
         
         // Apply number format
         if (i > 1) {
@@ -395,41 +429,85 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
         }
       }
       
-      // Add empty rows
-      worksheet.addRow([]);
-      worksheet.addRow([]);
+      // Add footer with page number
+      summarySheet.headerFooter.oddFooter = "&C&B" + translate('Page') + " 1";
       
-      // Add detailed sections for each company
-      let currentRowIndex = companyTotalRow.number + 3; // +3 for the two empty rows
-      
+      // ====== COMPANY DETAIL SHEETS - One sheet per company ======
       statistics.forEach((company, companyIndex) => {
         if (company.details && company.details.length > 0) {
-          // Add company header
-          const companyDetailTitleRow = worksheet.getRow(currentRowIndex);
-          companyDetailTitleRow.height = 24;
+          // Create a new worksheet for each company
+          const detailSheet = workbook.addWorksheet(translateCompanyName(company.company), {
+            views: [{ rightToLeft: language === 'arabic' }],
+            pageSetup: {
+              paperSize: 9, // A4
+              orientation: 'landscape',
+              fitToPage: true,
+              fitToWidth: 1,
+              fitToHeight: 0,
+              margins: {
+                left: 0.5, right: 0.5,
+                top: 0.5, bottom: 0.5,
+                header: 0.3, footer: 0.3
+              }
+            }
+          });
           
-          companyDetailTitleRow.getCell(1).value = `${translateCompanyName(company.company)} ${translate('Details')}`;
-          companyDetailTitleRow.getCell(1).style = companyHeaderStyle;
+          // Apply column widths to detail sheet
+          detailSheet.columns = columnWidths;
           
-          // Determine last column for merging based on company type
+          // Add report title to detail sheet
+          const detailTitleRow = detailSheet.addRow([translate('Statistics Report')]);
+          detailTitleRow.height = 40;
+          detailTitleRow.getCell(1).style = reportTitleStyle;
+          
+          // Determine which columns to include for this company
           const hasVAT = company.company === "Watanya" || company.company === "TAQA";
           const hasCarRental = company.company === "TAQA";
           
-          let lastColIndex = 4; // Default (A-D)
+          let detailLastCol = 4; // Default (A-D)
           if (hasFinancialAccess) {
-            lastColIndex = 6; // With Fee and Revenue (A-F)
-            if (hasCarRental) lastColIndex += 3; // Add Cars, Days, Car Rental
-            if (hasVAT) lastColIndex += 1; // Add VAT
-            if (hasVAT || hasCarRental) lastColIndex += 1; // Add Total
+            detailLastCol = 6; // With Fee and Revenue (A-F)
+            if (hasCarRental) detailLastCol += 3; // Add Cars, Days, Car Rental
+            if (hasVAT) detailLastCol += 1; // Add VAT
+            if (hasVAT || hasCarRental) detailLastCol += 1; // Add Total
           }
           
-          // Get column letter
-          const lastColLetter = String.fromCharCode(64 + lastColIndex); // 65=A, 66=B, etc.
-          worksheet.mergeCells(`A${currentRowIndex}:${lastColLetter}${currentRowIndex}`);
+          detailSheet.mergeCells(`A1:${String.fromCharCode(64 + detailLastCol)}1`);
           
-          currentRowIndex++;
+          // Add date range to detail sheet
+          detailSheet.addRow([]);
+          const detailDateHeaderRow = detailSheet.addRow([translate('Date Range'), translate('From'), translate('To')]);
+          detailDateHeaderRow.height = 30;
+          for (let i = 1; i <= 3; i++) {
+            detailDateHeaderRow.getCell(i).style = dateHeaderStyle;
+          }
+          
+          const detailDateValueRow = detailSheet.addRow(['', startDate, endDate]);
+          detailDateValueRow.height = 30;
+          for (let i = 2; i <= 3; i++) {
+            detailDateValueRow.getCell(i).style = dateValueStyle;
+          }
+          
+          detailSheet.addRow([]);
+          
+          // Add company details header with green background
+          const companyDetailHeaderStyle = {
+            ...sectionTitleStyle,
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '10B981' } },
+            font: { bold: true, size: 18, color: { argb: 'FFFFFF' } }
+          };
+          
+          const detailHeaderRow = detailSheet.addRow([`${translateCompanyName(company.company)} ${translate('Details')}`]);
+          detailHeaderRow.height = 35;
+          detailHeaderRow.getCell(1).style = companyDetailHeaderStyle;
+          detailSheet.mergeCells(`A6:${String.fromCharCode(64 + detailLastCol)}6`);
           
           // Add column headers for details
+          const detailTableHeaderStyle = {
+            ...tableHeaderStyle,
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '10B981' } }
+          };
+          
           const detailHeaders = [
             translate('Group'),
             translate('Trips'),
@@ -458,16 +536,11 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
             }
           }
           
-          const detailHeaderRow = worksheet.getRow(currentRowIndex);
-          detailHeaderRow.values = detailHeaders;
-          detailHeaderRow.height = 20;
-          
-          // Style detail header row
+          const detailHeadersRow = detailSheet.addRow(detailHeaders);
+          detailHeadersRow.height = 35;
           for (let i = 1; i <= detailHeaders.length; i++) {
-            detailHeaderRow.getCell(i).style = tableHeaderStyle;
+            detailHeadersRow.getCell(i).style = detailTableHeaderStyle;
           }
-          
-          currentRowIndex++;
           
           // Track group totals
           const groupTotals = {
@@ -484,10 +557,7 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
           };
           
           // Add group data rows
-          company.details.forEach(detail => {
-            const groupRow = worksheet.getRow(currentRowIndex);
-            
-            // Set values
+          company.details.forEach((detail, detailIndex) => {
             const rowData = [
               translateGroupName(detail.group_name),
               detail.total_trips || 0,
@@ -528,18 +598,19 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
               
               if (hasVAT || hasCarRental) {
                 const totalAmount = (detail.total_revenue || 0) + 
-                                    (detail.vat || 0) + 
-                                    (detail.car_rental || 0);
-                                    
+                                   (detail.vat || 0) + 
+                                   (detail.car_rental || 0);
+                                   
                 rowData.push(totalAmount);
                 groupTotals.totalAmount += totalAmount;
               }
             }
             
-            groupRow.values = rowData;
+            const groupRow = detailSheet.addRow(rowData);
+            groupRow.height = 30;
             
-            // Style group row
-            groupRow.getCell(1).style = groupStyle;
+            // Style the group row
+            groupRow.getCell(1).style = companyNameStyle;
             
             // Style numeric cells
             for (let i = 2; i <= 4; i++) {
@@ -565,13 +636,14 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
                 }
                 
                 // Style Car Rental as currency
-                const carRentalCell = groupRow.getCell(9);
+                const carRentalCellIndex = 9;
+                const carRentalCell = groupRow.getCell(carRentalCellIndex);
                 carRentalCell.style = cellStyle;
                 carRentalCell.numFmt = '$#,##0.00';
               }
               
               if (hasVAT) {
-                // VAT cell is after Revenue (pos 6) or after Car Rental (pos 9)
+                // VAT cell is after Revenue (pos 7) or after Car Rental (pos 10)
                 const vatCellIndex = hasCarRental ? 10 : 7;
                 const vatCell = groupRow.getCell(vatCellIndex);
                 vatCell.style = cellStyle;
@@ -586,13 +658,19 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
               }
             }
             
-            currentRowIndex++;
+            // Add alternating row colors
+            if (detailIndex % 2 === 1) {
+              for (let i = 1; i <= detailHeaders.length; i++) {
+                groupRow.getCell(i).fill = { 
+                  type: 'pattern', 
+                  pattern: 'solid', 
+                  fgColor: { argb: 'F9FAFB' } 
+                };
+              }
+            }
           });
           
           // Add group totals row
-          const groupTotalRow = worksheet.getRow(currentRowIndex);
-          groupTotalRow.height = 22;
-          
           const groupTotalData = [
             translate('Total'),
             groupTotals.totalTrips,
@@ -623,11 +701,14 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
             }
           }
           
-          groupTotalRow.values = groupTotalData;
+          const groupTotalRow = detailSheet.addRow(groupTotalData);
+          groupTotalRow.height = 35;
           
           // Style the group totals row
-          for (let i = 1; i <= groupTotalData.length; i++) {
-            groupTotalRow.getCell(i).style = companyTotalStyle;
+          groupTotalRow.getCell(1).style = totalLabelStyle;
+          
+          for (let i = 2; i <= groupTotalData.length; i++) {
+            groupTotalRow.getCell(i).style = totalRowStyle;
             
             // Apply number format
             if (i > 1) {
@@ -639,15 +720,8 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
             }
           }
           
-          currentRowIndex++;
-          
-          // Add empty rows between companies if not the last company
-          if (companyIndex < statistics.length - 1) {
-            worksheet.getRow(currentRowIndex).height = 10;
-            currentRowIndex++;
-            worksheet.getRow(currentRowIndex).height = 10;
-            currentRowIndex++;
-          }
+          // Add page number in footer
+          detailSheet.headerFooter.oddFooter = "&C&B" + translate('Page') + " " + (companyIndex + 2);
         }
       });
       
@@ -660,6 +734,7 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
       
       // Save file
       saveAs(blob, fileName);
+      
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       alert(
@@ -667,38 +742,41 @@ const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endD
           ? 'حدث خطأ أثناء التصدير إلى Excel' 
           : 'An error occurred during Excel export'
       );
+    } finally {
+      setIsGenerating(false);
     }
-  };
+};
 
-  return (
-    <div className="mb-4 flex items-center gap-4">
-      <div className="border border-gray-300 rounded-md p-2">
-        <div className="flex items-center space-x-2">
-          <Languages className="h-5 w-5 text-gray-500" />
-          <select
-            className="outline-none bg-transparent"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            dir={language === 'arabic' ? 'rtl' : 'ltr'}
-          >
-            <option value="english">English</option>
-            <option value="arabic">العربية</option>
-          </select>
-        </div>
+return (
+  <div className="mb-4 flex items-center gap-4">
+    <div className="border border-gray-300 rounded-md p-2">
+      <div className="flex items-center space-x-2">
+        <Languages className="h-5 w-5 text-gray-500" />
+        <select
+          className="outline-none bg-transparent"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          dir={language === 'arabic' ? 'rtl' : 'ltr'}
+        >
+          <option value="english">English</option>
+          <option value="arabic">العربية</option>
+        </select>
       </div>
-      
-      <button
-        onClick={exportToExcel}
-        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        dir={language === 'arabic' ? 'rtl' : 'ltr'}
-      >
-        <Download className="h-5 w-5" />
-        <span className={language === 'arabic' ? 'mr-2' : 'ml-2'}>
-          {language === 'arabic' ? 'تصدير إلى Excel' : 'Export to Excel'}
-        </span>
-      </button>
     </div>
-  );
+    
+    <button
+      onClick={exportToExcel}
+      disabled={isGenerating}
+      className={`flex items-center px-4 py-2 ${isGenerating ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md transition-colors`}
+      dir={language === 'arabic' ? 'rtl' : 'ltr'}
+    >
+      <Download className="h-5 w-5" />
+      <span className={language === 'arabic' ? 'mr-2' : 'ml-2'}>
+        {isGenerating ? translate('Generating Excel...') : translate('Export to Excel')}
+      </span>
+    </button>
+  </div>
+);
 };
 
 export default ExportToExcel;

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Download, Languages } from 'lucide-react';
 import apiClient from '../../apiClient';
+import * as XLSX from 'sheetjs';
+import ExportToExcel from './ExportStatsToExcel';
+
 import { 
   BarChart, 
   Bar, 
@@ -249,6 +252,14 @@ const TripStatistics = ({ filters }) => {
           </div>
         </div>
       )}
+
+      {/* Export to Excel Component */}
+{!isLoading && statistics.length > 0 && (
+  <ExportToExcel 
+    statistics={statistics} 
+    hasFinancialAccess={hasFinancialAccess} 
+  />
+)}
       
        {/* Loading Indicator */}
        {isLoading && (

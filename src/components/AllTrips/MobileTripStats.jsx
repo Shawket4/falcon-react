@@ -312,6 +312,7 @@ const MobileTripStatistics = ({ filters }) => {
   <ExportToExcel 
     statistics={statistics} 
     hasFinancialAccess={hasFinancialAccess} 
+    filters={internalFilters} // Make sure this is the correct filters object
   />
 )}
 

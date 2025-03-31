@@ -1,4 +1,3 @@
-// File: components/trips/ListActions.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import * as ExcelJS from 'exceljs';
@@ -8,6 +7,56 @@ const ListActions = ({ isLoading, isExporting, tripsCount, onExport }) => {
   const exportToExcel = async () => {
     const trips = await onExport();
     if (!trips.length) return;
+
+    // Updated sorting logic
+    trips.sort((a, b) => {
+      // First sort by date
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) {
+        return dateA.localeCompare(dateB);
+      }
+      
+      // Then by company
+      const companyA = a.company || '';
+      const companyB = b.company || '';
+      if (companyA !== companyB) {
+        return companyA.localeCompare(companyB);
+      }
+      
+      // Then by terminal
+      const terminalA = a.terminal || '';
+      const terminalB = b.terminal || '';
+      if (terminalA !== terminalB) {
+        return terminalA.localeCompare(terminalB);
+      }
+      
+      // Then by drop-off point
+      const dropOffA = a.drop_off_point || '';
+      const dropOffB = b.drop_off_point || '';
+      if (dropOffA !== dropOffB) {
+        return dropOffA.localeCompare(dropOffB);
+      }
+      
+      // Then by car no plate
+      const carNoPlateA = a.car_no_plate || '';
+      const carNoPlateB = b.car_no_plate || '';
+      if (carNoPlateA !== carNoPlateB) {
+        return carNoPlateA.localeCompare(carNoPlateB);
+      }
+      
+      // Then by tank capacity
+      const capacityA = a.tank_capacity || 0;
+      const capacityB = b.tank_capacity || 0;
+      if (capacityA !== capacityB) {
+        return capacityB - capacityA; // Descending order
+      }
+      
+      // Finally by receipt no
+      const receiptA = a.receipt_no || '';
+      const receiptB = b.receipt_no || '';
+      return receiptA.localeCompare(receiptB);
+    });
 
     // Create a new workbook
     const workbook = new ExcelJS.Workbook();
@@ -27,38 +76,9 @@ const ListActions = ({ isLoading, isExporting, tripsCount, onExport }) => {
       { header: 'Fee', key: 'fee', width: 12 }
     ];
 
-    // Style the header row
-    const headerRow = worksheet.getRow(1);
-    headerRow.height = 20;
-    headerRow.font = {
-      name: 'Arial',
-      size: 12,
-      bold: true,
-      color: { argb: 'FFFFFF' }
-    };
-    headerRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: '3B82F6' } // Blue color
-    };
-    headerRow.alignment = {
-      horizontal: 'center',
-      vertical: 'middle'
-    };
-    
-    // Add borders to header cells
-    headerRow.eachCell({ includeEmpty: true }, cell => {
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' }
-      };
-    });
-
     // Add data rows with proper formatting
     trips.forEach(trip => {
-      const row = worksheet.addRow({
+      worksheet.addRow({
         receipt_no: trip.receipt_no || '',
         date: trip.date || '',
         company: trip.company || '',
@@ -70,67 +90,90 @@ const ListActions = ({ isLoading, isExporting, tripsCount, onExport }) => {
         mileage: typeof trip.mileage === 'number' ? trip.mileage : (trip.mileage || ''),
         fee: typeof trip.fee === 'number' ? trip.fee : (trip.fee || '')
       });
-
-      // Style data cells
-      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        // Add borders to all cells
-        cell.border = {
-          top: { style: 'thin', color: { argb: 'D1D5DB' } },
-          left: { style: 'thin', color: { argb: 'D1D5DB' } },
-          bottom: { style: 'thin', color: { argb: 'D1D5DB' } },
-          right: { style: 'thin', color: { argb: 'D1D5DB' } }
-        };
-        
-        // Set alignment based on cell type
-        if (colNumber === 1) { // Receipt No
-          cell.alignment = { horizontal: 'center' };
-        } else if (colNumber === 2) { // Date
-          cell.alignment = { horizontal: 'center' };
-        } else if (colNumber === 9 || colNumber === 10) { // Distance and Fee
-          cell.alignment = { horizontal: 'right' };
-          
-          // Apply number formatting
-          if (colNumber === 9 && typeof cell.value === 'number') {
-            cell.numFmt = '#,##0.00';
-          } else if (colNumber === 10 && typeof cell.value === 'number') {
-            cell.numFmt = '#,##0.00';
-          }
-        } else {
-          cell.alignment = { horizontal: 'left' };
-        }
-      });
     });
 
-    // Apply zebra striping to rows
-    const rowCount = worksheet.rowCount;
-    for (let i = 2; i <= rowCount; i++) { // Start from 2 to skip header
-      if (i % 2 === 0) { // Even rows
-        const row = worksheet.getRow(i);
-        row.eachCell({ includeEmpty: true }, cell => {
-          cell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'F9FAFB' } // Light gray
-          };
-        });
-      }
+    // Get max column number and row number for the table
+    const maxCol = worksheet.columnCount;
+    const maxRow = worksheet.rowCount;
+
+    // Define the common border style for all cells
+    const borderStyle = {
+      top: { style: 'medium', color: { argb: 'D1D5DB' } },
+      left: { style: 'medium', color: { argb: 'D1D5DB' } },
+      bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+      right: { style: 'medium', color: { argb: 'D1D5DB' } }
+    };
+
+    // Style the header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 22; // Slightly taller header for professional look
+    
+    // Apply styles to each header cell
+    for (let i = 1; i <= maxCol; i++) {
+      const cell = headerRow.getCell(i);
+      cell.font = {
+        name: 'Arial',
+        size: 11,
+        bold: true,
+        color: { argb: 'FFFFFF' }
+      };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '3B82F6' } // Blue color
+      };
+      cell.alignment = {
+        horizontal: 'center',
+        vertical: 'middle'
+      };
+      cell.border = { ...borderStyle };
     }
 
-    // Add a footer row with total count
-    const footerRow = worksheet.addRow(['Total Trips:', trips.length]);
-    footerRow.font = { bold: true };
-    footerRow.getCell(1).alignment = { horizontal: 'right' };
-    footerRow.getCell(2).alignment = { horizontal: 'left' };
-    
-    // Merge some cells in the footer for a cleaner look
-    worksheet.mergeCells(`A${rowCount + 1}:B${rowCount + 1}`);
-    
-    // Add a border at the top of the footer
-    footerRow.eachCell({ includeEmpty: true }, cell => {
-      cell.border = {
-        top: { style: 'medium' }
-      };
-    });
+    // Style all data cells with consistent borders and zebra striping
+    for (let rowIndex = 2; rowIndex <= maxRow; rowIndex++) {
+      const row = worksheet.getRow(rowIndex);
+      
+      // Apply zebra striping - more subtle for professional look
+      const fillColor = rowIndex % 2 === 0 ? 'F9FAFB' : 'FFFFFF';
+      
+      for (let colIndex = 1; colIndex <= maxCol; colIndex++) {
+        const cell = row.getCell(colIndex);
+        
+        // Apply zebra striping
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: fillColor }
+        };
+        
+        // Add borders to all cells
+        cell.border = { ...borderStyle };
+        
+        // Set alignment based on cell type
+        if (colIndex === 1) { // Receipt No
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        } else if (colIndex === 2) { // Date
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        } else if (colIndex === 9 || colIndex === 10) { // Distance and Fee
+          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+          
+          // Apply number formatting
+          if (colIndex === 9 && typeof cell.value === 'number') {
+            cell.numFmt = '#,##0.00';
+          } else if (colIndex === 10 && typeof cell.value === 'number') {
+            cell.numFmt = '$#,##0.00';
+          }
+        } else {
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        }
+        
+        // Add consistent font for all cells
+        cell.font = {
+          name: 'Arial',
+          size: 10
+        };
+      }
+    }
 
     // Generate Excel file
     const buffer = await workbook.xlsx.writeBuffer();
@@ -138,8 +181,11 @@ const ListActions = ({ isLoading, isExporting, tripsCount, onExport }) => {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
     });
     
-    // Create filename
-    const fileName = `trips_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+    // Create filename with readable timestamp for better organization
+    const now = new Date();
+    const date = now.toISOString().split('T')[0];
+    const time = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+    const fileName = `trips_export_${date}_${time}.xlsx`;
     
     // Save file using file-saver
     saveAs(blob, fileName);

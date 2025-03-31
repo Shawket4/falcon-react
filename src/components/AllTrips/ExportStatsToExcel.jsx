@@ -82,163 +82,165 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
       maximumFractionDigits: 2 
     }).format(num);
   };
-
   const exportToExcel = async () => {
-    if (!statistics || statistics.length === 0) {
-      alert(language === 'arabic' ? 'لا توجد بيانات للتصدير' : 'No data to export');
-      return;
-    }
+  if (!statistics || statistics.length === 0) {
+    alert(language === 'arabic' ? 'لا توجد بيانات للتصدير' : 'No data to export');
+    return;
+  }
 
-    try {
-      // Create a new workbook
-      const workbook = new ExcelJS.Workbook();
-      
-      // Set RTL direction if in Arabic
-      if (language === 'arabic') {
-        workbook.views = [
-          {
-            x: 0, y: 0, width: 10000, height: 20000,
-            firstSheet: 0, activeTab: 0, visibility: 'visible',
-            rightToLeft: true
-          }
-        ];
+  try {
+    // Create a new workbook
+    const workbook = new ExcelJS.Workbook();
+    
+    // Set RTL direction if in Arabic
+    if (language === 'arabic') {
+      workbook.views = [
+        {
+          x: 0, y: 0, width: 10000, height: 20000,
+          firstSheet: 0, activeTab: 0, visibility: 'visible',
+          rightToLeft: true
+        }
+      ];
+    }
+    
+    // Add a worksheet
+    const worksheet = workbook.addWorksheet(translate('Summary'), {
+      views: [{ rightToLeft: language === 'arabic' }]
+    });
+    
+    // Define styles with updated border treatments
+    const reportTitleStyle = {
+      font: { bold: true, size: 18, color: { argb: 'FFFFFF' } },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } },
+      alignment: { 
+        horizontal: language === 'arabic' ? 'right' : 'left', 
+        vertical: 'middle'
+      },
+      border: {
+        bottom: { style: 'medium', color: { argb: 'D1D5DB' } }
       }
-      
-      // Add a worksheet
-      const worksheet = workbook.addWorksheet(translate('Summary'), {
-        views: [{ rightToLeft: language === 'arabic' }]
-      });
-      
-      // Define styles
-      const reportTitleStyle = {
-        font: { bold: true, size: 18, color: { argb: 'FFFFFF' } },
-        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } },
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'middle'
-        },
-        border: {
-          bottom: { style: 'medium', color: { argb: '000000' } }
-        }
-      };
-      
-      const sectionTitleStyle = {
-        font: { bold: true, size: 16 },
-        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E5E7EB' } },
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'middle'
-        },
-        border: {
-          top: { style: 'thin', color: { argb: '000000' } },
-          bottom: { style: 'thin', color: { argb: '000000' } }
-        }
-      };
-      
-      const dateHeaderStyle = {
-        font: { bold: true, italic: true, size: 12, color: { argb: '4B5563' } },
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'middle'
-        }
-      };
-      
-      const dateValueStyle = {
-        font: { size: 12, color: { argb: '4B5563' } },
-        alignment: { 
-          horizontal: 'center', 
-          vertical: 'middle'
-        }
-      };
-      
-      const tableHeaderStyle = {
-        font: { bold: true, size: 12, color: { argb: 'FFFFFF' } },
-        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } },
-        alignment: { 
-          horizontal: 'center', 
-          vertical: 'middle',
-          wrapText: true
-        },
-        border: {
-          top: { style: 'thin', color: { argb: '000000' } },
-          bottom: { style: 'thin', color: { argb: '000000' } },
-          left: { style: 'thin', color: { argb: '000000' } },
-          right: { style: 'thin', color: { argb: '000000' } }
-        }
-      };
-      
-      const companyHeaderStyle = {
-        font: { bold: true, size: 14, color: { argb: 'FFFFFF' } },
-        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '10B981' } }, // Green
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'middle'
-        },
-        border: {
-          top: { style: 'thin', color: { argb: '000000' } },
-          bottom: { style: 'thin', color: { argb: '000000' } }
-        }
-      };
-      
-      const cellStyle = {
-        alignment: { 
-          horizontal: 'center', 
-          vertical: 'middle'
-        },
-        border: {
-          top: { style: 'thin', color: { argb: 'D1D5DB' } },
-          bottom: { style: 'thin', color: { argb: 'D1D5DB' } },
-          left: { style: 'thin', color: { argb: 'D1D5DB' } },
-          right: { style: 'thin', color: { argb: 'D1D5DB' } }
-        }
-      };
-      
-      const groupStyle = {
-        font: { bold: true },
-        alignment: { 
-          horizontal: language === 'arabic' ? 'right' : 'left', 
-          vertical: 'middle'
-        },
-        border: {
-          top: { style: 'thin', color: { argb: 'D1D5DB' } },
-          bottom: { style: 'thin', color: { argb: 'D1D5DB' } },
-          left: { style: 'thin', color: { argb: 'D1D5DB' } },
-          right: { style: 'thin', color: { argb: 'D1D5DB' } }
-        }
-      };
-      
-      const companyTotalStyle = {
-        font: { bold: true, size: 12 },
-        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F3F4F6' } },
-        alignment: { 
-          horizontal: 'center', 
-          vertical: 'middle'
-        },
-        border: {
-          top: { style: 'thin', color: { argb: '000000' } },
-          bottom: { style: 'thin', color: { argb: '000000' } },
-          left: { style: 'thin', color: { argb: '000000' } },
-          right: { style: 'thin', color: { argb: '000000' } }
-        }
-      };
+    };
+    
+    const sectionTitleStyle = {
+      font: { bold: true, size: 16 },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E5E7EB' } },
+      alignment: { 
+        horizontal: language === 'arabic' ? 'right' : 'left', 
+        vertical: 'middle'
+      },
+      border: {
+        top: { style: 'medium', color: { argb: 'D1D5DB' } },
+        bottom: { style: 'medium', color: { argb: 'D1D5DB' } }
+      }
+    };
+    
+    const dateHeaderStyle = {
+      font: { bold: true, italic: true, size: 12, color: { argb: '4B5563' } },
+      alignment: { 
+        horizontal: language === 'arabic' ? 'right' : 'left', 
+        vertical: 'middle'
+      }
+    };
+    
+    const dateValueStyle = {
+      font: { size: 12, color: { argb: '4B5563' } },
+      alignment: { 
+        horizontal: 'center', 
+        vertical: 'middle'
+      }
+    };
+    
+    const tableHeaderStyle = {
+      font: { bold: true, size: 12, color: { argb: 'FFFFFF' } },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } },
+      alignment: { 
+        horizontal: 'center', 
+        vertical: 'middle',
+        wrapText: true,
+        textRotation: 0 // Ensure text is not rotated
+      },
+      border: {
+        top: { style: 'medium', color: { argb: 'D1D5DB' } },
+        bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+        left: { style: 'medium', color: { argb: 'D1D5DB' } },
+        right: { style: 'medium', color: { argb: 'D1D5DB' } }
+      }
+    };
+    
+    const companyHeaderStyle = {
+      font: { bold: true, size: 14, color: { argb: 'FFFFFF' } },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '10B981' } }, // Green
+      alignment: { 
+        horizontal: language === 'arabic' ? 'right' : 'left', 
+        vertical: 'middle'
+      },
+      border: {
+        top: { style: 'medium', color: { argb: 'D1D5DB' } },
+        bottom: { style: 'medium', color: { argb: 'D1D5DB' } }
+      }
+    };
+    
+    const cellStyle = {
+      alignment: { 
+        horizontal: 'center', 
+        vertical: 'middle',
+        wrapText: true,
+        textRotation: 0 // Ensure text is not rotated
+      },
+      border: {
+        top: { style: 'medium', color: { argb: 'D1D5DB' } },
+        bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+        left: { style: 'medium', color: { argb: 'D1D5DB' } },
+        right: { style: 'medium', color: { argb: 'D1D5DB' } }
+      }
+    };
+    
+    const groupStyle = {
+      font: { bold: true },
+      alignment: { 
+        horizontal: language === 'arabic' ? 'right' : 'left', 
+        vertical: 'middle'
+      },
+      border: {
+        top: { style: 'medium', color: { argb: 'D1D5DB' } },
+        bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+        left: { style: 'medium', color: { argb: 'D1D5DB' } },
+        right: { style: 'medium', color: { argb: 'D1D5DB' } }
+      }
+    };
+    
+    const companyTotalStyle = {
+      font: { bold: true, size: 12 },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F3F4F6' } },
+      alignment: { 
+        horizontal: 'center', 
+        vertical: 'middle'
+      },
+      border: {
+        top: { style: 'medium', color: { argb: 'D1D5DB' } },
+        bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
+        left: { style: 'medium', color: { argb: 'D1D5DB' } },
+        right: { style: 'medium', color: { argb: 'D1D5DB' } }
+      }
+    };
       
       // Set column widths
       const columnWidths = [
-        { width: 22 }, // Company/Group name
-        { width: 12 }, // Trips
-        { width: 14 }, // Volume
-        { width: 14 }, // Distance
+        { width: 22.5 }, // Company/Group name
+        { width: 22.5 }, // Trips
+        { width: 16 }, // Volume
+        { width: 16 }, // Distance
       ];
       
       if (hasFinancialAccess) {
         columnWidths.push(
-          { width: 12 }, // Fee
-          { width: 16 }, // Base Revenue
-          { width: 14 }, // VAT/Cars
-          { width: 14 }, // Car Rental/Days
-          { width: 18 }, // Total Amount/Car Rental
-          { width: 16 }, // VAT
-          { width: 16 }  // Total
+          { width: 20 }, // Fee
+          { width: 22.5 }, // Base Revenue - INCREASED from 16 to 20
+          { width: 22.5 }, // VAT/Cars
+          { width: 16 }, // Car Rental/Days
+          { width: 20 }, // Total Amount/Car Rental
+          { width: 22.5 }, // VAT
+          { width: 20 }  // Total
         );
       }
       
@@ -261,8 +263,8 @@ const ExportToExcel = ({ statistics, hasFinancialAccess, filters }) => {
         dateHeaderRow.getCell(i).style = dateHeaderStyle;
       }
       
-      const startDate = filters && filters.startDate ? filters.startDate : '';
-      const endDate = filters && filters.endDate ? filters.endDate : '';
+      const startDate = filters && (filters.startDate || filters.start_date) ? (filters.startDate || filters.start_date) : '';
+const endDate = filters && (filters.endDate || filters.end_date) ? (filters.endDate || filters.end_date) : '';
       const dateValueRow = worksheet.addRow(['', startDate, endDate]);
       for (let i = 2; i <= 3; i++) {
         dateValueRow.getCell(i).style = dateValueStyle;

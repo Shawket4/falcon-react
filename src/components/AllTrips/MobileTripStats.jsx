@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import ExportToExcel from './ExportStatsToExcel';
+import ExportToPdf from './ExportStatsToPdf';
 import apiClient from '../../apiClient';
 import { 
   BarChart, 
@@ -315,7 +316,7 @@ const MobileTripStatistics = ({ filters }) => {
       hasFinancialAccess={hasFinancialAccess} 
       filters={internalFilters}
     />
-    <ExportToPDF 
+    <ExportToPdf 
       statistics={statistics} 
       hasFinancialAccess={hasFinancialAccess} 
       filters={internalFilters}

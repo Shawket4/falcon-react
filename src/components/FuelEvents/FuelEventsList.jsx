@@ -326,6 +326,8 @@ const FuelEventsList = () => {
         {sortedCarPlates.length > 0 && (
           <GlobalStatistics stats={globalStats} />
         )}
+
+        
         
         {/* Content Area */}
         {loading ? (

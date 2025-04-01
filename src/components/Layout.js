@@ -13,7 +13,11 @@ import {
   DollarSign,
   Container,
   Droplet,
-  Building
+  Building,
+  BarChart4,
+  FileText,
+  CreditCard,
+  PieChart
 } from 'lucide-react';
 import Breadcrumbs from './Breadcrumbs';
 import { useAuth } from './AuthContext';
@@ -147,26 +151,44 @@ const Layout = ({ children }) => {
     }
   ];
   
-  // Only add the Vendor Expenses section if user has the required permission level
+  // Only add the Vendor Finance section if user has the required permission level
   if (hasMinPermissionLevel(REQUIRED_PERMISSION_LEVEL)) {
     navSections.push({
-      title: "Vendor Expenses",
-      icon: <Building size={18} />,
+      title: "Vendor Finance",
+      icon: <DollarSign size={18} />,
       items: [
         { 
-          path: '/vendor-dashboard', 
-          icon: <DollarSign size={18} />, 
-          label: 'Expense Dashboard',
-          isActive: location.pathname === '/vendor-dashboard'
+          path: '/finance-dashboard', 
+          icon: <BarChart4 size={18} />, 
+          label: 'Financial Dashboard',
+          isActive: location.pathname === '/finance-dashboard'
         },
         { 
           path: '/vendors', 
           icon: <Building size={18} />, 
           label: 'Vendors',
           isActive: location.pathname === '/vendors' || 
-                    location.pathname.includes('/edit-vendor/') || 
-                    location.pathname.includes('/add-vendor') ||
-                    location.pathname.includes('/vendor/')
+                    location.pathname.includes('/vendors/')
+        },
+        { 
+          path: '/transactions', 
+          icon: <CreditCard size={18} />, 
+          label: 'Transactions',
+          isActive: location.pathname === '/transactions'
+        },
+        { 
+          path: '/vendors/create', 
+          icon: <PlusCircle size={18} />, 
+          label: 'Add Vendor',
+          isActive: location.pathname === '/vendors/create',
+          minPermissionLevel: REQUIRED_PERMISSION_LEVEL
+        },
+        { 
+          path: '/reports', 
+          icon: <PieChart size={18} />, 
+          label: 'Financial Reports',
+          isActive: location.pathname === '/reports',
+          minPermissionLevel: REQUIRED_PERMISSION_LEVEL
         }
       ]
     });

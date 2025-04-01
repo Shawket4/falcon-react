@@ -10,7 +10,7 @@ import CreateTire from './components/CreateTire';
 import Login from './components/Login';
 import Layout from './components/Layout';
 import { AllDrivers, DriverDetails, DriverLoans, AddDriverLoan } from './components/Drivers';
-import {FuelEventsList, FuelEventDetails, AddFuelEvent, EditFuelEvent} from './components/FuelEvents';
+import { FuelEventsList, FuelEventDetails, AddFuelEvent, EditFuelEvent } from './components/FuelEvents';
 import { AuthProvider } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -24,12 +24,14 @@ import { AllOilChanges, AddOilChange, EditOilChange } from './components/OilChan
 // Import the refactored TripList component instead of AllTrips
 import { TripList } from './components/AllTrips';
 
-// New Vendor Expense components
-import VendorList from './components/VendorList';
-import VendorForm from './components/VendorForm';
-import ExpenseList from './components/ExpenseList';
-import ExpenseForm from './components/ExpenseForm';
-import Dashboard from './components/VendorDashboard'; // This is the vendor expense dashboard
+// Import vendor financial system components
+import {
+  Dashboard,
+  VendorManagement,
+  VendorDetail,
+  VendorForm,
+  TransactionForm
+} from './components/Vendors';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -45,15 +47,10 @@ export const pathNames = {
   'add-trip': 'Add Trip',
   'oil-changes-list': 'Oil Changes',
   'add-oil-change': 'Add Oil Change',
-  
-  // Add vendor expense path names
   vendors: 'Vendors',
-  'add-vendor': 'Add Vendor',
-  'edit-vendor': 'Edit Vendor',
-  expenses: 'Expenses',
-  'add-expense': 'Add Expense',
-  'edit-expense': 'Edit Expense',
-  'vendor-expenses': 'Vendor Expenses',
+  'vendors/create': 'Add Vendor',
+  'finance-dashboard': 'Finance Dashboard',
+  transactions: 'Transactions',
 };
 
 // Permission level required for certain operations
@@ -264,9 +261,9 @@ function App() {
             </ProtectedRoute>
           } />
 
-          {/* New Vendor Expense Routes - All restricted to permission level 3 or higher */}
-          <Route path="/vendor-dashboard" element={
-            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+          {/* Vendor Financial System Routes */}
+          <Route path="/finance-dashboard" element={
+            <ProtectedRoute>
               <Layout>
                 <Dashboard />
               </Layout>
@@ -274,57 +271,56 @@ function App() {
           } />
           
           <Route path="/vendors" element={
-            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+            <ProtectedRoute>
               <Layout>
-                <VendorList />
+                <VendorManagement />
               </Layout>
             </ProtectedRoute>
           } />
           
-          <Route path="/add-vendor" element={
+          <Route path="/vendors/create" element={
             <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
               <Layout>
-                <VendorForm />
+                <div className="p-6 bg-white rounded-lg shadow">
+                  <h1 className="text-2xl font-bold mb-6">Add New Vendor</h1>
+                  <VendorForm 
+                    onSubmit={(data) => console.log('Submit new vendor:', data)}
+                    onCancel={() => window.history.back()}
+                  />
+                </div>
               </Layout>
             </ProtectedRoute>
           } />
           
-          <Route path="/edit-vendor/:vendorId" element={
-            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+          <Route path="/vendors/:id" element={
+            <ProtectedRoute>
               <Layout>
-                <VendorForm />
+                <VendorDetail />
               </Layout>
             </ProtectedRoute>
           } />
           
-          <Route path="/vendor/:vendorId/expenses" element={
-            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+          <Route path="/vendors/:id/add-transaction" element={
+            <ProtectedRoute>
               <Layout>
-                <ExpenseList />
+                <div className="p-6 bg-white rounded-lg shadow">
+                  <h1 className="text-2xl font-bold mb-6">Add Transaction</h1>
+                  <TransactionForm 
+                    onSubmit={(data) => console.log('Submit transaction:', data)}
+                    onCancel={() => window.history.back()}
+                  />
+                </div>
               </Layout>
             </ProtectedRoute>
           } />
           
-          <Route path="/expenses" element={
-            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+          <Route path="/transactions" element={
+            <ProtectedRoute>
               <Layout>
-                <ExpenseList />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/add-expense/:vendorId?" element={
-            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
-              <Layout>
-                <ExpenseForm />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/edit-expense/:vendorId/:expenseId" element={
-            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
-              <Layout>
-                <ExpenseForm />
+                <div className="p-6 bg-white rounded-lg shadow">
+                  <h1 className="text-2xl font-bold mb-4">All Transactions</h1>
+                  <p>This page is under construction. Please use the vendor details view to manage transactions.</p>
+                </div>
               </Layout>
             </ProtectedRoute>
           } />

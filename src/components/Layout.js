@@ -168,7 +168,7 @@ const Layout = ({ children }) => {
           icon: <Building size={18} />, 
           label: 'Vendors',
           isActive: location.pathname === '/vendors' || 
-                    location.pathname.includes('/vendors/')
+                    location.pathname.includes('/vendors/') && !location.pathname.includes('/vendors/create')
         },
         { 
           path: '/transactions', 

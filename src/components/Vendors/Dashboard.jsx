@@ -61,10 +61,10 @@ const mockRecentActivity = [
 
 const Dashboard = () => {
   const [summary, setSummary] = useState({
-    totalCredits: 0,
-    totalDebits: 0,
-    netBalance: 0,
-    vendorCount: 0
+    total_credits: 0,
+    total_debits: 0,
+    net_balance: 0,
+    vendor_count: 0
   });
   const [monthlyData, setMonthlyData] = useState([]);
   const [topVendors, setTopVendors] = useState([]);
@@ -93,10 +93,10 @@ const Dashboard = () => {
         // Use mock data for development
         setTimeout(() => {
           setSummary({
-            totalCredits: 15000,
-            totalDebits: -8000,
-            netBalance: 7000,
-            vendorCount: 5
+            total_credits: 15000,
+            total_debits: -8000,
+            net_balance: 7000,
+            vendor_count: 5
           });
           setMonthlyData(mockMonthlyData);
           setTopVendors(mockTopVendors);
@@ -127,10 +127,10 @@ const Dashboard = () => {
       // Use mock data if API fails
       setUseMockData(true);
       setSummary({
-        totalCredits: 15000,
-        totalDebits: -8000,
-        netBalance: 7000,
-        vendorCount: 5
+        total_credits: 15000,
+        total_debits: -8000,
+        net_balance: 7000,
+        vendor_count: 5
       });
       setMonthlyData(mockMonthlyData);
       setTopVendors(mockTopVendors);
@@ -147,15 +147,15 @@ const Dashboard = () => {
 
   // Calculate percentage for payments vs purchases for pie chart
   const transactionDistribution = useMemo(() => {
-    if (!summary || (summary.totalCredits === 0 && Math.abs(summary.totalDebits || 0) === 0)) {
+    if (!summary || (summary.total_credits === 0 && Math.abs(summary.total_debits || 0) === 0)) {
       return [
         { name: 'No Data', value: 1, color: '#e2e8f0' }
       ];
     }
     
     return [
-      { name: 'Purchases', value: summary.totalCredits || 0, color: '#ef4444' },
-      { name: 'Payments', value: Math.abs(summary.totalDebits || 0), color: '#10b981' }
+      { name: 'Purchases', value: summary.total_credits || 0, color: '#ef4444' },
+      { name: 'Payments', value: Math.abs(summary.total_debits || 0), color: '#10b981' }
     ];
   }, [summary]);
 
@@ -206,7 +206,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
           title="Total Purchases" 
-          value={formatCurrency(summary.totalCredits || 0)}
+          value={formatCurrency(summary.total_credits || 0)}
           subtitle="All time credit transactions" 
           icon={CreditCard} 
           iconColor="bg-red-500"
@@ -215,7 +215,7 @@ const Dashboard = () => {
         />
         <StatCard 
           title="Total Payments" 
-          value={formatCurrency(Math.abs(summary.totalDebits || 0))}
+          value={formatCurrency(Math.abs(summary.total_debits || 0))}
           subtitle="All time debit transactions" 
           icon={TrendingDown} 
           iconColor="bg-green-500"
@@ -224,18 +224,18 @@ const Dashboard = () => {
         />
         <StatCard 
           title="Current Balance" 
-          value={formatCurrency(summary.netBalance || 0)}
+          value={formatCurrency(summary.net_balance || 0)}
           subtitle="Net balance across all vendors" 
           icon={DollarSign} 
-          iconColor={(summary.netBalance || 0) > 0 ? "bg-amber-500" : "bg-blue-500"}
-          change={(summary.netBalance || 0) !== 0 ? 
-            `${Math.abs(Math.round(((summary.netBalance || 0) / ((summary.totalCredits || 0) + Math.abs(summary.totalDebits || 0)) * 100)))}%` : 
+          iconColor={(summary.net_balance || 0) > 0 ? "bg-amber-500" : "bg-blue-500"}
+          change={(summary.net_balance || 0) !== 0 ? 
+            `${Math.abs(Math.round(((summary.net_balance || 0) / ((summary.total_credits || 0) + Math.abs(summary.total_debits || 0)) * 100)))}%` : 
             "0%"}
-          changeType={(summary.netBalance || 0) > 0 ? "negative" : "positive"}
+          changeType={(summary.net_balance || 0) > 0 ? "negative" : "positive"}
         />
         <StatCard 
           title="Active Vendors" 
-          value={summary.vendorCount || 0}
+          value={summary.vendor_count || 0}
           subtitle="Total vendors in system" 
           icon={Users} 
           iconColor="bg-purple-500"

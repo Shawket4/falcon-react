@@ -17,6 +17,7 @@
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.5.13",
     "lucide-react": "^0.483.0",
+    "mui": "^0.0.1",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",
     "react-datepicker": "^8.2.1",

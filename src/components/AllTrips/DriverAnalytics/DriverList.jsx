@@ -2,9 +2,6 @@ import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { 
   TrendingUp, 
-  DollarSign, 
-  Clock, 
-  MapPin, 
   Search, 
   X,
   ArrowUp,

@@ -93,9 +93,9 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess, dateRange }) =
 
   // Prepare revenue data for activity timeline
   const revenueData = useMemo(() => 
-    driver ? (driver.revenue_heatmap || []).map(day => ({
+    driver ? (driver.activity_heatmap || []).map(day => ({
       date: day.date,
-      revenue: day.amount,
+      revenue: (driver.total_fees / driver.working_days) * day.count,
     })) : [], 
     [driver]
   );
@@ -331,7 +331,13 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess, dateRange }) =
                       border: '1px solid #ddd', 
                       borderRadius: '8px' 
                     }} 
-                    formatter={(value) => [`$${formatNumber(value)}`, 'Revenue']}
+                    formatter={(value, name, props) => {
+                      const dailyRate = driver.total_fees / driver.working_days;
+                      return [
+                        `${formatNumber(value)}`, 
+                        `Revenue (${props.payload.count} trips at ${formatNumber(dailyRate)}/day)`
+                      ];
+                    }}
                   />
                   <Line 
                     type="monotone" 

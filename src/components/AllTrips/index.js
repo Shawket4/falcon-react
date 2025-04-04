@@ -12,3 +12,4 @@ export { default as Pagination } from './Pagination';
 export { default as ListActions } from './ListActions';
 export { default as NoResultsAlert } from './NoResultsAlert';
 export { default as TripStatistics } from './TripStatistics';
+export {default as DriverAnalytics} from './DriverAnalytics/DriverAnalytics'

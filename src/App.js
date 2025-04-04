@@ -22,7 +22,7 @@ import TripDetails from './components/TripDetails';
 import { AllOilChanges, AddOilChange, EditOilChange } from './components/OilChanges';
 
 // Import the refactored TripList component instead of AllTrips
-import { TripList } from './components/AllTrips';
+import { TripList, DriverAnalytics } from './components/AllTrips';
 
 // Import vendor financial system components
 import {
@@ -51,6 +51,7 @@ export const pathNames = {
   'vendors/create': 'Add Vendor',
   'finance-dashboard': 'Finance Dashboard',
   transactions: 'Transactions',
+  'driver-analytics': 'Driver Analytics',
 };
 
 // Permission level required for certain operations
@@ -260,6 +261,13 @@ function App() {
               </Layout>
             </ProtectedRoute>
           } />
+          <Route path="/driver-analytics" element={
+  <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+    <Layout>
+      <DriverAnalytics />
+    </Layout>
+  </ProtectedRoute>
+} />
 
           {/* Vendor Financial System Routes */}
           <Route path="/finance-dashboard" element={

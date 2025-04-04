@@ -382,7 +382,7 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" scale="log" domain={['auto', 'auto']} />
+                <XAxis type="number" scale="log" domain={[dataMin => Math.floor(dataMin), dataMax => Math.ceil(dataMax)]} />
                 <YAxis type="category" dataKey="name" />
                 <Tooltip 
                   contentStyle={{ 

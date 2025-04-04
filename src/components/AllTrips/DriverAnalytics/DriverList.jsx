@@ -1,30 +1,60 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { 
   TrendingUp, 
   DollarSign, 
   Clock, 
   MapPin, 
-  Filter, 
-  ArrowUp, 
-  ArrowDown, 
   Search, 
-  X 
+  X,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 const DriverList = ({ 
   drivers, 
   selectedDriver, 
   onSelectDriver, 
-  onSort, 
-  sortConfig,
   hasFinancialAccess 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [localSortConfig, setLocalSortConfig] = useState({
+  const [sortConfig, setSortConfig] = useState({
     key: 'revenue_per_day',
     direction: 'desc'
   });
-  
+
+  // Consistent efficiency color logic
+  const getEfficiencyColor = (efficiency) => {
+    if (efficiency >= 1.2) return { 
+      bgClass: 'bg-green-500 text-green-50', 
+      label: 'Outstanding' 
+    };
+    if (efficiency >= 1.1) return { 
+      bgClass: 'bg-green-400 text-green-50', 
+      label: 'Excellent' 
+    };
+    if (efficiency >= 1.0) return { 
+      bgClass: 'bg-blue-500 text-blue-50', 
+      label: 'Good' 
+    };
+    if (efficiency >= 0.9) return { 
+      bgClass: 'bg-blue-400 text-blue-50', 
+      label: 'Average' 
+    };
+    if (efficiency >= 0.8) return { 
+      bgClass: 'bg-yellow-500 text-yellow-50', 
+      label: 'Needs Improvement' 
+    };
+    if (efficiency > 0) return { 
+      bgClass: 'bg-red-400 text-red-50', 
+      label: 'Poor' 
+    };
+    return { 
+      bgClass: 'bg-gray-400 text-gray-50', 
+      label: 'No Data' 
+    };
+  };
+
   // Memoized filtered and sorted drivers
   const processedDrivers = useMemo(() => {
     // First, filter by search term
@@ -35,7 +65,7 @@ const DriverList = ({
     // Then sort
     return filtered.sort((a, b) => {
       let comparison = 0;
-      switch(localSortConfig.key) {
+      switch(sortConfig.key) {
         case 'driver_name':
           comparison = a.driver_name.localeCompare(b.driver_name);
           break;
@@ -51,9 +81,9 @@ const DriverList = ({
           break;
       }
 
-      return localSortConfig.direction === 'desc' ? comparison : -comparison;
+      return sortConfig.direction === 'desc' ? comparison : -comparison;
     });
-  }, [drivers, searchTerm, localSortConfig]);
+  }, [drivers, searchTerm, sortConfig]);
   
   // Format numbers
   const formatNumber = (num) => {
@@ -63,21 +93,9 @@ const DriverList = ({
     }).format(num || 0);
   };
   
-  // Get efficiency color class
-  const getEfficiencyColor = (efficiency) => {
-    if (efficiency >= 1.2) return 'bg-green-500 text-green-50';
-    if (efficiency >= 1.1) return 'bg-green-400 text-green-50';
-    if (efficiency >= 1.0) return 'bg-blue-500 text-blue-50';
-    if (efficiency >= 0.9) return 'bg-blue-400 text-blue-50';
-    if (efficiency >= 0.8) return 'bg-yellow-500 text-yellow-50';
-    if (efficiency >= 0.6) return 'bg-yellow-400 text-yellow-50';
-    if (efficiency > 0) return 'bg-red-400 text-red-50';
-    return 'bg-gray-400 text-gray-50';
-  };
-
   // Handle sorting
   const handleSort = (key) => {
-    setLocalSortConfig(prev => ({
+    setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
     }));
@@ -121,15 +139,15 @@ const DriverList = ({
           <button
             key={key}
             className={`flex items-center text-xs font-medium transition-colors ${
-              localSortConfig.key === key 
+              sortConfig.key === key 
                 ? 'text-blue-600' 
                 : 'text-gray-600 hover:text-blue-600'
             }`}
             onClick={() => handleSort(key)}
           >
             {label}
-            {localSortConfig.key === key && (
-              localSortConfig.direction === 'desc' 
+            {sortConfig.key === key && (
+              sortConfig.direction === 'desc' 
                 ? <ArrowDown className="ml-1 w-3 h-3" /> 
                 : <ArrowUp className="ml-1 w-3 h-3" />
             )}
@@ -144,6 +162,9 @@ const DriverList = ({
           const revenuePerDay = driver.total_amount 
             ? driver.total_amount / (driver.working_days || 1) 
             : 0;
+
+          // Get efficiency color details
+          const efficiencyDetails = getEfficiencyColor(driver.efficiency);
 
           return (
             <div 
@@ -165,7 +186,7 @@ const DriverList = ({
                 <div 
                   className={`
                     px-2 py-1 rounded-full text-xs font-semibold 
-                    ${getEfficiencyColor(driver.efficiency)}
+                    ${efficiencyDetails.bgClass}
                   `}
                 >
                   {formatNumber(driver.efficiency * 100)}%
@@ -222,4 +243,18 @@ const DriverList = ({
   );
 };
 
-export default DriverList;
+DriverList.propTypes = {
+  drivers: PropTypes.arrayOf(PropTypes.shape({
+    driver_name: PropTypes.string.isRequired,
+    total_trips: PropTypes.number,
+    total_distance: PropTypes.number,
+    working_days: PropTypes.number,
+    total_amount: PropTypes.number,
+    efficiency: PropTypes.number
+  })).isRequired,
+  selectedDriver: PropTypes.object,
+  onSelectDriver: PropTypes.func.isRequired,
+  hasFinancialAccess: PropTypes.bool
+};
+
+export default DriverList;npm

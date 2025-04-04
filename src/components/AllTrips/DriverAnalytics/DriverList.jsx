@@ -72,8 +72,8 @@ const DriverList = ({
         case 'revenue_per_day':
         default:
           // Calculate revenue per day
-          const aRevPerDay = a.total_amount ? a.total_amount / (a.working_days || 1) : 0;
-          const bRevPerDay = b.total_amount ? b.total_amount / (b.working_days || 1) : 0;
+          const aRevPerDay = a.total_revenue ? a.total_revenue / (a.working_days || 1) : 0;
+          const bRevPerDay = b.total_revenue ? b.total_revenue / (b.working_days || 1) : 0;
           comparison = bRevPerDay - aRevPerDay;
           break;
       }
@@ -156,8 +156,8 @@ const DriverList = ({
       <div className="divide-y divide-gray-100">
         {processedDrivers.map((driver) => {
           // Calculate revenue per day
-          const revenuePerDay = driver.total_amount 
-            ? driver.total_amount / (driver.working_days || 1) 
+          const revenuePerDay = driver.total_revenue 
+            ? driver.total_revenue / (driver.working_days || 1) 
             : 0;
 
           // Get efficiency color details
@@ -218,7 +218,7 @@ const DriverList = ({
                 <div className="mt-3 bg-gray-50 rounded-lg p-2 flex justify-between">
                   <span className="text-xs text-gray-600">Total Revenue</span>
                   <span className="text-sm font-bold text-green-600">
-                    ${formatNumber(driver.total_amount || 0)}
+                    ${formatNumber(driver.total_revenue || 0)}
                   </span>
                 </div>
               )}
@@ -246,7 +246,7 @@ DriverList.propTypes = {
     total_trips: PropTypes.number,
     total_distance: PropTypes.number,
     working_days: PropTypes.number,
-    total_amount: PropTypes.number,
+    total_revenue: PropTypes.number,
     efficiency: PropTypes.number
   })).isRequired,
   selectedDriver: PropTypes.object,

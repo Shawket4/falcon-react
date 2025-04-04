@@ -109,7 +109,7 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
         name: 'Trips Per Day',
         driver: driver.avg_trips_per_day || 0,
         global: globalStats.avg_trips_per_day || 0,
-        unit: ''
+        unit: 'L'
       },
       {
         name: 'Km Per Day',

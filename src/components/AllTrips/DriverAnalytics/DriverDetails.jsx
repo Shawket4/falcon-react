@@ -140,7 +140,7 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
             // Conditionally add financial metrics
             if (hasFinancialAccess) {
               const globalRevenuePerDay = globalStats ? 
-                Number((globalStats.total_amount / (globalStats.total_trips / globalStats.avg_trips_per_day)).toFixed(2)) :
+                Number((globalStats.total_revenue / (globalStats.total_trips / globalStats.avg_trips_per_day)).toFixed(2)) :
                 0;
               
               metrics.push({
@@ -410,8 +410,6 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Route</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Trips</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Distance</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -425,12 +423,6 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
                   >
                     <td className="px-6 py-3 text-sm text-gray-900">{route.Terminal} - {route.DropOffPoint}</td>
                     <td className="px-6 py-3 text-sm text-gray-900 text-right">{route.count}</td>
-                    <td className="px-6 py-3 text-sm text-gray-900 text-right">
-                      {formatNumber(route.distance)} km
-                    </td>
-                    <td className="px-6 py-3 text-sm text-gray-900 text-right">
-                      {formatPercent(route.percent || 0)}
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -455,7 +447,6 @@ DriverDetails.propTypes = {
     working_days: PropTypes.number,
     total_fees: PropTypes.number,
     total_revenue: PropTypes.number,
-    total_amount: PropTypes.number,
     avg_trips_per_day: PropTypes.number,
     avg_km_per_day: PropTypes.number,
     avg_fees_per_day: PropTypes.number,

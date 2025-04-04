@@ -10,7 +10,7 @@ import {
   DollarSign, Truck, Package 
 } from 'lucide-react';
 
-const DriverDetails = ({ driver, globalStats, hasFinancialAccess, dateRange }) => {
+const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
   // Consistent efficiency color logic
   const getEfficiencyColor = (efficiency) => {
     if (efficiency >= 1.2) return { 
@@ -81,13 +81,12 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess, dateRange }) =
   const routeData = useMemo(() => {
     if (!driver || !driver.route_distribution) return [];
     
-    const totalCount = driver.route_distribution.reduce((sum, route) => sum + route.count, 0);
     
     return driver.route_distribution
       .slice(0, 8)
       .map(route => ({
         ...route,
-        percentage: ((route.count / totalCount) * 100).toFixed(1)
+        name: `${route.Terminal} - ${route.DropOffPoint}`, // Use the pre-formatted route name
       }));
   }, [driver]);
 
@@ -269,23 +268,24 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess, dateRange }) =
             {routeData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={routeData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {routeData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={COLORS[index % COLORS.length]} 
-                        className="hover:opacity-75 transition-opacity"
-                      />
-                    ))}
-                  </Pie>
+                <Pie
+  data={routeData}
+  cx="50%"
+  cy="50%"
+  labelLine={true}
+  outerRadius={80}
+  fill="#8884d8"
+  dataKey="count"
+  label={({ name}) => `${name}`}
+>
+  {routeData.map((entry, index) => (
+    <Cell 
+      key={`cell-${index}`} 
+      fill={COLORS[index % COLORS.length]} 
+      className="hover:opacity-75 transition-opacity"
+    />
+  ))}
+</Pie>
                   <Tooltip 
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
@@ -409,7 +409,7 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess, dateRange }) =
                       hover:bg-blue-50 transition-colors duration-200
                     `}
                   >
-                    <td className="px-6 py-3 text-sm text-gray-900">{route.route}</td>
+                    <td className="px-6 py-3 text-sm text-gray-900">{route.Terminal} - {route.DropOffPoint}</td>
                     <td className="px-6 py-3 text-sm text-gray-900 text-right">{route.count}</td>
                     <td className="px-6 py-3 text-sm text-gray-900 text-right">
                       {formatNumber(route.distance)} km

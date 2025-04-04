@@ -105,44 +105,60 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
     if (!driver || !globalStats) return [];
 
     const metrics = [
-      {
-        name: 'Trips Per Day',
-        driver: driver.avg_trips_per_day || 0,
-        global: globalStats.avg_trips_per_day || 0,
-        unit: 'L'
-      },
-      {
-        name: 'Km Per Day',
-        driver: driver.avg_km_per_day || 0,
-        global: globalStats.avg_km_per_day || 0,
-        unit: 'km'
-      },
-      {
-        name: 'Volume Per Km',
-        driver: driver.avg_volume_per_km || 0,
-        global: globalStats.avg_volume_per_km || 0,
-        unit: 'L'
-      }
-    ];
-
-    // Conditionally add financial metrics
-    if (hasFinancialAccess) {
-      metrics.push({
-        name: 'Revenue Per Day',
-        driver: driver.avg_fees_per_day || 0,
-        global: globalStats ? 
-          (globalStats.total_amount / (globalStats.total_trips / globalStats.avg_trips_per_day)) : 
-          0,
-        unit: '$'
-      });
-    }
-
-    return metrics;
-  }, [
-    driver, 
-    globalStats, 
-    hasFinancialAccess
-  ]);
+              {
+                name: 'Trips Per Day',
+                driver: driver.avg_trips_per_day ? 
+                  Number(driver.avg_trips_per_day.toFixed(2)) : 
+                  0,
+                global: globalStats.avg_trips_per_day ?
+                  Number(globalStats.avg_trips_per_day.toFixed(2)) :
+                  0,
+                unit: 'L'
+              },
+              {
+                name: 'Km Per Day',
+                driver: driver.avg_km_per_day ?
+                  Number(driver.avg_km_per_day.toFixed(2)) :
+                  0,
+                global: globalStats.avg_km_per_day ?
+                  Number(globalStats.avg_km_per_day.toFixed(2)) :
+                  0,
+                unit: 'km'
+              },
+              {
+                name: 'Volume Per Km',
+                driver: driver.avg_volume_per_km ?
+                  Number(driver.avg_volume_per_km.toFixed(2)) :
+                  0,
+                global: globalStats.avg_volume_per_km ?
+                  Number(globalStats.avg_volume_per_km.toFixed(2)) :
+                  0,
+                unit: 'L'
+              }
+            ];
+          
+            // Conditionally add financial metrics
+            if (hasFinancialAccess) {
+              const globalRevenuePerDay = globalStats ? 
+                Number((globalStats.total_amount / (globalStats.total_trips / globalStats.avg_trips_per_day)).toFixed(2)) :
+                0;
+              
+              metrics.push({
+                name: 'Revenue Per Day',
+                driver: driver.avg_fees_per_day ?
+                  Number(driver.avg_fees_per_day.toFixed(2)) :
+                  0,
+                global: globalRevenuePerDay,
+                unit: '$'
+              });
+            }
+          
+            return metrics;
+          }, [
+            driver,
+            globalStats,
+            hasFinancialAccess
+          ]);
 
   // Efficiency details
   const efficiencyDetails = useMemo(() => {
@@ -334,7 +350,7 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
                     }} 
                     formatter={(value) => {
                       return [
-                        `${formatNumber(value)}`, 
+                        `$${formatNumber(value)}`, 
                       ];
                     }}
                   />

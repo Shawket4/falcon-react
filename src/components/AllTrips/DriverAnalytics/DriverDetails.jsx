@@ -113,7 +113,7 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
                 global: globalStats.avg_trips_per_day ?
                   Number(globalStats.avg_trips_per_day.toFixed(2)) :
                   0,
-                unit: 'L'
+                unit: ''
               },
               {
                 name: 'Km Per Day',
@@ -382,7 +382,7 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" />
+                <XAxis type="number" scale="log" domain={['auto', 'auto']} />
                 <YAxis type="category" dataKey="name" />
                 <Tooltip 
                   contentStyle={{ 

@@ -332,11 +332,9 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess }) => {
                       border: '1px solid #ddd', 
                       borderRadius: '8px' 
                     }} 
-                    formatter={(value, name, props) => {
-                      const dailyRate = driver.total_fees / driver.working_days;
+                    formatter={(value) => {
                       return [
                         `${formatNumber(value)}`, 
-                        `Revenue (${props.payload.count} trips at ${formatNumber(dailyRate)}/day)`
                       ];
                     }}
                   />

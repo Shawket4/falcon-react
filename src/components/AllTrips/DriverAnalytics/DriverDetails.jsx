@@ -432,37 +432,39 @@ const DriverDetails = ({ driver, globalStats, hasFinancialAccess, dateRange }) =
 };
 
 DriverDetails.propTypes = {
-  driver: PropTypes.shape({
-    driver_name: PropTypes.string.isRequired,
-    total_trips: PropTypes.number,
-    total_distance: PropTypes.number,
-    total_volume: PropTypes.number,
-    working_days: PropTypes.number,
-    total_amount: PropTypes.number,
-    avg_trips_per_day: PropTypes.number,
-    avg_km_per_day: PropTypes.number,
-    avg_fees_per_day: PropTypes.number,
-    efficiency: PropTypes.number,
-    route_distribution: PropTypes.arrayOf(PropTypes.shape({
-      route: PropTypes.string,
-      count: PropTypes.number,
-      distance: PropTypes.number,
-      percent: PropTypes.number
-    })),
-    revenue_heatmap: PropTypes.arrayOf(PropTypes.shape({
-      date: PropTypes.string,
-      amount: PropTypes.number
-    }))
-  }),
-  globalStats: PropTypes.shape({
-    avg_trips_per_day: PropTypes.number,
-    avg_km_per_day: PropTypes.number,
-    avg_volume_per_km: PropTypes.number,
-    total_amount: PropTypes.number,
-    total_trips: PropTypes.number
-  }),
-  hasFinancialAccess: PropTypes.bool,
-  dateRange: PropTypes.object
-};
+    driver: PropTypes.shape({
+      driver_name: PropTypes.string.isRequired,
+      total_trips: PropTypes.number,
+      total_distance: PropTypes.number,
+      total_volume: PropTypes.number,
+      working_days: PropTypes.number,
+      total_fees: PropTypes.number,
+      total_revenue: PropTypes.number,
+      total_amount: PropTypes.number,
+      avg_trips_per_day: PropTypes.number,
+      avg_km_per_day: PropTypes.number,
+      avg_fees_per_day: PropTypes.number,
+      efficiency: PropTypes.number,
+      route_distribution: PropTypes.arrayOf(PropTypes.shape({
+        route: PropTypes.string,
+        count: PropTypes.number,
+        distance: PropTypes.number,
+        percent: PropTypes.number
+      })),
+      activity_heatmap: PropTypes.arrayOf(PropTypes.shape({
+        date: PropTypes.string,
+        count: PropTypes.number
+      }))
+    }),
+    globalStats: PropTypes.shape({
+      avg_trips_per_day: PropTypes.number,
+      avg_km_per_day: PropTypes.number,
+      avg_volume_per_km: PropTypes.number,
+      total_fees: PropTypes.number,
+      total_trips: PropTypes.number
+    }),
+    hasFinancialAccess: PropTypes.bool,
+    dateRange: PropTypes.object
+  };
 
 export default DriverDetails;

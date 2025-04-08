@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../../apiClient';
 import ExportToExcel from './ExportStatsToExcel';
 import ExportToPDF from './ExportStatsToPdf';
+import TripStatsByDate from './AnalyticsGraphByDate';
 
 import { 
   BarChart, 
@@ -40,6 +41,7 @@ const TripStatistics = ({ filters }) => {
   };
 
   // State declarations
+  const [statsByDate, setStatsByDate] = useState([]);
   const [statistics, setStatistics] = useState([]);
   const [hasFinancialAccess, setHasFinancialAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -96,7 +98,7 @@ const TripStatistics = ({ filters }) => {
       const response = await apiClient.get(url, { params });
       setStatistics(response.data.data || []);
       setHasFinancialAccess(response.data.hasFinancialAccess || false);
-      
+      setStatsByDate(response.data.statsByDate || []);
       // Set active company to first one if not already set
       if (response.data.data && response.data.data.length > 0 && !activeCompany) {
         setActiveCompany(response.data.data[0].company);
@@ -359,7 +361,7 @@ const TripStatistics = ({ filters }) => {
               </div>
             )}
           </div>
-          
+          <TripStatsByDate statsByDate={statsByDate} hasFinancialAccess={hasFinancialAccess}></TripStatsByDate>
           {/* Company Comparison Charts */}
           <div className="bg-white p-4 rounded-lg shadow mb-6">
             <h3 className="text-lg font-semibold mb-4">Company Comparison</h3>

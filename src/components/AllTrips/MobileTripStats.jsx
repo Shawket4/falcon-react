@@ -3,6 +3,8 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import ExportToExcel from './ExportStatsToExcel';
 import ExportToPdf from './ExportStatsToPdf';
 import apiClient from '../../apiClient';
+import TripStatsByDate from './AnalyticsGraphByDate';
+
 import { 
   BarChart, 
   Bar, 
@@ -76,6 +78,7 @@ const MobileTripStatistics = ({ filters }) => {
   };
 
   // State declarations
+  const [statsByDate, setStatsByDate] = useState([]);
   const [statistics, setStatistics] = useState([]);
   const [hasFinancialAccess, setHasFinancialAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -132,7 +135,7 @@ const MobileTripStatistics = ({ filters }) => {
       const response = await apiClient.get(url, { params });
       setStatistics(response.data.data || []);
       setHasFinancialAccess(response.data.hasFinancialAccess || false);
-      
+      setStatsByDate(response.data.statsByDate || []);
       // Set active company to first one if not already set
       if (response.data.data && response.data.data.length > 0 && !activeCompany) {
         setActiveCompany(response.data.data[0].company);
@@ -389,6 +392,8 @@ const MobileTripStatistics = ({ filters }) => {
               )}
             </div>
           </CollapsibleCard>
+
+          <TripStatsByDate statsByDate={statsByDate} hasFinancialAccess={hasFinancialAccess}></TripStatsByDate>
           
           {/* Company Selection */}
           <div className="mb-2">

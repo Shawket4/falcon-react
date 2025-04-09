@@ -58,9 +58,10 @@ const MobileTripStatistics = ({ filters }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeCompany, setActiveCompany] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'companies', 'details'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'timeline', 'companies', 'details'
   const [showExportOptions, setShowExportOptions] = useState(false);
-
+  const [activePieChart, setActivePieChart] = useState('trips'); // 'trips', 'volume', 'revenue'
+  const [activeMetric, setActiveMetric] = useState('trips'); // 'trips', 'volume', 'distance', 'revenue'
 
   useEffect(() => {
     fetchStatistics();
@@ -517,7 +518,7 @@ const MobileTripStatistics = ({ filters }) => {
                   </div>
                 </div>
                 
-                {hasFinancialAccess && (
+                {hasFinancialAccess ? (
                   <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
                     <div className="flex items-center">
                       <div className="p-2 rounded-full bg-purple-100 text-purple-500 mr-2">
@@ -527,12 +528,28 @@ const MobileTripStatistics = ({ filters }) => {
                       </div>
                       <div>
                         <p className="text-gray-500 text-xs">Total Revenue</p>
+                        <p className="text-gray-900 font-semibold text-sm">{formatCurrency(totals.totalAmount)}</p>
+                        <p className="text-xs text-gray-500">
+                          Monthly: {formatCurrency(dailyAvgs.avgRevenuePerDay * 31)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-100 p-3 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="p-2 rounded-full bg-gray-200 text-gray-400 mr-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs">Total Revenue</p>
                         <p className="text-gray-400 font-semibold text-sm">Restricted</p>
                       </div>
                     </div>
                   </div>
-                )
-              }
+                )}
               </div>
 
               {/* Top Performers Cards - Scrollable horizontally */}
@@ -599,14 +616,23 @@ const MobileTripStatistics = ({ filters }) => {
                 
                 {/* Tabs for different pie charts */}
                 <div className="flex border-b mb-3">
-                  <button className="text-xs font-medium text-blue-600 border-b-2 border-blue-500 px-3 py-2 mr-3">
+                  <button 
+                    className={`text-xs font-medium px-3 py-2 mr-3 ${activePieChart === 'trips' ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-500'}`}
+                    onClick={() => setActivePieChart('trips')}
+                  >
                     Trips
                   </button>
-                  <button className="text-xs font-medium text-gray-500 px-3 py-2 mr-3">
+                  <button 
+                    className={`text-xs font-medium px-3 py-2 mr-3 ${activePieChart === 'volume' ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-500'}`}
+                    onClick={() => setActivePieChart('volume')}
+                  >
                     Volume
                   </button>
                   {hasFinancialAccess && (
-                    <button className="text-xs font-medium text-gray-500 px-3 py-2">
+                    <button 
+                      className={`text-xs font-medium px-3 py-2 ${activePieChart === 'revenue' ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-500'}`}
+                      onClick={() => setActivePieChart('revenue')}
+                    >
                       Revenue
                     </button>
                   )}
@@ -622,14 +648,21 @@ const MobileTripStatistics = ({ filters }) => {
                         labelLine={false}
                         label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
                         outerRadius={70}
-                        fill={COLORS.blue}
-                        dataKey="trips"
+                        fill={activePieChart === 'trips' ? COLORS.blue : activePieChart === 'volume' ? COLORS.green : COLORS.purple}
+                        dataKey={activePieChart}
                       >
                         {comparisonData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLOR_ARRAY[index % COLOR_ARRAY.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value, name, props) => [`${formatNumber(value)} trips`, props.payload.name]} />
+                      <Tooltip 
+                        formatter={(value, name, props) => {
+                          if (activePieChart === 'trips') return [`${formatNumber(value)} trips`, props.payload.name];
+                          if (activePieChart === 'volume') return [`${formatNumber(value)} L`, props.payload.name];
+                          if (activePieChart === 'revenue') return [formatCurrency(value), props.payload.name];
+                          return [formatNumber(value), props.payload.name];
+                        }} 
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -699,17 +732,37 @@ const MobileTripStatistics = ({ filters }) => {
                 
                 {/* Metric selector */}
                 <div className="flex overflow-x-auto mb-3 pb-1 hide-scrollbar">
-                  <button className="whitespace-nowrap px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-2">
+                  <button 
+                    className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium mr-2 ${
+                      activeMetric === 'trips' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                    }`}
+                    onClick={() => setActiveMetric('trips')}
+                  >
                     Trips
                   </button>
-                  <button className="whitespace-nowrap px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium mr-2">
+                  <button 
+                    className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium mr-2 ${
+                      activeMetric === 'volume' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                    }`}
+                    onClick={() => setActiveMetric('volume')}
+                  >
                     Volume
                   </button>
-                  <button className="whitespace-nowrap px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium mr-2">
+                  <button 
+                    className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium mr-2 ${
+                      activeMetric === 'distance' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                    }`}
+                    onClick={() => setActiveMetric('distance')}
+                  >
                     Distance
                   </button>
                   {hasFinancialAccess && (
-                    <button className="whitespace-nowrap px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                    <button 
+                      className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium ${
+                        activeMetric === 'revenue' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                      }`}
+                      onClick={() => setActiveMetric('revenue')}
+                    >
                       Revenue
                     </button>
                   )}
@@ -723,7 +776,21 @@ const MobileTripStatistics = ({ filters }) => {
                       <YAxis tick={{ fontSize: 10 }} />
                       <Tooltip formatter={customTooltipFormatter} />
                       <Legend wrapperStyle={{ fontSize: '10px' }} />
-                      <Bar dataKey="trips" fill={COLORS.blue} name="Trips">
+                      <Bar 
+                        dataKey={activeMetric === 'revenue' && hasFinancialAccess ? 'totalAmount' : activeMetric} 
+                        fill={
+                          activeMetric === 'trips' ? COLORS.blue : 
+                          activeMetric === 'volume' ? COLORS.green : 
+                          activeMetric === 'distance' ? COLORS.yellow : 
+                          COLORS.purple
+                        } 
+                        name={
+                          activeMetric === 'trips' ? 'Trips' : 
+                          activeMetric === 'volume' ? 'Volume' : 
+                          activeMetric === 'distance' ? 'Distance' : 
+                          'Revenue'
+                        }
+                      >
                         {comparisonData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLOR_ARRAY[(index + 1) % COLOR_ARRAY.length]} />
                         ))}
@@ -838,7 +905,12 @@ const MobileTripStatistics = ({ filters }) => {
                         VAT: {formatCurrency(activeCompanyData.total_vat)}
                       </span>
                     )}
-                    {(activeCompanyData.total_amount > 0 || (activeCompanyData.total_vat > 0)) && (
+                    {activeCompanyData.total_car_rent > 0 && (
+                      <span className="px-2 py-1 bg-pink-100 text-pink-800 rounded-full text-xs font-semibold">
+                        Car Rental: {formatCurrency(activeCompanyData.total_car_rent)}
+                      </span>
+                    )}
+                    {(activeCompanyData.total_amount > 0 || activeCompanyData.total_vat > 0 || activeCompanyData.total_car_rent > 0) && (
                       <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
                         Total: {formatCurrency(activeCompanyData.total_revenue + (activeCompanyData.total_vat || 0) + (activeCompanyData.total_car_rent || 0))}
                       </span>
@@ -908,6 +980,27 @@ const MobileTripStatistics = ({ filters }) => {
                     </div>
                   </div>
                   
+                  {/* Financial Breakdown Chart for companies with VAT or Car Rental */}
+                  {hasFinancialAccess && (hasVAT || hasCarRental) && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">Financial Breakdown</h4>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={detailsData.slice(0, 5)} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                            <YAxis tick={{ fontSize: 9 }} />
+                            <Tooltip formatter={customTooltipFormatter} />
+                            <Legend wrapperStyle={{ fontSize: '10px' }} />
+                            <Bar dataKey="revenue" name="Base Revenue" stackId="a" fill={COLORS.green} />
+                            {hasVAT && <Bar dataKey="vat" name="VAT (14%)" stackId="a" fill={COLORS.indigo} />}
+                            {hasCarRental && <Bar dataKey="carRental" name="Car Rental" stackId="a" fill={COLORS.teal} />}
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Details Table - ScrollView */}
                   <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Detailed Breakdown</h4>
@@ -933,6 +1026,24 @@ const MobileTripStatistics = ({ filters }) => {
                                   Revenue
                                 </th>
                                 {hasVAT && (
+                                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    VAT
+                                  </th>
+                                )}
+                                {hasCarRental && (
+                                  <>
+                                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Cars
+                                    </th>
+                                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Days
+                                    </th>
+                                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Car Rental
+                                    </th>
+                                  </>
+                                )}
+                                {(hasVAT || hasCarRental) && (
                                   <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Total
                                   </th>
@@ -962,6 +1073,24 @@ const MobileTripStatistics = ({ filters }) => {
                                     {formatCurrency(detail.total_revenue)}
                                   </td>
                                   {hasVAT && (
+                                    <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                                      {formatCurrency(detail.vat || 0)}
+                                    </td>
+                                  )}
+                                  {hasCarRental && (
+                                    <>
+                                      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                                        {formatNumber(detail.distinct_cars || 0)}
+                                      </td>
+                                      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                                        {formatNumber(detail.distinct_days || 0)}
+                                      </td>
+                                      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                                        {formatCurrency(detail.car_rental || 0)}
+                                      </td>
+                                    </>
+                                  )}
+                                  {(hasVAT || hasCarRental) && (
                                     <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900">
                                       {formatCurrency(detail.total_with_vat || (detail.total_revenue + (detail.vat || 0) + (detail.car_rental || 0)))}
                                     </td>

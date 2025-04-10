@@ -1,5 +1,5 @@
 // File: utils/dateUtils.js
-
+import { format as dateFnsFormat } from 'date-fns';
 // Parse ISO date string to Date object
 export const parseISO = (dateStr) => {
     // Handles various date formats
@@ -11,25 +11,12 @@ export const parseISO = (dateStr) => {
   export const format = (date, formatStr) => {
     if (!date) return '';
     
-    const d = new Date(date);
+    // Create a copy of the date at noon to avoid timezone issues
+    // This ensures the formatted date will be the same regardless of timezone
+    const safeDateCopy = new Date(date);
+    safeDateCopy.setHours(12, 0, 0, 0);
     
-    switch(formatStr) {
-      case 'yyyy-MM-dd':
-        return d.toISOString().split('T')[0];
-      case 'MMM dd, yyyy':
-        return d.toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
-          year: 'numeric' 
-        });
-      case 'MMM d':
-        return d.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric'
-        });
-      default:
-        return d.toISOString();
-    }
+    return dateFnsFormat(safeDateCopy, formatStr);
   };
   
   // Check if a date is within given interval

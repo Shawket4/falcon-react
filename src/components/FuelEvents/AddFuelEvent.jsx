@@ -11,7 +11,7 @@ const AddFuelEvent = () => {
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [date, setDate] = useState(new Date());
   const [liters, setLiters] = useState('');
-  const [pricePerLiter, setPricePerLiter] = useState('13.6');
+  const [pricePerLiter, setPricePerLiter] = useState('15.6');
   const [odometerBefore, setOdometerBefore] = useState('');
   const [odometerAfter, setOdometerAfter] = useState('');
   const [loading, setLoading] = useState(true);

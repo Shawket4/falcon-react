@@ -488,7 +488,7 @@ const AddFuelEvent = () => {
                   setSelectedDriver(drivers[0]);
                   setDate(new Date());
                   setLiters('');
-                  setPricePerLiter('13.6');
+                  setPricePerLiter('15.6');
                   setOdometerAfter('');
                 }}
                 className="flex-1 py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"

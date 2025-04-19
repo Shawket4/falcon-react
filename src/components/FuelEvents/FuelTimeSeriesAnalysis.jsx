@@ -246,7 +246,13 @@ const FuelTimeSeriesAnalysis = ({ dateRange }) => {
       ? stats.daily_stats.reduce((sum, day) => sum + (day.total_liters || 0), 0) / stats.daily_stats.length
       : 0,
     total: stats.total_liters,
-    projectedMonthly: (stats.total_liters / (stats.period_days || 1)) * 31
+    projectedMonthly: (stats.total_liters / (stats.period_days || 1)) * 30,
+    min: stats.daily_stats
+      ? Math.min(...stats.daily_stats.map(day => day.total_liters || 0).filter(liters => liters > 0))
+      : 0,
+    max: stats.daily_stats
+      ? Math.max(...stats.daily_stats.map(day => day.total_liters || 0))
+      : 0
   };
 
   return (
@@ -409,10 +415,10 @@ const FuelTimeSeriesAnalysis = ({ dateRange }) => {
             </div>
           </div>
           <div className="mt-2 text-xs text-gray-500">
-            Based on {stats.period_days} day{stats.period_days !== 1 ? 's' : ''} avg
-            • Min: {formatNumber(stats.min_liters || 0)} liters
-            • Max: {formatNumber(stats.max_liters || 0)} liters
-          </div>
+  Based on {stats.period_days} day{stats.period_days !== 1 ? 's' : ''} avg
+  • Min: {formatNumber(litersMetric.min)} liters
+  • Max: {formatNumber(litersMetric.max)} liters
+</div>
         </div>
       </div>
     </div>

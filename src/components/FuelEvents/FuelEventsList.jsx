@@ -133,7 +133,7 @@ const FuelEventsList = () => {
       acc[carPlate].totalDistance += distance;
       
       // But only include valid fuel rates in the average calculation
-      if (fuelRate >= 1.0 && fuelRate <= 2.7) {
+      if (fuelRate >= 1.0 && fuelRate <= 3) {
         acc[carPlate].validLitersForAvg += liters;
         acc[carPlate].validDistanceForAvg += distance;
       }

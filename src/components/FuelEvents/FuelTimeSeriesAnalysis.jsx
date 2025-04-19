@@ -12,7 +12,7 @@ import {
   Label
 } from 'recharts';
 import apiClient from '../../apiClient';
-
+import {format} from "./DateUtils";
 const FuelTimeSeriesAnalysis = ({ dateRange }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -176,10 +176,10 @@ const FuelTimeSeriesAnalysis = ({ dateRange }) => {
         // Construct query parameters
         const params = {};
         if (dateRange?.startDate) {
-          params.start_date = dateRange.startDate.toISOString().split('T')[0];
+          params.start_date = format(dateRange.startDate, "yyyy-MM-dd");
         }
         if (dateRange?.endDate) {
-          params.end_date = dateRange.endDate.toISOString().split('T')[0];
+          params.end_date = format(dateRange.endDate, "yyyy-MM-dd");
         }
 
         const response = await apiClient.get('/api/fuel/statistics', { params });

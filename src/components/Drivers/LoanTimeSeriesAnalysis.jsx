@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   AreaChart,
   Area,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -85,14 +84,6 @@ const LoanTimeSeriesAnalysis = ({ stats }) => {
   // Calculate projected monthly amount (30 days)
   const projectedMonthlyAmount = avgAmountPerDay * 31;
 
-  // Get color for the active metric
-  const getMetricColor = (metric) => {
-    switch(metric) {
-      case 'amount': return '#10B981'; // GREEN for amount
-      case 'avgAmount': return '#8B5CF6'; // PURPLE for average amount
-      default: return '#3B82F6'; // Blue for loans
-    }
-  };
 
   // Get data key and name for active metric
   const getMetricInfo = (metric) => {

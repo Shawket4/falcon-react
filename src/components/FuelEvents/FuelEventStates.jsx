@@ -60,7 +60,7 @@ export const useFuelEventsState = () => {
         makeApiCall(pendingFilter);
       }
     }
-  }, [isAuthenticated]);
+  }, []);
   
   // Public fetch function that queues API calls to prevent duplicates
   const fetchEvents = useCallback((dateRange = null) => {
@@ -88,6 +88,14 @@ export const useFuelEventsState = () => {
     // Otherwise make the API call immediately
     makeApiCall(filterToUse);
   }, [isAuthenticated, activeFilter, makeApiCall]);
+  
+  // Reset filter when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clear any pending API calls
+      pendingCallRef.current = null;
+    };
+  }, []);
   
   return { 
     events, 

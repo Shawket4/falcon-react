@@ -1,4 +1,3 @@
-// File: components/GlobalStatistics.jsx
 import React from 'react';
 import { Droplet, DollarSign, Gauge, Calendar, TrendingUp, Clock } from 'lucide-react';
 import { format, formatNumber, formatCurrency } from './DateUtils';
@@ -26,6 +25,11 @@ const GlobalStatistics = ({ stats }) => {
   const dateRangeCompact = earliestDate && latestDate 
     ? `${format(earliestDate, 'MMM d')} — ${format(latestDate, 'MMM d')}`
     : 'No range';
+    
+  // Format period duration (based on actual data range, not filter range)
+  const periodText = totalDays === 1 
+    ? "1-day period" 
+    : `${totalDays}-day period`;
 
   return (
     <div className="mb-6 bg-white shadow-sm rounded-lg p-4 sm:p-5 border border-gray-100">
@@ -66,7 +70,7 @@ const GlobalStatistics = ({ stats }) => {
           label="Cost Per Day"
           value={formatCurrency(avgCostPerDay)}
           color="purple"
-          subvalue={`Over ${totalDays} days`}
+          subvalue={periodText}
         />
         
         <StatCard 
@@ -74,7 +78,7 @@ const GlobalStatistics = ({ stats }) => {
           label="Fuel Per Day"
           value={`${formatNumber(avgLitersPerDay, 2)}L`}
           color="cyan"
-          subvalue={`Over ${totalDays} days`}
+          subvalue={periodText}
         />
         
         <StatCard 

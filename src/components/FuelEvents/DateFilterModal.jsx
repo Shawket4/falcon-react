@@ -24,9 +24,16 @@ const DateFilterModal = ({
       (selectedRange.from !== dateRange.startDate) || 
       (selectedRange.to !== dateRange.endDate)
     ) {
+      // Ensure end date has time set to end of day for inclusive filtering
+      let adjustedEndDate = null;
+      if (selectedRange.to) {
+        adjustedEndDate = new Date(selectedRange.to);
+        adjustedEndDate.setHours(23, 59, 59, 999);
+      }
+      
       const newRange = {
         startDate: selectedRange.from,
-        endDate: selectedRange.to
+        endDate: adjustedEndDate || selectedRange.to
       };
       
       // Call applyDateFilter which will update both the UI and fetch data

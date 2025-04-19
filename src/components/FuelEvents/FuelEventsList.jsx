@@ -63,8 +63,13 @@ const FuelEventsList = () => {
   // Apply current month filter
   const applyCurrentMonthFilter = useCallback(() => {
     const now = new Date();
+    // First day of current month at start of day
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    firstDay.setHours(0, 0, 0, 0);
+    
+    // Last day of current month at end of day
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    lastDay.setHours(23, 59, 59, 999);
     
     const currentMonthRange = {
       startDate: firstDay,
@@ -115,9 +120,9 @@ const FuelEventsList = () => {
       
       acc[carPlate].events.push(event);
       
-      const liters = parseFloat(event.liters);
-      const fuelRate = parseFloat(event.fuel_rate);
-      const price = parseFloat(event.price);
+      const liters = parseFloat(event.liters) || 0;
+      const fuelRate = parseFloat(event.fuel_rate) || 0;
+      const price = parseFloat(event.price) || 0;
       
       // Include all events in these totals
       acc[carPlate].totalLiters += liters;
@@ -134,8 +139,8 @@ const FuelEventsList = () => {
       }
       
       // Track the most recent event date for sorting
-      const eventDate = new Date(event.date);
-      if (!acc[carPlate].lastUpdated || eventDate > acc[carPlate].lastUpdated) {
+      const eventDate = parseISO(event.date);
+      if (eventDate && (!acc[carPlate].lastUpdated || eventDate > acc[carPlate].lastUpdated)) {
         acc[carPlate].lastUpdated = eventDate;
       }
       
@@ -156,11 +161,11 @@ const FuelEventsList = () => {
       // Sort events within each car by date (newest first), then by odometer (highest first)
       carData.events.sort((a, b) => {
         // Primary sort by date
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
+        const dateA = parseISO(a.date);
+        const dateB = parseISO(b.date);
         
         // Sort by date
-        if (dateA.getTime() !== dateB.getTime()) {
+        if (dateA && dateB && dateA.getTime() !== dateB.getTime()) {
           return dateB - dateA; // Newest first
         }
         
@@ -184,6 +189,11 @@ const FuelEventsList = () => {
       const lastDateA = processedEvents[a].lastUpdated;
       const lastDateB = processedEvents[b].lastUpdated;
       
+      // Handle null dates
+      if (!lastDateA && !lastDateB) return 0;
+      if (!lastDateA) return 1;
+      if (!lastDateB) return -1;
+      
       return lastDateB - lastDateA; // Most recent first
     });
   }, [processedEvents]);
@@ -195,9 +205,23 @@ const FuelEventsList = () => {
     let totalValidLiters = 0;
     let totalValidDistance = 0;
     let totalEvents = 0;
-    let earliestDate = null;
-    let latestDate = null;
     
+    // Date range determination
+    let startDate, endDate;
+    
+    // If we have an active date filter (custom date filter), use those dates
+    if (activeFilter.startDate || activeFilter.endDate) {
+      startDate = activeFilter.startDate;
+      endDate = activeFilter.endDate;
+    } 
+    // For default and search views, use start of month to today
+    else {
+      const today = new Date();
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1); // First day of current month
+      endDate = today; // Today
+    }
+    
+    // Gather all other statistics
     sortedCarPlates.forEach(plate => {
       const carData = processedEvents[plate];
       totalLiters += carData.totalLiters;
@@ -205,19 +229,6 @@ const FuelEventsList = () => {
       totalValidLiters += carData.validLitersForAvg;
       totalValidDistance += carData.validDistanceForAvg;
       totalEvents += carData.events.length;
-      
-      // Find the earliest and latest dates among all events
-      carData.events.forEach(event => {
-        const eventDate = parseISO(event.date);
-        if (eventDate) {
-          if (!earliestDate || eventDate < earliestDate) {
-            earliestDate = eventDate;
-          }
-          if (!latestDate || eventDate > latestDate) {
-            latestDate = eventDate;
-          }
-        }
-      });
     });
     
     const avgFuelRate = totalValidLiters > 0 ? 
@@ -228,8 +239,17 @@ const FuelEventsList = () => {
     let avgLitersPerDay = 0;
     let totalDays = 0;
     
-    if (earliestDate && latestDate) {
-      totalDays = Math.max(1, Math.ceil((latestDate - earliestDate) / (1000 * 60 * 60 * 24)));
+    if (startDate && endDate) {
+      // Normalize dates to remove time component
+      const normalizedStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const normalizedEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      
+      // Calculate difference in days and add 1 to include both start and end dates
+      totalDays = Math.round((normalizedEndDate - normalizedStartDate) / (1000 * 60 * 60 * 24)) + 1;
+      
+      // Ensure we always have at least 1 day
+      totalDays = Math.max(1, totalDays);
+      
       avgCostPerDay = totalCost / totalDays;
       avgLitersPerDay = totalLiters / totalDays;
     }
@@ -242,8 +262,8 @@ const FuelEventsList = () => {
       avgCostPerDay,
       avgLitersPerDay,
       totalDays,
-      earliestDate,
-      latestDate
+      earliestDate: startDate,
+      latestDate: endDate
     };
   }, [sortedCarPlates, processedEvents]);
 
@@ -326,8 +346,6 @@ const FuelEventsList = () => {
         {sortedCarPlates.length > 0 && (
           <GlobalStatistics stats={globalStats} />
         )}
-
-        
         
         {/* Content Area */}
         {loading ? (

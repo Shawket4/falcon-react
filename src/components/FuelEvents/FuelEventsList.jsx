@@ -12,12 +12,21 @@ import FuelEventCard from './FuelEventCard';
 import DateFilterModal from './DateFilterModal';
 import GlobalStatistics from './GlobalStatistics';
 import ActiveFilters from './ActiveFilters';
+import { 
+  BarChart3, 
+  ChevronDown, 
+  ChevronUp 
+} from 'lucide-react';
+import FuelTimeSeriesAnalysis from './FuelTimeSeriesAnalysis';
 
 const FuelEventsList = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showTimeSeriesAnalysis, setShowTimeSeriesAnalysis] = useState(false);
+
+
   const [localDateRange, setLocalDateRange] = useState({
     startDate: null,
     endDate: null
@@ -272,6 +281,7 @@ const FuelEventsList = () => {
     return localDateRange.startDate !== null || localDateRange.endDate !== null;
   }, [localDateRange]);
 
+
   return (
     <ErrorBoundary>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
@@ -310,6 +320,7 @@ const FuelEventsList = () => {
             >
               <Filter size={20} />
             </button>
+
             <button 
               className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 shadow-sm transition-all duration-200"
               onClick={() => navigate('/add-fuel')}
@@ -320,7 +331,8 @@ const FuelEventsList = () => {
             </button>
           </div>
         </div>
-        
+
+       
         {/* Date Filter Modal */}
         {showFilters && (
           <DateFilterModal 
@@ -346,7 +358,36 @@ const FuelEventsList = () => {
         {sortedCarPlates.length > 0 && (
           <GlobalStatistics stats={globalStats} />
         )}
-        
+        {/* Time Series Analysis Dropdown */}
+{ (
+          <div className="mb-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-gray-50 px-5 py-3 border-b border-gray-200 flex justify-between items-center">
+                <h3 className="font-semibold text-gray-800 flex items-center">
+                  <BarChart3 size={18} className="mr-2 text-purple-600" />
+                  Fuel Time Series Analysis
+                </h3>
+                <button
+                  onClick={() => setShowTimeSeriesAnalysis(!showTimeSeriesAnalysis)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  {showTimeSeriesAnalysis ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+              </div>
+              
+              {showTimeSeriesAnalysis && (
+                <div className="p-5">
+                  <FuelTimeSeriesAnalysis 
+                    dateRange={{
+                      startDate: activeFilter.startDate, 
+                      endDate: activeFilter.endDate
+                    }} 
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {/* Content Area */}
         {loading ? (
           <LoadingState />

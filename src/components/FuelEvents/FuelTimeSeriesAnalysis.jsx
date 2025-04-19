@@ -242,9 +242,11 @@ const FuelTimeSeriesAnalysis = ({ dateRange }) => {
     name: 'Liters',
     color: '#3B82F6', // BLUE
     fillId: 'colorLiters',
-    avg: stats.average_liters || 0,
+    avg: stats.daily_stats 
+      ? stats.daily_stats.reduce((sum, day) => sum + (day.total_liters || 0), 0) / stats.daily_stats.length
+      : 0,
     total: stats.total_liters,
-    projectedMonthly: (stats.total_liters / (stats.period_days || 1)) * 30
+    projectedMonthly: (stats.total_liters / (stats.period_days || 1)) * 31
   };
 
   return (
@@ -378,31 +380,44 @@ const FuelTimeSeriesAnalysis = ({ dateRange }) => {
       </div>
 
       {/* Trend Analysis Section */}
-      {chartData.length > 1 && (
-        <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-100">
-          <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">Trend Analysis & Projections</h4>
-          <div className="grid grid-cols-1 gap-2 sm:gap-4">
-            <div className="bg-white border border-blue-200 rounded-lg p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs sm:text-sm text-blue-600 font-medium">Liters Trend</p>
-                {getLitersTrendIndicator()}
-              </div>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2">
-                {getLitersTrendAnalysis()}
+     {/* Trend Analysis Section */}
+{chartData.length > 1 && (
+  <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-100">
+    <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">Trend Analysis & Projections</h4>
+    <div className="grid grid-cols-1 gap-2 sm:gap-4">
+      <div className="bg-white border border-blue-200 rounded-lg p-3 sm:p-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs sm:text-sm text-blue-600 font-medium">Liters Trend</p>
+          {getLitersTrendIndicator()}
+        </div>
+        <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2">
+          {getLitersTrendAnalysis()}
+        </p>
+        <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-blue-100">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className="text-xs text-blue-600 font-medium">Daily Average</p>
+              <p className="text-sm sm:text-base font-semibold text-blue-800 overflow-x-auto">
+                {formatNumber(litersMetric.avg)} liters
               </p>
-              <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-blue-100">
-                <p className="text-xs text-blue-600 font-medium">Projected Monthly</p>
-                <p className="text-sm sm:text-base font-semibold text-blue-800 overflow-x-auto">
-                  {formatNumber(litersMetric.projectedMonthly || 0)} liters
-                </p>
-                <p className="text-xs text-gray-500">
-                  Based on {stats.period_days} day{stats.period_days !== 1 ? 's' : ''} avg
-                </p>
-              </div>
+            </div>
+            <div>
+              <p className="text-xs text-green-600 font-medium">Projected Monthly</p>
+              <p className="text-sm sm:text-base font-semibold text-green-800 overflow-x-auto">
+                {formatNumber(litersMetric.projectedMonthly || 0)} liters
+              </p>
             </div>
           </div>
+          <div className="mt-2 text-xs text-gray-500">
+            Based on {stats.period_days} day{stats.period_days !== 1 ? 's' : ''} avg
+            • Min: {formatNumber(stats.min_liters || 0)} liters
+            • Max: {formatNumber(stats.max_liters || 0)} liters
+          </div>
         </div>
-      )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

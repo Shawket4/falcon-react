@@ -83,7 +83,7 @@ const LoanTimeSeriesAnalysis = ({ stats }) => {
   const avgAmountPerDay = totalDays > 0 ? totalAmount / totalDays : 0;
   
   // Calculate projected monthly amount (30 days)
-  const projectedMonthlyAmount = avgAmountPerDay * 30;
+  const projectedMonthlyAmount = avgAmountPerDay * 31;
 
   // Get color for the active metric
   const getMetricColor = (metric) => {

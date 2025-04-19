@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children, requiredPermission = null, minPermissionLeve
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/landing-page" state={{ from: location }} replace />;
   }
 
   // Check permission level if required

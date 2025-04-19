@@ -111,8 +111,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     
     // Redirect to login if needed
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
+    if (window.location.pathname !== '/landing-page') {
+      window.location.href = '/landing-page';
     }
   };
 

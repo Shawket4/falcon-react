@@ -32,6 +32,7 @@ import {
   VendorForm,
   TransactionForm
 } from './components/Vendors';
+import LandingPage from './landing_page/landing_page';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -63,6 +64,7 @@ function App() {
       <Router>
         <Routes>
           {/* Public route - Login */}
+          <Route path='/landing-page' element={<LandingPage/>}/>
           <Route path="/login" element={<Login />} />
 
           {/* Protected routes - require authentication */}
@@ -334,7 +336,7 @@ function App() {
           } />
 
           {/* Catch-all redirect to login */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/landing-page" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

@@ -193,7 +193,7 @@ const EditFuelEvent = ({ serverIp }) => {
   
   // Get fuel efficiency color based on value (same as FuelEventList)
   const getEfficiencyColorClass = (rate) => {
-    if (rate < 1.0 || rate > 2.7) return 'text-gray-400';
+    if (rate < 1.0 || rate > 3.2) return 'text-gray-400';
     if (rate < 1.8) return 'text-red-500';
     if (rate < 1.9) return 'text-orange-500';
     return 'text-green-500';
@@ -416,7 +416,7 @@ const EditFuelEvent = ({ serverIp }) => {
                 </label>
                 <div className={`w-full px-4 py-2 border border-gray-200 rounded-lg bg-white font-medium ${fuelRateColorClass}`}>
                   {fuelRate} km/L
-                  {(parseFloat(fuelRate) < 1.0 || parseFloat(fuelRate) > 2.7) && parseFloat(fuelRate) !== 0 ? 
+                  {(parseFloat(fuelRate) < 1.0 || parseFloat(fuelRate) > 3.2) && parseFloat(fuelRate) !== 0 ? 
                     <span className="ml-2 text-xs italic">(excluded from avg)</span> : ''}
                 </div>
               </div>

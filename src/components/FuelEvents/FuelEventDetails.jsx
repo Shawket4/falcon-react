@@ -115,7 +115,7 @@ const FuelEventDetails = ({ serverIp }) => {
 
   // Get fuel efficiency color based on value (same as FuelEventList)
   const getEfficiencyColorClass = (rate) => {
-    if (rate < 1.0 || rate > 2.7) return 'text-gray-400';
+    if (rate < 1.0 || rate > 3.2) return 'text-gray-400';
     if (rate < 1.8) return 'text-red-500';
     if (rate < 1.9) return 'text-orange-500';
     return 'text-green-500';

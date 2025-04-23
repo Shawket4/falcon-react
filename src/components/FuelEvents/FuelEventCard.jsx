@@ -11,7 +11,7 @@ const FuelEventCard = ({ carPlate, carData, navigate, isMobile }) => {
     const rate = parseFloat(value);
     
     let colorClass = 'text-gray-400';
-    if (rate >= 1.0 && rate <= 2.7) {
+    if (rate >= 1.0 && rate <= 3.2) {
       if (rate < 1.8) {
         colorClass = 'text-red-500';
       } else if (rate < 1.9) {
@@ -53,7 +53,7 @@ const FuelEventCard = ({ carPlate, carData, navigate, isMobile }) => {
           <span className={`flex items-center ${efficiency.colorClass}`}>
             <Gauge className="w-4 h-4 mr-1 flex-shrink-0" />
             {efficiency.value} km/L
-            {(parseFloat(event.fuel_rate) < 1.0 || parseFloat(event.fuel_rate) > 2.7) && 
+            {(parseFloat(event.fuel_rate) < 1.0 || parseFloat(event.fuel_rate) > 3.2) && 
               <span className="ml-1 text-xs italic">(excluded)</span>
             }
           </span>

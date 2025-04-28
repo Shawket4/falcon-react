@@ -9,7 +9,7 @@ import CreateTruck from './components/CreateTruck';
 import CreateTire from './components/CreateTire';
 import Login from './components/Login';
 import Layout from './components/Layout';
-import { AllDrivers, DriverDetails, DriverLoans, AddDriverLoan } from './components/Drivers';
+import { AllDrivers, DriverDetails, DriverLoans, AddDriverLoan, AddDriver } from './components/Drivers';
 import { FuelEventsList, FuelEventDetails, AddFuelEvent, EditFuelEvent } from './components/FuelEvents';
 import { AuthProvider } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -37,6 +37,7 @@ import DriverExpenses from './components/Drivers/DriverExpenses';
 import AddDriverExpense from './components/Drivers/AddDriverExpense';
 import DriverSalaries from './components/Drivers/DriverSalaries';
 import AddDriverSalary from './components/Drivers/AddDriverSalary';
+import AddCar from './components/AddCar';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -149,6 +150,22 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <AddDriverSalary />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+<Route path="/add-driver" element={
+            <ProtectedRoute>
+              <Layout>
+                <AddDriver />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+<Route path="/add-car" element={
+            <ProtectedRoute>
+              <Layout>
+                <AddCar />
               </Layout>
             </ProtectedRoute>
           } />

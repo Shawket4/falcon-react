@@ -5,3 +5,4 @@ export { default as DriverLoans } from './DriverLoans';
 export { default as LoanStatistics } from './LoanStatistics';
 export {default as LoanTimeSeriesAnalysis} from "./LoanTimeSeriesAnalysis"
 export {default as GlobalStats} from "./GlobalStats"
+export {default as AddDriver} from "./AddDriver"

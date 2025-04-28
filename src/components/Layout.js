@@ -49,7 +49,6 @@ const Layout = ({ children }) => {
     setSidebarOpen(!sidebarOpen);
   };
   
-  
   // Close sidebar on mobile when clicking outside
   const handleContentClick = () => {
     if (sidebarOpen && window.innerWidth < 768) {
@@ -97,12 +96,19 @@ const Layout = ({ children }) => {
     {
       title: "Fleet Management",
       icon: <Truck size={18} />,
-      items: [
+      items: getNavItems([
         { 
           path: '/trucks', 
           icon: <Truck size={18} />, 
           label: 'Trucks',
           isActive: location.pathname === '/trucks' || location.pathname.includes('/trucks/')
+        },
+        { 
+          path: '/add-car', 
+          icon: <PlusCircle size={18} />, 
+          label: 'Add Car',
+          isActive: location.pathname === '/add-car',
+          minPermissionLevel: REQUIRED_PERMISSION_LEVEL
         },
         { 
           path: '/tires', 
@@ -116,12 +122,18 @@ const Layout = ({ children }) => {
           label: 'Oil Changes',
           isActive: location.pathname === '/oil-changes-list' || location.pathname.includes('/edit-oil-change/')
         },
-      ]
+      ])
     },
     {
       title: "Trip Management",
       icon: <Container size={18} />,
       items: getNavItems([
+        { 
+          path: '/trips-list', 
+          icon: <Container size={18} />, 
+          label: 'Trips',
+          isActive: location.pathname === '/trips-list' || location.pathname.includes('/trip-details/')
+        },
         { 
           path: '/fees', 
           icon: <DollarSign size={18} />, 
@@ -129,25 +141,26 @@ const Layout = ({ children }) => {
           isActive: location.pathname === '/fees',
           minPermissionLevel: REQUIRED_PERMISSION_LEVEL
         },
-        { 
-          path: '/trips-list', 
-          icon: <Container size={18} />, 
-          label: 'Trips',
-          isActive: location.pathname === '/trips-list' || location.pathname.includes('/trip-details/')
-        },
       ])
     },
     {
       title: "Driver Management",
       icon: <Users size={18} />,
-      items: [
+      items: getNavItems([
         { 
           path: '/drivers', 
           icon: <Users size={18} />, 
           label: 'Drivers',
           isActive: location.pathname === '/drivers' || location.pathname.includes('/driver/')
         },
-      ]
+        { 
+          path: '/add-driver', 
+          icon: <PlusCircle size={18} />, 
+          label: 'Add Driver',
+          isActive: location.pathname === '/add-driver',
+          minPermissionLevel: REQUIRED_PERMISSION_LEVEL
+        }
+      ])
     }
   ];
   
@@ -212,9 +225,10 @@ const Layout = ({ children }) => {
 
   // Filter out sections with no items
   const filteredNavSections = navSections.filter(section => section.items.length > 0);
+  
   return (
     <div className="flex min-h-screen bg-gray-50 overflow-x-auto">
-      {/* Overlay for mobile sidebar */}
+      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-gray-800 bg-opacity-40 z-40 md:hidden transition-opacity duration-300"
@@ -228,6 +242,7 @@ const Layout = ({ children }) => {
         md:translate-x-0 
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
+        {/* Sidebar Header */}
         <div className="flex items-center justify-between p-4 md:p-5 border-b border-blue-100 flex-shrink-0 bg-gradient-to-r from-blue-50 to-blue-50">
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-blue-500 rounded-lg">
@@ -243,6 +258,7 @@ const Layout = ({ children }) => {
           </button>
         </div>
         
+        {/* Sidebar Navigation */}
         <nav className="p-4 overflow-y-auto flex-grow">
           {filteredNavSections.map((section, idx) => (
             <div key={idx} className="mb-5">
@@ -281,7 +297,7 @@ const Layout = ({ children }) => {
           ))}
         </nav>
 
-        {/* User info & Logout */}
+        {/* Sidebar Footer - User Info & Logout */}
         <div className="p-4 border-t border-blue-100 flex-shrink-0 bg-blue-50">
           {user && (
             <div className="mb-4 flex items-center">
@@ -311,21 +327,21 @@ const Layout = ({ children }) => {
             <span className="text-sm font-medium">Logout</span>
           </button>
           
-          {/* Copyright in sidebar */}
+          {/* Copyright */}
           <div className="text-center text-xs text-blue-400 mt-4">
-            © {new Date().getFullYear()} Shawket Ibrahim
+            © {new Date().getFullYear()} Apex Fleet
           </div>
         </div>
       </div>
       
-      {/* Main content */}
+      {/* Main Content Area */}
       <div 
         className={`
           flex-1 flex flex-col ml-0 md:ml-72 lg:ml-76 w-full min-w-0
         `} 
         onClick={handleContentClick}
       >
-        {/* App bar */}
+        {/* Top App Bar */}
         <div className={`
           bg-white p-3.5 md:p-4.5 flex items-center justify-between sticky top-0 z-40 transition-shadow duration-300
           ${scrolled ? 'shadow-md' : 'shadow-sm border-b border-blue-100'}
@@ -338,13 +354,13 @@ const Layout = ({ children }) => {
               <Menu size={20} />
             </button>
             
-            {/* Breadcrumbs component */}
+            {/* Breadcrumbs */}
             <Breadcrumbs />
           </div>
           
-          {/* Right side elements */}
+          {/* Right side of App Bar */}
           <div className="flex items-center space-x-3">
-            {/* Permission level indicator */}
+            {/* Permission Level Indicator */}
             {!hasRequiredPermissionLevel && (
               <div className="hidden md:block">
                 <span className="px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-xs font-medium">
@@ -353,7 +369,7 @@ const Layout = ({ children }) => {
               </div>
             )}
             
-            {/* User avatar on mobile */}
+            {/* Mobile User Avatar */}
             <div className="md:hidden">
               {user && (
                 <button 
@@ -367,16 +383,16 @@ const Layout = ({ children }) => {
           </div>
         </div>
         
-        {/* Page content */}
+        {/* Page Content */}
         <div className="flex-1 overflow-auto p-5 md:p-6 lg:p-8 bg-gray-50">
-          <div className="w-full">
+          <div className="w-full max-w-7xl mx-auto">
             {children}
           </div>
         </div>
         
-        {/* Copyright footer - slimmer and more subtle */}
-        <div className="py-2 md:py-3 px-4 md:px-6 bg-white border-t border-gray-100 text-center text-gray-400 text-xs">
-          © {new Date().getFullYear()} Shawket Ibrahim. All rights reserved.
+        {/* Footer */}
+        <div className="py-3 px-4 md:px-6 bg-white border-t border-gray-100 text-center text-gray-400 text-xs">
+        Apex Fleet. All rights reserved.
         </div>
       </div>
     </div>

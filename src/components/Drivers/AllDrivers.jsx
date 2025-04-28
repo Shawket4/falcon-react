@@ -8,7 +8,8 @@ import {
   Menu, 
   X, 
   CreditCard,
-  Users
+  Users,
+  PlusCircle  // Added for the Add Driver button
 } from 'lucide-react';
 import apiClient from '../../apiClient';
 import LoanStatistics from './LoanStatistics'; // Import the new component
@@ -191,6 +192,18 @@ const AllDrivers = () => {
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 </div>
+                
+                {/* Add Driver Button */}
+                <button 
+                  onClick={() => navigate('/add-driver')} 
+                  className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center"
+                  aria-label="Add Driver"
+                  title="Add New Driver"
+                >
+                  <PlusCircle size={20} />
+                  <span className="ml-2 hidden sm:inline">Add Driver</span>
+                </button>
+                
                 <button 
                   onClick={handleRefresh} 
                   disabled={refreshing}
@@ -227,6 +240,14 @@ const AllDrivers = () => {
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200"
                     />
                   </div>
+                  <button 
+                    type="button"
+                    onClick={() => navigate('/add-driver')}
+                    className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    aria-label="Add Driver"
+                  >
+                    <PlusCircle size={20} />
+                  </button>
                   <button 
                     type="button"
                     onClick={handleRefresh} 
@@ -280,6 +301,13 @@ const AllDrivers = () => {
                   </div>
                   <p className="text-lg text-gray-500 font-medium">No drivers found</p>
                   <p className="text-gray-400 mt-2">Try adjusting your search or refreshing the page</p>
+                  <button 
+                    onClick={() => navigate('/add-driver')} 
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                  >
+                    <PlusCircle size={18} className="mr-2" />
+                    Add Driver
+                  </button>
                 </div>
               </div>
             ) : (
@@ -332,6 +360,17 @@ const AllDrivers = () => {
           <span className="text-gray-600">Refreshing...</span>
         </div>
       )}
+      
+      {/* Floating Add Button (only on mobile and tablet) */}
+      <div className="sm:hidden fixed bottom-6 right-6 z-20">
+        <button 
+          onClick={() => navigate('/add-driver')} 
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg flex items-center justify-center"
+          aria-label="Add Driver"
+        >
+          <PlusCircle size={24} />
+        </button>
+      </div>
     </div>
   );
 };

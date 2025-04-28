@@ -3,6 +3,7 @@ import apiClient from '../../apiClient';
 import ExportToExcel from './ExportStatsToExcel';
 import ExportToPDF from './ExportStatsToPdf';
 import TripStatsByDate from './AnalyticsGraphByDate';
+import RouteDetailsSection from './RouteDetailsSection';
 import { 
   BarChart, 
   Bar, 
@@ -58,7 +59,7 @@ const TripStatistics = ({ filters }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeCompany, setActiveCompany] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'companies', 'details'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'timeline', 'companies', 'details', 'routes'
 
 
   useEffect(() => {
@@ -233,6 +234,7 @@ const TripStatistics = ({ filters }) => {
     if (name === 'trips') return [`${formatNumber(value)}`, 'Trips'];
     if (name === 'distinctCars') return [`${formatNumber(value)}`, 'Distinct Cars'];
     if (name === 'distinctDays') return [`${formatNumber(value)}`, 'Distinct Days'];
+    if (name === 'workingDays') return [`${formatNumber(value)}`, 'Working Days'];
     
     return [formatNumber(value), name];
   };
@@ -265,8 +267,65 @@ const TripStatistics = ({ filters }) => {
     { id: 'overview', label: 'Overview', icon: 'chart-pie' },
     { id: 'timeline', label: 'Timeline', icon: 'chart-line' },
     { id: 'companies', label: 'Companies', icon: 'building-office' },
-    { id: 'details', label: 'Company Details', icon: 'clipboard-document-list' }
+    { id: 'details', label: 'Company Details', icon: 'clipboard-document-list' },
+    { id: 'routes', label: 'Route Analysis', icon: 'map' } // New tab for route analysis
   ];
+
+  // Helper function to group data by week
+  function getWeeklyData() {
+    if (!statsByDate.length) return [];
+    
+    const weekData = {};
+    
+    statsByDate.forEach(day => {
+      const date = new Date(day.date);
+      const weekNumber = getWeekNumber(date);
+      const weekKey = `Week ${weekNumber}`;
+      
+      if (!weekData[weekKey]) {
+        weekData[weekKey] = {
+          week: weekKey,
+          trips: 0,
+          volume: 0,
+          distance: 0,
+          revenue: 0
+        };
+      }
+      
+      weekData[weekKey].trips += day.total_trips || 0;
+      weekData[weekKey].volume += day.total_volume || 0;
+      weekData[weekKey].distance += day.total_distance || 0;
+      weekData[weekKey].revenue += day.total_revenue || 0;
+    });
+    
+    return Object.values(weekData);
+  }
+  
+  // Helper function to get week number
+  function getWeekNumber(date) {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  }
+  
+  // Helper function to get daily patterns
+  function getDailyPatterns() {
+    if (!statsByDate.length) return [];
+    
+    return statsByDate.map(day => {
+      const date = new Date(day.date);
+      const formattedDate = date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      
+      return {
+        date: formattedDate,
+        trips: day.total_trips || 0,
+        companies: day.company_details?.length || 0
+      };
+    });
+  }
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -365,6 +424,9 @@ const TripStatistics = ({ filters }) => {
                 )}
                 {tab.icon === 'clipboard-document-list' && (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                )}
+                {tab.icon === 'map' && (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                 )}
               </svg>
               {tab.label}
@@ -476,7 +538,7 @@ const TripStatistics = ({ filters }) => {
               <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-6">
                 <h3 className="text-lg font-semibold mb-4">Top Performers</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="border border-blue-100 rounded-lg p-4 bg-blue-50">
+                <div className="border border-blue-100 rounded-lg p-4 bg-blue-50">
                     <h4 className="text-gray-700 text-sm font-medium">Top by Trips</h4>
                     {getTopPerformer('trips') && (
                       <div className="mt-2 flex items-center">
@@ -796,26 +858,26 @@ const TripStatistics = ({ filters }) => {
           
           {/* Company Details Tab Content */}
           {activeTab === 'details' && activeCompanyData && (
-            
             <div className="space-y-6">
               <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-6 overflow-x-auto">
-  <h4 className="text-gray-700 text-sm font-medium mb-4">Switch Company</h4>
-  <div className="flex space-x-2">
-    {statistics.map((company, index) => (
-      <button
-        key={index}
-        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap
-          ${activeCompany === company.company 
-            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent'
-          }`}
-        onClick={() => setActiveCompany(company.company)}
-      >
-        {company.company}
-      </button>
-    ))}
-  </div>
-</div>
+                <h4 className="text-gray-700 text-sm font-medium mb-4">Switch Company</h4>
+                <div className="flex space-x-2">
+                  {statistics.map((company, index) => (
+                    <button
+                      key={index}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap
+                        ${activeCompany === company.company 
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent'
+                        }`}
+                      onClick={() => setActiveCompany(company.company)}
+                    >
+                      {company.company}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
               {/* Company Header */}
               <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1028,103 +1090,80 @@ const TripStatistics = ({ filters }) => {
                                   )}
                                   {(hasVAT || hasCarRental) && (
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                      {formatCurrency(detail.total_with_vat || (detail.total_revenue + (detail.vat || 0) + (detail.car_rental || 0)))}
-                                    </td>
-                                  )}
-                                </>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="bg-gray-50 p-8 text-center rounded-lg">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No detailed data available</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    No detailed data is available for this company.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
-      
-      {!isLoading && statistics.length === 0 && (
-        <div className="bg-gray-50 p-8 text-center rounded-lg shadow-sm">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No statistics available</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Try changing your filter options or make sure trips are recorded in the system.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-  
-  // Helper function to group data by week
-  function getWeeklyData() {
-    if (!statsByDate.length) return [];
-    
-    const weekData = {};
-    
-    statsByDate.forEach(day => {
-      const date = new Date(day.date);
-      const weekNumber = getWeekNumber(date);
-      const weekKey = `Week ${weekNumber}`;
-      
-      if (!weekData[weekKey]) {
-        weekData[weekKey] = {
-          week: weekKey,
-          trips: 0,
-          volume: 0,
-          distance: 0,
-          revenue: 0
-        };
-      }
-      
-      weekData[weekKey].trips += day.total_trips || 0;
-      weekData[weekKey].volume += day.total_volume || 0;
-      weekData[weekKey].distance += day.total_distance || 0;
-      weekData[weekKey].revenue += day.total_revenue || 0;
-    });
-    
-    return Object.values(weekData);
-  }
-  
-  // Helper function to get week number
-  function getWeekNumber(date) {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-  }
-  
-  // Helper function to get daily patterns
-  function getDailyPatterns() {
-    if (!statsByDate.length) return [];
-    
-    return statsByDate.map(day => {
-      const date = new Date(day.date);
-      const formattedDate = date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      });
-      
-      return {
-        date: formattedDate,
-        trips: day.total_trips || 0,
-        companies: day.company_details?.length || 0
-      };
-    });
-  }
+{formatCurrency(detail.total_with_vat || (detail.total_revenue + (detail.vat || 0) + (detail.car_rental || 0)))}
+                                   </td>
+                                 )}
+                               </>
+                             )}
+                           </tr>
+                         ))}
+                       </tbody>
+                     </table>
+                   </div>
+                 </div>
+               </>
+             ) : (
+               <div className="bg-gray-50 p-8 text-center rounded-lg">
+                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                 </svg>
+                 <h3 className="mt-2 text-sm font-medium text-gray-900">No detailed data available</h3>
+                 <p className="mt-1 text-sm text-gray-500">
+                   No detailed data is available for this company.
+                 </p>
+               </div>
+             )}
+           </div>
+         )}
+
+         {/* Route Analysis Tab Content */}
+         {activeTab === 'routes' && (
+           <div className="space-y-6">
+             <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-6 overflow-x-auto">
+               <h4 className="text-gray-700 text-sm font-medium mb-4">Select Company for Route Analysis</h4>
+               <div className="flex space-x-2">
+                 {statistics.map((company, index) => (
+                   <button
+                     key={index}
+                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap
+                       ${activeCompany === company.company 
+                         ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent'
+                       }`}
+                     onClick={() => setActiveCompany(company.company)}
+                   >
+                     {company.company}
+                   </button>
+                 ))}
+               </div>
+             </div>
+
+             {activeCompanyData && (
+               <RouteDetailsSection 
+                 activeCompanyData={activeCompanyData} 
+                 hasFinancialAccess={hasFinancialAccess} 
+                 formatNumber={formatNumber}
+                 formatCurrency={formatCurrency}
+               />
+             )}
+           </div>
+         )}
+       </>
+     )}
+     
+     {!isLoading && statistics.length === 0 && (
+       <div className="bg-gray-50 p-8 text-center rounded-lg shadow-sm">
+         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+         </svg>
+         <h3 className="mt-2 text-sm font-medium text-gray-900">No statistics available</h3>
+         <p className="mt-1 text-sm text-gray-500">
+           Try changing your filter options or make sure trips are recorded in the system.
+         </p>
+       </div>
+     )}
+   </div>
+ );
 };
 
 export default TripStatistics;

@@ -33,6 +33,10 @@ import {
   TransactionForm
 } from './components/Vendors';
 import LandingPage from './landing_page/landing_page';
+import DriverExpenses from './components/Drivers/DriverExpenses';
+import AddDriverExpense from './components/Drivers/AddDriverExpense';
+import DriverSalaries from './components/Drivers/DriverSalaries';
+import AddDriverSalary from './components/Drivers/AddDriverSalary';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -125,12 +129,43 @@ function App() {
               </Layout>
             </ProtectedRoute>
           } />
+
+        <Route path="/driver/expenses/:id" element={
+            <ProtectedRoute>
+              <Layout>
+                <DriverExpenses />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+<Route path="/driver/salaries/:id" element={
+            <ProtectedRoute>
+              <Layout>
+                <DriverSalaries />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/driver/salaries/:id/add" element={
+            <ProtectedRoute>
+              <Layout>
+                <AddDriverSalary />
+              </Layout>
+            </ProtectedRoute>
+          } />
           
           {/* Add Driver Loan - Requires permission level 3 or higher */}
           <Route path="/driver/loans/:id/add" element={
             <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
               <Layout>
                 <AddDriverLoan />
+              </Layout>
+            </ProtectedRoute>
+          } />
+           {/* Add Driver Expense - Requires permission level 3 or higher */}
+           <Route path="/driver/expenses/:id/add" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <AddDriverExpense />
               </Layout>
             </ProtectedRoute>
           } />

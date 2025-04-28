@@ -3,29 +3,29 @@ import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../../apiClient';
 import { 
   Plus, Trash2, Calendar, DollarSign, RefreshCw, 
-  AlertTriangle, LockIcon, ArrowLeft, User, CreditCard,
-  Clock, Info, Check, CheckCircle
+  AlertTriangle, LockIcon, ArrowLeft, Receipt, 
+  Clock, Info, FileText, Tag, CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
 // Permission level required for add/delete operations
 const REQUIRED_PERMISSION_LEVEL = 3;
 
-const DriverLoans = () => {
+const DriverExpenses = () => {
   const { id } = useParams();
-  const [loans, setLoans] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [loanToDelete, setLoanToDelete] = useState(null);
+  const [expenseToDelete, setExpenseToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [stats, setStats] = useState({
-    totalLoans: 0,
+    totalExpenses: 0,
     totalAmount: 0,
     averageAmount: 0,
-    paidLoans: 0,
+    paidExpenses: 0,
     paidAmount: 0
   });
   const navigate = useNavigate();
@@ -43,10 +43,10 @@ const DriverLoans = () => {
   const isLoadingRef = useRef(false);
   const initialLoadDone = useRef(false);
   
-  // Group loans by year and month
-  const groupLoansByYearMonth = (loansList) => {
-    return loansList.reduce((acc, loan) => {
-      const date = new Date(loan.date);
+  // Group expenses by year and month
+  const groupExpensesByYearMonth = (expensesList) => {
+    return expensesList.reduce((acc, expense) => {
+      const date = new Date(expense.date);
       const year = date.getFullYear();
       const month = date.toLocaleString('default', { month: 'long' });
       
@@ -58,38 +58,38 @@ const DriverLoans = () => {
         acc[year][month] = [];
       }
       
-      acc[year][month].push(loan);
+      acc[year][month].push(expense);
       return acc;
     }, {});
   };
   
-  // Calculate loan statistics
-  const calculateStats = (loansList) => {
-    if (!loansList || loansList.length === 0) {
+  // Calculate expense statistics
+  const calculateStats = (expensesList) => {
+    if (!expensesList || expensesList.length === 0) {
       return {
-        totalLoans: 0,
+        totalExpenses: 0,
         totalAmount: 0,
         averageAmount: 0,
-        paidLoans: 0,
+        paidExpenses: 0,
         paidAmount: 0
       };
     }
     
-    const totalLoans = loansList.length;
-    const totalAmount = loansList.reduce((sum, loan) => sum + parseFloat(loan.amount), 0);
-    const averageAmount = totalAmount / totalLoans;
+    const totalExpenses = expensesList.length;
+    const totalAmount = expensesList.reduce((sum, expense) => sum + parseFloat(expense.cost), 0);
+    const averageAmount = totalAmount / totalExpenses;
     
-    // Calculate paid loans stats
-    const paidLoans = loansList.filter(loan => loan.is_paid).length;
-    const paidAmount = loansList
-      .filter(loan => loan.is_paid)
-      .reduce((sum, loan) => sum + parseFloat(loan.amount), 0);
+    // Calculate paid expenses stats
+    const paidExpenses = expensesList.filter(expense => expense.is_paid).length;
+    const paidAmount = expensesList
+      .filter(expense => expense.is_paid)
+      .reduce((sum, expense) => sum + parseFloat(expense.cost), 0);
     
     return {
-      totalLoans,
+      totalExpenses,
       totalAmount,
       averageAmount,
-      paidLoans,
+      paidExpenses,
       paidAmount
     };
   };
@@ -138,9 +138,9 @@ const DriverLoans = () => {
         }
       }
       
-      // Get driver loans
-      const loansResponse = await apiClient.post(
-        '/api/GetDriverLoans',
+      // Get driver expenses
+      const expensesResponse = await apiClient.post(
+        '/api/GetDriverExpenses',
         { id: parseInt(driverId) },
         {
           headers: { 'Content-Type': 'application/json' },
@@ -153,20 +153,20 @@ const DriverLoans = () => {
         return;
       }
       
-      if (loansResponse.data && loansResponse.data.length > 0) {
-        // Sort loans by date (newest first)
-        const sortedLoans = [...loansResponse.data].sort((a, b) => new Date(b.date) - new Date(a.date));
-        setLoans(sortedLoans);
+      if (expensesResponse.data && expensesResponse.data.length > 0) {
+        // Sort expenses by date (newest first)
+        const sortedExpenses = [...expensesResponse.data].sort((a, b) => new Date(b.date) - new Date(a.date));
+        setExpenses(sortedExpenses);
         
         // Calculate stats
-        setStats(calculateStats(sortedLoans));
+        setStats(calculateStats(sortedExpenses));
       } else {
-        setLoans([]);
+        setExpenses([]);
         setStats({
-          totalLoans: 0,
+          totalExpenses: 0,
           totalAmount: 0,
           averageAmount: 0,
-          paidLoans: 0,
+          paidExpenses: 0,
           paidAmount: 0
         });
       }
@@ -176,7 +176,7 @@ const DriverLoans = () => {
         return;
       }
       console.error(err);
-      setError("Failed to load driver loans");
+      setError("Failed to load driver expenses");
     } finally {
       if (isMounted.current) {
         setLoading(false);
@@ -209,20 +209,20 @@ const DriverLoans = () => {
     loadDataImpl(id, true); // Force refresh
   };
   
-  const confirmDeleteLoan = (loan) => {
-    if (!canAddDelete || loan.is_paid) return; // Prevent deleting paid loans
-    setLoanToDelete(loan);
+  const confirmDeleteExpense = (expense) => {
+    if (!canAddDelete || expense.is_paid) return; // Prevent deleting paid expenses
+    setExpenseToDelete(expense);
     setShowDeleteConfirm(true);
   };
   
-  const handleDeleteLoan = async () => {
-    if (!loanToDelete || !canAddDelete || loanToDelete.is_paid) return;
+  const handleDeleteExpense = async () => {
+    if (!expenseToDelete || !canAddDelete || expenseToDelete.is_paid) return;
     
     setDeleting(true);
     try {
       const response = await apiClient.post(
-        '/api/DeleteLoan',
-        { id: loanToDelete.ID },
+        '/api/DeleteExpense',
+        { id: expenseToDelete.ID },
         {
           headers: { 'Content-Type': 'application/json' },
           timeout: 4000
@@ -230,26 +230,26 @@ const DriverLoans = () => {
       );
       
       if (response.status === 200) {
-        // Remove the deleted loan from the state
-        const updatedLoans = loans.filter(loan => loan.ID !== loanToDelete.ID);
-        setLoans(updatedLoans);
+        // Remove the deleted expense from the state
+        const updatedExpenses = expenses.filter(expense => expense.ID !== expenseToDelete.ID);
+        setExpenses(updatedExpenses);
         
         // Recalculate stats
-        setStats(calculateStats(updatedLoans));
+        setStats(calculateStats(updatedExpenses));
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to delete loan");
+      alert("Failed to delete expense");
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
-      setLoanToDelete(null);
+      setExpenseToDelete(null);
     }
   };
   
-  const handleAddLoan = () => {
+  const handleAddExpense = () => {
     if (!canAddDelete) return;
-    navigate(`/driver/loans/${id}/add`);
+    navigate(`/driver/expenses/${id}/add`);
   };
   
   const navigateToDriver = () => {
@@ -263,7 +263,7 @@ const DriverLoans = () => {
           <div className="w-16 h-16 border-4 border-blue-200 border-solid rounded-full"></div>
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent border-solid rounded-full animate-spin absolute top-0"></div>
         </div>
-        <p className="text-gray-600 font-medium mt-4">Loading driver loans...</p>
+        <p className="text-gray-600 font-medium mt-4">Loading driver expenses...</p>
       </div>
     );
   }
@@ -275,7 +275,7 @@ const DriverLoans = () => {
           <div className="text-red-500 mb-4">
             <AlertTriangle size={48} />
           </div>
-          <p className="text-red-700 font-medium mb-2 text-xl">Error Loading Loans</p>
+          <p className="text-red-700 font-medium mb-2 text-xl">Error Loading Expenses</p>
           <p className="text-red-600 mb-6">{error}</p>
           <button 
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
@@ -289,8 +289,8 @@ const DriverLoans = () => {
     );
   }
   
-  const groupedLoansByYearMonth = groupLoansByYearMonth(loans);
-  const yearsInDescendingOrder = Object.keys(groupedLoansByYearMonth).sort((a, b) => b - a);
+  const groupedExpensesByYearMonth = groupExpensesByYearMonth(expenses);
+  const yearsInDescendingOrder = Object.keys(groupedExpensesByYearMonth).sort((a, b) => b - a);
   
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6">
@@ -310,11 +310,11 @@ const DriverLoans = () => {
         <div className="bg-white border-b border-gray-200 p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
             <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-3 rounded-full text-blue-600">
-                <CreditCard size={24} />
+              <div className="bg-orange-100 p-3 rounded-full text-orange-600">
+                <Receipt size={24} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">Loans</h1>
+                <h1 className="text-2xl font-bold text-gray-800">Expenses</h1>
                 <p className="text-gray-500 mt-1">{driver?.name || 'Driver'}</p>
               </div>
             </div>
@@ -331,19 +331,19 @@ const DriverLoans = () => {
                 onClick={handleRefresh} 
                 disabled={refreshing}
                 className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600"
-                aria-label="Refresh loans"
-                title="Refresh loans"
+                aria-label="Refresh expenses"
+                title="Refresh expenses"
               >
                 <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
               </button>
               
               {canAddDelete && (
                 <button 
-                  onClick={handleAddLoan} 
+                  onClick={handleAddExpense} 
                   className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus size={20} className="mr-2" />
-                  <span>Add Loan</span>
+                  <span>Add Expense</span>
                 </button>
               )}
             </div>
@@ -351,18 +351,18 @@ const DriverLoans = () => {
         </div>
         
         {/* Stats Summary */}
-        {loans.length > 0 && (
+        {expenses.length > 0 && (
           <div className="bg-gray-50 border-b border-gray-200 p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {/* Total Loans */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {/* Total Expenses */}
               <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm text-gray-500">Total Loans</p>
-                    <p className="text-xl font-bold text-gray-800">{stats.totalLoans}</p>
+                    <p className="text-sm text-gray-500">Total Expenses</p>
+                    <p className="text-xl font-bold text-gray-800">{stats.totalExpenses}</p>
                   </div>
-                  <div className="bg-blue-100 p-3 rounded-full text-blue-600">
-                    <CreditCard size={20} />
+                  <div className="bg-orange-100 p-2 rounded-full text-orange-600">
+                    <Receipt size={18} />
                   </div>
                 </div>
               </div>
@@ -372,39 +372,39 @@ const DriverLoans = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-sm text-gray-500">Total Amount</p>
-                    <p className="text-xl font-bold text-green-600">{formatCurrency(stats.totalAmount)}</p>
+                    <p className="text-xl font-bold text-red-600">{formatCurrency(stats.totalAmount)}</p>
                   </div>
-                  <div className="bg-green-100 p-3 rounded-full text-green-600">
-                    <DollarSign size={20} />
+                  <div className="bg-red-100 p-2 rounded-full text-red-600">
+                    <DollarSign size={18} />
                   </div>
                 </div>
               </div>
               
-              {/* Average Loan */}
+              {/* Average Expense */}
               <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm text-gray-500">Average Loan</p>
+                    <p className="text-sm text-gray-500">Average Expense</p>
                     <p className="text-xl font-bold text-purple-600">{formatCurrency(stats.averageAmount)}</p>
                   </div>
-                  <div className="bg-purple-100 p-3 rounded-full text-purple-600">
-                    <Calculator size={20} />
+                  <div className="bg-purple-100 p-2 rounded-full text-purple-600">
+                    <Calculator size={18} />
                   </div>
                 </div>
               </div>
               
-              {/* Paid Loans */}
+              {/* Paid Expenses */}
               <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm text-gray-500">Paid Loans</p>
+                    <p className="text-sm text-gray-500">Paid Expenses</p>
                     <div className="flex items-center">
-                      <p className="text-xl font-bold text-green-600">{stats.paidLoans}</p>
-                      <span className="text-xs ml-2 text-gray-500">of {stats.totalLoans}</span>
+                      <p className="text-xl font-bold text-green-600">{stats.paidExpenses}</p>
+                      <span className="text-xs ml-2 text-gray-500">of {stats.totalExpenses}</span>
                     </div>
                   </div>
-                  <div className="bg-green-100 p-3 rounded-full text-green-600">
-                    <CheckCircle size={20} />
+                  <div className="bg-green-100 p-2 rounded-full text-green-600">
+                    <CheckCircle size={18} />
                   </div>
                 </div>
               </div>
@@ -416,8 +416,8 @@ const DriverLoans = () => {
                     <p className="text-sm text-gray-500">Paid Amount</p>
                     <p className="text-xl font-bold text-green-600">{formatCurrency(stats.paidAmount)}</p>
                   </div>
-                  <div className="bg-green-100 p-3 rounded-full text-green-600">
-                    <DollarSign size={20} />
+                  <div className="bg-green-100 p-2 rounded-full text-green-600">
+                    <DollarSign size={18} />
                   </div>
                 </div>
               </div>
@@ -425,23 +425,23 @@ const DriverLoans = () => {
           </div>
         )}
         
-        {/* Loans Content */}
+        {/* Expenses Content */}
         <div className="p-6">
-          {loans.length === 0 ? (
+          {expenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="bg-gray-100 p-6 rounded-full text-gray-400 mb-4">
-                <DollarSign size={64} />
+                <Receipt size={64} />
               </div>
-              <p className="text-lg text-gray-800 font-medium mb-2">No loans found</p>
-              <p className="text-gray-500 mb-6 text-center">This driver doesn't have any recorded loans yet.</p>
+              <p className="text-lg text-gray-800 font-medium mb-2">No expenses found</p>
+              <p className="text-gray-500 mb-6 text-center">This driver doesn't have any recorded expenses yet.</p>
               
               {canAddDelete && (
                 <button 
-                  onClick={handleAddLoan} 
+                  onClick={handleAddExpense} 
                   className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus size={16} className="mr-2" />
-                  Register Loan
+                  Register Expense
                 </button>
               )}
             </div>
@@ -455,64 +455,77 @@ const DriverLoans = () => {
                       <span>{year}</span>
                     </div>
                     <div className="bg-white bg-opacity-20 text-sm px-2 py-0.5 rounded-full">
-                      {Object.values(groupedLoansByYearMonth[year]).flat().length} loans
+                      {Object.values(groupedExpensesByYearMonth[year]).flat().length} expenses
                     </div>
                   </div>
                   
                   <div className="divide-y divide-gray-100">
-                    {Object.keys(groupedLoansByYearMonth[year]).map(month => (
+                    {Object.keys(groupedExpensesByYearMonth[year]).map(month => (
                       <div key={`${year}-${month}`} className="p-4">
                         <div className="flex items-center px-3 py-2 mb-3 bg-blue-50 rounded-lg text-sm font-medium text-blue-700">
                           <Calendar size={16} className="mr-2" />
                           <span>{month}</span>
                         </div>
                         <div className="space-y-3">
-                          {groupedLoansByYearMonth[year][month].map(loan => (
+                          {groupedExpensesByYearMonth[year][month].map(expense => (
                             <div 
-                              key={loan.ID} 
+                              key={expense.ID} 
                               className={`flex justify-between items-center p-4 rounded-lg border transition-all hover:shadow-sm
-                                ${loan.is_paid 
+                                ${expense.is_paid 
                                   ? 'bg-green-50 border-green-200 hover:border-green-300' 
                                   : 'bg-gray-50 border-gray-100 hover:border-blue-200'}`}
                             >
                               <div className="flex items-start gap-3">
                                 <div className={`p-2 rounded-full 
-                                  ${loan.is_paid 
+                                  ${expense.is_paid 
                                     ? 'bg-green-100 text-green-600' 
-                                    : 'bg-blue-100 text-blue-600'}`}>
-                                  {loan.is_paid ? <CheckCircle size={20} /> : <DollarSign size={20} />}
+                                    : 'bg-red-100 text-red-600'}`}>
+                                  {expense.is_paid ? <CheckCircle size={20} /> : <Receipt size={20} />}
                                 </div>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <h3 className={`font-semibold ${loan.is_paid ? 'text-green-700' : 'text-gray-800'}`}>
-                                      {formatCurrency(loan.amount)}
+                                    <h3 className={`font-semibold ${expense.is_paid ? 'text-green-700' : 'text-gray-800'}`}>
+                                      {formatCurrency(expense.cost)}
                                     </h3>
-                                    {loan.is_paid && (
+                                    <span className={`text-xs px-2 py-0.5 rounded 
+                                      ${expense.is_paid 
+                                        ? 'bg-green-200 text-green-800' 
+                                        : 'bg-gray-200 text-gray-700'}`}>
+                                      {expense.category || 'Uncategorized'}
+                                    </span>
+                                    {expense.is_paid && (
                                       <span className="bg-green-200 text-green-800 text-xs px-2 py-0.5 rounded flex items-center">
                                         <CheckCircle size={12} className="mr-1" />
                                         Paid
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-4 mt-1">
+                                  {expense.description && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {expense.description}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-4 mt-2">
                                     <div className="flex items-center text-sm text-gray-500">
                                       <Clock size={14} className="mr-1" />
-                                      <span>{new Date(loan.date).toLocaleDateString('default', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                      <span>{new Date(expense.date).toLocaleDateString('default', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                     </div>
-                                    <div className="flex items-center text-sm text-gray-500">
-                                      <Info size={14} className="mr-1" />
-                                      <span>{loan.method}</span>
-                                    </div>
+                                    {expense.payment_method && (
+                                      <div className="flex items-center text-sm text-gray-500">
+                                        <Tag size={14} className="mr-1" />
+                                        <span>{expense.payment_method}</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
                               
-                              {/* Only show delete button for unpaid loans */}
-                              {canAddDelete && !loan.is_paid && (
+                              {/* Only show delete button for unpaid expenses */}
+                              {canAddDelete && !expense.is_paid && (
                                 <button 
                                   className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                  onClick={() => confirmDeleteLoan(loan)}
-                                  title="Delete loan"
+                                  onClick={() => confirmDeleteExpense(expense)}
+                                  title="Delete expense"
                                 >
                                   <Trash2 size={18} />
                                 </button>
@@ -539,15 +552,16 @@ const DriverLoans = () => {
       )}
       
       {/* Delete Confirmation Dialog - Only shown if user has permission */}
-      {showDeleteConfirm && loanToDelete && canAddDelete && !loanToDelete.is_paid && (
+      {showDeleteConfirm && expenseToDelete && canAddDelete && !expenseToDelete.is_paid && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-fadeIn">
             <div className="bg-red-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
               <Trash2 size={28} className="text-red-600" />
             </div>
-            <h3 className="text-xl font-bold text-center text-gray-800 mb-2">Delete Loan</h3>
+            <h3 className="text-xl font-bold text-center text-gray-800 mb-2">Delete Expense</h3>
             <p className="text-center text-gray-600 mb-6">
-              Are you sure you want to delete this loan of {formatCurrency(loanToDelete.amount)} ({loanToDelete.method}) from {new Date(loanToDelete.date).toLocaleDateString()}? This action cannot be undone.
+              Are you sure you want to delete this expense of {formatCurrency(expenseToDelete.cost)} 
+              {expenseToDelete.category ? ` (${expenseToDelete.category})` : ''} from {new Date(expenseToDelete.date).toLocaleDateString()}? This action cannot be undone.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
               <button 
@@ -559,7 +573,7 @@ const DriverLoans = () => {
               </button>
               <button 
                 className="px-4 py-2 sm:py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex-1 flex items-center justify-center disabled:bg-red-300"
-                onClick={handleDeleteLoan}
+                onClick={handleDeleteExpense}
                 disabled={deleting}
               >
                 {deleting ? (
@@ -570,7 +584,7 @@ const DriverLoans = () => {
                 ) : (
                   <>
                     <Trash2 size={18} className="mr-2" />
-                    Delete Loan
+                    Delete Expense
                   </>
                 )}
               </button>
@@ -609,4 +623,4 @@ const Calculator = (props) => {
   );
 };
 
-export default DriverLoans;
+export default DriverExpenses;

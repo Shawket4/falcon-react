@@ -139,7 +139,7 @@ const DriverDetails = () => {
   };
   
   const navigateToSalary = () => {
-    navigate(`/driver/salary/${id}`);
+    navigate(`/driver/salaries/${id}`);
   };
   
   const handleApproveDriver = async () => {

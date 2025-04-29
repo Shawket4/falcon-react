@@ -4,6 +4,7 @@ import ExportToExcel from './ExportStatsToExcel';
 import ExportToPDF from './ExportStatsToPdf';
 import TripStatsByDate from './AnalyticsGraphByDate';
 import RouteDetailsSection from './RouteDetailsSection';
+import CarDataSection from './CarDataSection';
 import { 
   BarChart, 
   Bar, 
@@ -60,6 +61,7 @@ const TripStatistics = ({ filters }) => {
   const [error, setError] = useState('');
   const [activeCompany, setActiveCompany] = useState(null);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'timeline', 'companies', 'details', 'routes'
+  const [carTotals, setCarTotals] = useState([]);
 
 
   useEffect(() => {
@@ -100,6 +102,10 @@ const TripStatistics = ({ filters }) => {
       if (response.data.data && response.data.data.length > 0 && !activeCompany) {
         setActiveCompany(response.data.data[0].company);
       }
+      if (response.data.data) {
+        const calculatedCarTotals = GetCarTotals(response.data.data);
+        setCarTotals(calculatedCarTotals);
+      }
     } catch (err) {
       setError('Failed to fetch statistics: ' + (err.response?.data?.message || err.message));
       console.error(err);
@@ -112,7 +118,64 @@ const TripStatistics = ({ filters }) => {
   const formatNumber = (num) => {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
   };
-
+  // Function to get car totals from statistics
+  const GetCarTotals = (statistics) => {
+    // Create a map to aggregate data by car number plate
+    const carTotalsMap = {};
+    
+    // Iterate through all statistics
+    for (const statistic of statistics) {
+      // Access the route details which contain car information
+      if (statistic.route_details) {
+        for (const routeDetail of statistic.route_details) {
+          // Process each car in the route
+          if (routeDetail.cars) {
+            for (const car of routeDetail.cars) {
+              // Check if we already have an entry for this car
+              if (!carTotalsMap[car.car_no_plate]) {
+                // If not, create a new CarTotal
+                carTotalsMap[car.car_no_plate] = {
+                  car_no_plate: car.car_no_plate,
+                  liters: 0,
+                  distance: 0,
+                  base_revenue: 0,
+                  vat: 0,
+                  rent: 0
+                };
+              }
+              
+              // Aggregate the data
+              carTotalsMap[car.car_no_plate].liters += car.total_volume || 0;
+              carTotalsMap[car.car_no_plate].distance += car.total_distance || 0;
+              carTotalsMap[car.car_no_plate].base_revenue += car.total_revenue || 0;
+              
+              // Add VAT if available
+              if (car.vat) {
+                carTotalsMap[car.car_no_plate].vat += car.vat;
+              }
+              
+              // Add Rent/Car Rental if available
+              if (car.car_rental) {
+                carTotalsMap[car.car_no_plate].rent += car.car_rental;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Convert the map to an array and sort by revenue descending
+    const result = Object.values(carTotalsMap);
+    
+    // Sort by total revenue (base_revenue + vat + rent) descending
+    result.sort((a, b) => {
+      const totalA = (a.base_revenue || 0) + (a.vat || 0) + (a.rent || 0);
+      const totalB = (b.base_revenue || 0) + (b.vat || 0) + (b.rent || 0);
+      return totalB - totalA;
+    });
+    
+    return result;
+  };
   // Format currency
   const formatCurrency = (num) => {
     return new Intl.NumberFormat('en-US', { 
@@ -268,7 +331,8 @@ const TripStatistics = ({ filters }) => {
     { id: 'timeline', label: 'Timeline', icon: 'chart-line' },
     { id: 'companies', label: 'Companies', icon: 'building-office' },
     { id: 'details', label: 'Company Details', icon: 'clipboard-document-list' },
-    { id: 'routes', label: 'Route Analysis', icon: 'map' } // New tab for route analysis
+    { id: 'routes', label: 'Route Analysis', icon: 'map' }, // New tab for route analysis
+    { id: 'cars', label: 'Car Data', icon: 'truck' }
   ];
 
   // Helper function to group data by week
@@ -428,6 +492,9 @@ const TripStatistics = ({ filters }) => {
                 {tab.icon === 'map' && (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                 )}
+                {tab.icon === 'truck' && (
+  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+)}
               </svg>
               {tab.label}
             </button>
@@ -1148,6 +1215,24 @@ const TripStatistics = ({ filters }) => {
              )}
            </div>
          )}
+         {/* Car Data Tab Content */}
+{activeTab === 'cars' && (
+  <div className="space-y-6">
+    <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-6">
+      <h4 className="text-gray-700 text-sm font-medium mb-4">Car Performance Analysis</h4>
+      <p className="text-gray-500 text-sm">
+        This section displays the aggregated performance data for all cars across all routes and companies.
+      </p>
+    </div>
+
+    <CarDataSection 
+      carTotals={carTotals}
+      hasFinancialAccess={hasFinancialAccess}
+      formatNumber={formatNumber}
+      formatCurrency={formatCurrency}
+    />
+  </div>
+)}
        </>
      )}
      

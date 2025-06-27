@@ -38,6 +38,7 @@ import AddDriverExpense from './components/Drivers/AddDriverExpense';
 import DriverSalaries from './components/Drivers/DriverSalaries';
 import AddDriverSalary from './components/Drivers/AddDriverSalary';
 import AddCar from './components/AddCar';
+import CarManagement from './components/CarManagement';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -58,6 +59,7 @@ export const pathNames = {
   'finance-dashboard': 'Finance Dashboard',
   transactions: 'Transactions',
   'driver-analytics': 'Driver Analytics',
+  'car-management': 'Car Management',
 };
 
 // Permission level required for certain operations
@@ -166,6 +168,14 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <AddCar />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+<Route path="/car-management" element={
+            <ProtectedRoute>
+              <Layout>
+                <CarManagement />
               </Layout>
             </ProtectedRoute>
           } />

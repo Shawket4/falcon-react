@@ -111,6 +111,12 @@ const Layout = ({ children }) => {
           minPermissionLevel: REQUIRED_PERMISSION_LEVEL
         },
         { 
+          path: '/car-management', 
+          icon: <Truck size={18} />, 
+          label: 'Car Management',
+          isActive: location.pathname === '/car-management'
+        },
+        { 
           path: '/tires', 
           icon: <Disc size={18} />, 
           label: 'Tires',

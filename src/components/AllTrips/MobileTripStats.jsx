@@ -124,7 +124,13 @@ const MobileTripStatistics = ({ filters }) => {
   // Function to get the first day of current month
   const getFirstDayOfMonth = () => {
     const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-indexed (0 = January, 1 = February, etc.)
+    const firstDay = new Date(year, month, 1);
+    // Use local date formatting to avoid timezone issues
+    const result = firstDay.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+    console.log('getFirstDayOfMonth:', { now: now.toISOString(), year, month, firstDay: firstDay.toISOString(), result });
+    return result;
   };
 
   // Function to get today's date

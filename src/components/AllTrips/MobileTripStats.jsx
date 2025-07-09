@@ -758,7 +758,7 @@ const MobileTripStatistics = ({ filters }) => {
           {activeTab === 'timeline' && (
             <div className="space-y-4">
               {/* Use the desktop TripStatsByDate component */}
-              <TripStatsByDate statsByDate={statsByDate} hasFinancialAccess={hasFinancialAccess} />
+              <TripStatsByDate statsByDate={statsByDate} hasFinancialAccess={hasFinancialAccess} startDate={internalFilters.startDate} endDate={internalFilters.endDate} />
               
               {/* Additional Mobile-Friendly Charts */}
               <CollapsibleCard title="Daily Company Activity" initiallyExpanded={false}>

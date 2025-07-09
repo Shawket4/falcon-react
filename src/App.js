@@ -39,6 +39,7 @@ import DriverSalaries from './components/Drivers/DriverSalaries';
 import AddDriverSalary from './components/Drivers/AddDriverSalary';
 import AddCar from './components/AddCar';
 import CarManagement from './components/CarManagement';
+import UserManagement from './components/UserManagement';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -393,6 +394,14 @@ function App() {
                   <h1 className="text-2xl font-bold mb-4">All Transactions</h1>
                   <p>This page is under construction. Please use the vendor details view to manage transactions.</p>
                 </div>
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/user-management" element={
+            <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
+              <Layout>
+                <UserManagement />
               </Layout>
             </ProtectedRoute>
           } />

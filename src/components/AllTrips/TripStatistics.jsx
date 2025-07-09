@@ -652,7 +652,7 @@ const TripStatistics = ({ filters }) => {
               </div>
               
               {/* Time Series Chart */}
-              <TripStatsByDate statsByDate={statsByDate} hasFinancialAccess={hasFinancialAccess} />
+              <TripStatsByDate statsByDate={statsByDate} hasFinancialAccess={hasFinancialAccess} startDate={filters.startDate} endDate={filters.endDate} />
               
               {/* Company Distribution Pie Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -739,7 +739,7 @@ const TripStatistics = ({ filters }) => {
           {/* Timeline Tab Content */}
           {activeTab === 'timeline' && (
             <div className="space-y-6">
-              <TripStatsByDate statsByDate={statsByDate} hasFinancialAccess={hasFinancialAccess} />
+              <TripStatsByDate statsByDate={statsByDate} hasFinancialAccess={hasFinancialAccess} startDate={filters.startDate} endDate={filters.endDate} />
               
               {/* Weekly Performance Analysis */}
               <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">

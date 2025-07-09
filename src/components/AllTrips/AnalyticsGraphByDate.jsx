@@ -13,7 +13,7 @@ import {
   Label
 } from 'recharts';
 
-const TripStatsByDate = ({ statsByDate, hasFinancialAccess }) => {
+const TripStatsByDate = ({ statsByDate, hasFinancialAccess, startDate, endDate }) => {
   const [activeMetric, setActiveMetric] = useState(hasFinancialAccess ? 'revenue' : 'volume');
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
@@ -43,6 +43,15 @@ const TripStatsByDate = ({ statsByDate, hasFinancialAccess }) => {
       currency: 'USD',
       maximumFractionDigits: 2
     }).format(num);
+  };
+
+  // Helper to calculate total days in range (inclusive)
+  const getTotalDaysInRange = () => {
+    if (!startDate || !endDate) return statsByDate.length || 1;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    // Add 1 to include both endpoints
+    return Math.max(1, Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1);
   };
 
   // If no data, show empty state
@@ -84,16 +93,18 @@ const TripStatsByDate = ({ statsByDate, hasFinancialAccess }) => {
   });
 
   // Calculate summary statistics
-  const totalDays = chartData.length;
+  const totalDaysWithData = chartData.length;
+  const totalDaysInRange = getTotalDaysInRange();
   const totalTrips = chartData.reduce((sum, day) => sum + day.trips, 0);
   const totalVolume = chartData.reduce((sum, day) => sum + day.volume, 0);
   const totalDistance = chartData.reduce((sum, day) => sum + day.distance, 0);
   const totalRevenue = hasFinancialAccess ? chartData.reduce((sum, day) => sum + day.revenue, 0) : 0;
   
-  const avgTripsPerDay = totalDays > 0 ? totalTrips / totalDays : 0;
-  const avgVolumePerDay = totalDays > 0 ? totalVolume / totalDays : 0;
-  const avgDistancePerDay = totalDays > 0 ? totalDistance / totalDays : 0;
-  const avgRevenuePerDay = totalDays > 0 && hasFinancialAccess ? totalRevenue / totalDays : 0;
+  // Use totalDaysInRange for averages
+  const avgTripsPerDay = totalDaysInRange > 0 ? totalTrips / totalDaysInRange : 0;
+  const avgVolumePerDay = totalDaysInRange > 0 ? totalVolume / totalDaysInRange : 0;
+  const avgDistancePerDay = totalDaysInRange > 0 ? totalDistance / totalDaysInRange : 0;
+  const avgRevenuePerDay = totalDaysInRange > 0 && hasFinancialAccess ? totalRevenue / totalDaysInRange : 0;
   
   // Calculate projected monthly revenue (31 days)
   const projectedMonthlyRevenue = avgRevenuePerDay * 31;
@@ -484,7 +495,7 @@ const TripStatsByDate = ({ statsByDate, hasFinancialAccess }) => {
                     {formatCurrency(projectedMonthlyRevenue)}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Based on {totalDays} day{totalDays !== 1 ? 's' : ''} avg
+                    Based on {totalDaysInRange} day{totalDaysInRange !== 1 ? 's' : ''} in selected range
                   </p>
                 </div>
               </div>
@@ -502,6 +513,9 @@ const TripStatsByDate = ({ statsByDate, hasFinancialAccess }) => {
                 <p className="text-sm sm:text-base font-semibold text-purple-800 overflow-x-auto">
                   {formatNumber(avgVolumePerDay)} L
                 </p>
+                <p className="text-xs text-gray-500">
+                  Based on {totalDaysInRange} day{totalDaysInRange !== 1 ? 's' : ''} in selected range
+                </p>
               </div>
             </div>
             <div className="bg-white border border-yellow-200 rounded-lg p-3 sm:p-4">
@@ -516,6 +530,9 @@ const TripStatsByDate = ({ statsByDate, hasFinancialAccess }) => {
                 <p className="text-xs text-yellow-600 font-medium">Daily Average</p>
                 <p className="text-sm sm:text-base font-semibold text-yellow-800 overflow-x-auto">
                   {formatNumber(avgDistancePerDay)} km
+                </p>
+                <p className="text-xs text-gray-500">
+                  Based on {totalDaysInRange} day{totalDaysInRange !== 1 ? 's' : ''} in selected range
                 </p>
               </div>
             </div>

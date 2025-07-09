@@ -224,6 +224,12 @@ const Layout = ({ children }) => {
           icon: <Settings size={18} />, 
           label: 'Admin Panel',
           isActive: location.pathname === '/admin'
+        },
+        {
+          path: '/user-management',
+          icon: <Users size={18} />,
+          label: 'User Management',
+          isActive: location.pathname === '/user-management'
         }
       ]
     });

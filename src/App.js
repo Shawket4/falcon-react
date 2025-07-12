@@ -40,6 +40,7 @@ import AddDriverSalary from './components/Drivers/AddDriverSalary';
 import AddCar from './components/AddCar';
 import CarManagement from './components/CarManagement';
 import UserManagement from './components/UserManagement';
+import OpenStreetMapApp from './components/OpenStreetMap';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -61,6 +62,7 @@ export const pathNames = {
   transactions: 'Transactions',
   'driver-analytics': 'Driver Analytics',
   'car-management': 'Car Management',
+  'map': 'OpenStreetMap',
 };
 
 // Permission level required for certain operations
@@ -402,6 +404,14 @@ function App() {
             <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>
               <Layout>
                 <UserManagement />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/map" element={
+            <ProtectedRoute>
+              <Layout>
+                <OpenStreetMapApp />
               </Layout>
             </ProtectedRoute>
           } />

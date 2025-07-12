@@ -17,7 +17,8 @@ import {
   BarChart4,
   FileText,
   CreditCard,
-  PieChart
+  PieChart,
+  Map
 } from 'lucide-react';
 import Breadcrumbs from './Breadcrumbs';
 import { useAuth } from './AuthContext';
@@ -115,6 +116,12 @@ const Layout = ({ children }) => {
           icon: <Truck size={18} />, 
           label: 'Car Management',
           isActive: location.pathname === '/car-management'
+        },
+        { 
+          path: '/map', 
+          icon: <Map size={18} />, 
+          label: 'PetroApp Stations',
+          isActive: location.pathname === '/map'
         },
         { 
           path: '/tires', 

@@ -75,7 +75,7 @@ function CreateTire() {
         throw new Error('Brand is required');
       }
 
-      await apiClient.post('/tires', tireData);
+      await apiClient.post('/api/tires', tireData);
       setLoading(false);
       navigate('/tires'); // Redirect to tire list
     } catch (err) {

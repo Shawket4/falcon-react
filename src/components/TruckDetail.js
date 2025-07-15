@@ -17,7 +17,7 @@ function TruckDetail() {
   useEffect(() => {
     const fetchTruck = async () => {
       try {
-        const response = await apiClient.get(`${SERVER_IP}/trucks/${id}`);
+        const response = await apiClient.get(`/api/trucks/${id}`);
         setTruck(response.data);
         setLoading(false);
       } catch (err) {
@@ -36,13 +36,13 @@ function TruckDetail() {
 
   const handleTireAssign = async (tireId) => {
     try {
-      await apiClient.post(`${SERVER_IP}/positions/assign`, {
+      await apiClient.post(`/api/positions/assign`, {
         tire_id: tireId,
         position_id: selectedPosition.ID
       });
       
       // Refresh truck data to show updated tire assignments
-      const response = await apiClient.get(`${SERVER_IP}/trucks/${id}`);
+      const response = await apiClient.get(`/api/trucks/${id}`);
       setTruck(response.data);
       setShowTireSelector(false);
     } catch (err) {
@@ -52,10 +52,10 @@ function TruckDetail() {
 
   const handleRemoveTire = async (positionId) => {
     try {
-      await apiClient.put(`${SERVER_IP}/positions/${positionId}/remove-tire`);
+      await apiClient.put(`/api/positions/${positionId}/remove-tire`);
       
       // Refresh truck data
-      const response = await apiClient.get(`${SERVER_IP}/trucks/${id}`);
+      const response = await apiClient.get(`/api/trucks/${id}`);
       setTruck(response.data);
     } catch (err) {
       setError('Failed to remove tire. Please try again.');

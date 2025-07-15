@@ -13,7 +13,7 @@ function TruckList() {
   useEffect(() => {
     const fetchTrucks = async () => {
       try {
-        const response = await apiClient.get(`${SERVER_IP}/trucks`);
+        const response = await apiClient.get(`/api/trucks`);
         setTrucks(response.data);
         setLoading(false);
       } catch (err) {
@@ -29,7 +29,7 @@ function TruckList() {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this truck?')) {
       try {
-        await apiClient.delete(`${SERVER_IP}/trucks/${id}`);
+        await apiClient.delete(`/api/trucks/${id}`);
         setTrucks(trucks.filter(truck => truck.ID !== id));
       } catch (err) {
         setError('Failed to delete the truck. Please try again.');

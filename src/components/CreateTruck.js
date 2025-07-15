@@ -46,7 +46,7 @@ function CreateTruck() {
         year: typeof truckData.year === 'string' ? parseInt(truckData.year, 10) : truckData.year
       };
 
-      await apiClient.post('/trucks', dataToSubmit);
+      await apiClient.post('/api/trucks', dataToSubmit);
       setLoading(false);
       navigate('/'); // Redirect to truck list
     } catch (err) {

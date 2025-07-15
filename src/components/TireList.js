@@ -12,7 +12,7 @@ function TireList() {
   useEffect(() => {
     const fetchTires = async () => {
       try {
-        const response = await apiClient.get('/tires');
+        const response = await apiClient.get('/api/tires');
         setTires(response.data);
         setLoading(false);
       } catch (err) {
@@ -32,7 +32,7 @@ function TireList() {
     e && e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this tire?')) {
       try {
-        await apiClient.delete(`/tires/${id}`);
+        await apiClient.delete(`/api/tires/${id}`);
         setTires(tires.filter(tire => tire.ID !== id));
       } catch (err) {
         setError('Failed to delete the tire. Please try again.');

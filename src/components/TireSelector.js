@@ -20,7 +20,7 @@ function TireSelector({ onSelect, onClose, currentTireId, positionInfo }) {
   useEffect(() => {
     const fetchTires = async () => {
       try {
-        const response = await apiClient.get('/tires');
+        const response = await apiClient.get('/api/tires');
         setTires(response.data);
         setLoading(false);
       } catch (err) {
@@ -48,7 +48,7 @@ function TireSelector({ onSelect, onClose, currentTireId, positionInfo }) {
         return;
       }
 
-      const response = await apiClient.post('/tires', newTire);
+      const response = await apiClient.post('/api/tires', newTire);
       setTires([...tires, response.data]);
       setShowNewTireForm(false);
       onSelect(response.data.ID);

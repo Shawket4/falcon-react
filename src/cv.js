@@ -49,9 +49,11 @@ const CV = () => {
           <div className="relative z-10">
             {/* Profile Section */}
             <div className="text-center mb-6">
-              <div className="w-20 h-20 bg-blue-600 rounded-full border-2 border-gray-200 mx-auto mb-4 flex items-center justify-center text-white text-2xl font-light">
-                SI
-              </div>
+              <img 
+                src="profile.jpg" 
+                alt="Shawket Ibrahim"
+                className="w-20 h-20 rounded-full border-2 border-gray-200 mx-auto mb-4 object-cover"
+              />
               <h1 className="text-lg font-semibold text-gray-800 mb-1 tracking-tight">
                 Shawket Ibrahim
               </h1>

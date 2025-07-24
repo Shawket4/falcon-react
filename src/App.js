@@ -42,6 +42,7 @@ import CarManagement from './components/CarManagement';
 import UserManagement from './components/UserManagement';
 import OpenStreetMapApp from './components/OpenStreetMap';
 import Portfolio from './portfolio';
+import CV from './cv';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -76,6 +77,7 @@ function App() {
         <Routes>
           {/* Public route - Login */}
           <Route path='/portfolio' element={<Portfolio/>}/>
+          <Route path='/cv' element={<CV/>}/>
           <Route path='/landing-page' element={<LandingPage/>}/>
           <Route path="/login" element={<Login />} />
 

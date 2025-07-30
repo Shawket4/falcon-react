@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, ScatterChart, Scatter } from 'recharts';
-import { AlertTriangle, Car, TrendingUp, Clock, MapPin, Download, Filter, Search, RefreshCw, Eye, X, Calendar, BarChart3, PieChart as PieChartIcon, Activity, FileText } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { AlertTriangle, Car, TrendingUp, Clock, MapPin, Download, Filter, Search, RefreshCw, Eye, X, Calendar, BarChart3, Activity, FileText } from 'lucide-react';
 import apiClient from '../../apiClient';
 
 const SpeedViolations = () => {
@@ -11,7 +11,9 @@ const SpeedViolations = () => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [filterExceedsBy, setFilterExceedsBy] = useState('all');
-  const [dateRange, setDateRange] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
   const [viewMode, setViewMode] = useState('overview');
 
   useEffect(() => {
@@ -32,8 +34,8 @@ const SpeedViolations = () => {
     }
   };
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'N/A';
+  const parseDate = (timestamp) => {
+    if (!timestamp) return null;
     try {
       if (timestamp.includes('/') && timestamp.includes(':')) {
         const parts = timestamp.split(' ');
@@ -53,32 +55,29 @@ const SpeedViolations = () => {
               const minute = parseInt(timeParts[1], 10);
               const second = parseInt(timeParts[2], 10);
               
-              const date = new Date(year, month, day, hour, minute, second);
-              return date.toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-              });
+              return new Date(year, month, day, hour, minute, second);
             }
           }
         }
       }
-      
-      const date = new Date(timestamp);
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
+      return new Date(timestamp);
     } catch (err) {
-      return timestamp;
+      return null;
     }
+  };
+
+  const formatDate = (timestamp) => {
+    const date = parseDate(timestamp);
+    if (!date) return timestamp || 'N/A';
+    
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   };
 
   const formatSpeed = (speed) => {
@@ -107,10 +106,63 @@ const SpeedViolations = () => {
     setSortConfig({ key, direction });
   };
 
-  // Data processing for charts
+  const isViolationInDateRange = (violation) => {
+    const violationDate = parseDate(violation.Timestamp);
+    if (!violationDate) return true;
+
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    switch (dateFilter) {
+      case 'today':
+        const todayEnd = new Date(todayStart);
+        todayEnd.setDate(todayEnd.getDate() + 1);
+        return violationDate >= todayStart && violationDate < todayEnd;
+        
+      case 'yesterday':
+        const yesterdayStart = new Date(todayStart);
+        yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+        return violationDate >= yesterdayStart && violationDate < todayStart;
+        
+      case 'week':
+        const weekStart = new Date(todayStart);
+        weekStart.setDate(weekStart.getDate() - 7);
+        return violationDate >= weekStart;
+        
+      case 'month':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        return violationDate >= monthStart;
+        
+      case 'last30':
+        const last30Start = new Date(todayStart);
+        last30Start.setDate(last30Start.getDate() - 30);
+        return violationDate >= last30Start;
+        
+      case 'custom':
+        if (!customDateFrom && !customDateTo) return true;
+        const fromDate = customDateFrom ? new Date(customDateFrom) : null;
+        const toDate = customDateTo ? new Date(customDateTo + 'T23:59:59') : null;
+        
+        if (fromDate && toDate) {
+          return violationDate >= fromDate && violationDate <= toDate;
+        } else if (fromDate) {
+          return violationDate >= fromDate;
+        } else if (toDate) {
+          return violationDate <= toDate;
+        }
+        return true;
+        
+      default:
+        return true;
+    }
+  };
+
+  // Data processing for charts with date filtering
   const getTimeSeriesData = () => {
     const allViolations = Object.entries(violations).flatMap(([plate, vehicleViolations]) =>
-      vehicleViolations.map(v => ({ ...v, plate }))
+      vehicleViolations
+        .filter(isViolationInDateRange)
+        .map(v => ({ ...v, plate }))
     );
     
     const groupedByDate = allViolations.reduce((acc, violation) => {
@@ -132,7 +184,7 @@ const SpeedViolations = () => {
   };
 
   const getSeverityDistribution = () => {
-    const allViolations = Object.values(violations).flat();
+    const allViolations = Object.values(violations).flat().filter(isViolationInDateRange);
     const distribution = {
       'Low (≤10 km/h)': 0,
       'Medium (11-20 km/h)': 0,
@@ -151,17 +203,22 @@ const SpeedViolations = () => {
   };
 
   const getVehicleRankingData = () => {
-    return Object.entries(violations).map(([plate, vehicleViolations]) => ({
-      plate,
-      count: vehicleViolations.length,
-      maxSpeed: Math.max(...vehicleViolations.map(v => v.Speed)),
-      avgExceedsBy: Math.round(vehicleViolations.reduce((sum, v) => sum + v.ExceedsBy, 0) / vehicleViolations.length),
-      maxExceedsBy: Math.max(...vehicleViolations.map(v => v.ExceedsBy))
-    })).sort((a, b) => b.count - a.count).slice(0, 10);
+    return Object.entries(violations).map(([plate, vehicleViolations]) => {
+      const filteredViolations = vehicleViolations.filter(isViolationInDateRange);
+      return {
+        plate,
+        count: filteredViolations.length,
+        maxSpeed: filteredViolations.length > 0 ? Math.max(...filteredViolations.map(v => v.Speed)) : 0,
+        avgExceedsBy: filteredViolations.length > 0 ? Math.round(filteredViolations.reduce((sum, v) => sum + v.ExceedsBy, 0) / filteredViolations.length) : 0,
+        maxExceedsBy: filteredViolations.length > 0 ? Math.max(...filteredViolations.map(v => v.ExceedsBy)) : 0
+      };
+    }).filter(vehicle => vehicle.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
   };
 
   const getHourlyDistribution = () => {
-    const allViolations = Object.values(violations).flat();
+    const allViolations = Object.values(violations).flat().filter(isViolationInDateRange);
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0 }));
     
     allViolations.forEach(violation => {
@@ -173,7 +230,10 @@ const SpeedViolations = () => {
   };
 
   const getSortedViolations = () => {
-    const vehicleEntries = Object.entries(violations);
+    const vehicleEntries = Object.entries(violations).map(([plate, vehicleViolations]) => {
+      const filteredViolations = vehicleViolations.filter(isViolationInDateRange);
+      return [plate, filteredViolations];
+    }).filter(([plate, filteredViolations]) => filteredViolations.length > 0);
     
     if (!sortConfig.key) return vehicleEntries;
 
@@ -190,12 +250,12 @@ const SpeedViolations = () => {
           b = violationsB.length;
           break;
         case 'maxSpeed':
-          a = Math.max(...violationsA.map(v => v.Speed));
-          b = Math.max(...violationsB.map(v => v.Speed));
+          a = violationsA.length > 0 ? Math.max(...violationsA.map(v => v.Speed)) : 0;
+          b = violationsB.length > 0 ? Math.max(...violationsB.map(v => v.Speed)) : 0;
           break;
         case 'maxExceedsBy':
-          a = Math.max(...violationsA.map(v => v.ExceedsBy));
-          b = Math.max(...violationsB.map(v => v.ExceedsBy));
+          a = violationsA.length > 0 ? Math.max(...violationsA.map(v => v.ExceedsBy)) : 0;
+          b = violationsB.length > 0 ? Math.max(...violationsB.map(v => v.ExceedsBy)) : 0;
           break;
         default:
           return 0;
@@ -220,6 +280,7 @@ const SpeedViolations = () => {
 
     if (filterExceedsBy !== 'all') {
       filtered = filtered.filter(([plate, violations]) => {
+        if (violations.length === 0) return false;
         const maxExceedsBy = Math.max(...violations.map(v => v.ExceedsBy));
         switch (filterExceedsBy) {
           case 'low':
@@ -240,35 +301,34 @@ const SpeedViolations = () => {
   };
 
   const getTotalViolations = () => {
-    return Object.values(violations).reduce((total, vehicleViolations) => 
-      total + vehicleViolations.length, 0
-    );
+    return Object.values(violations).flat().filter(isViolationInDateRange).length;
   };
 
   const getTotalVehicles = () => {
-    return Object.keys(violations).length;
+    return Object.entries(violations).filter(([plate, vehicleViolations]) => 
+      vehicleViolations.some(isViolationInDateRange)
+    ).length;
   };
 
   const getAverageExceedsBy = () => {
-    const allViolations = Object.values(violations).flat();
+    const allViolations = Object.values(violations).flat().filter(isViolationInDateRange);
     if (allViolations.length === 0) return 0;
     const total = allViolations.reduce((sum, v) => sum + v.ExceedsBy, 0);
     return Math.round(total / allViolations.length);
   };
 
   const getHighestSpeed = () => {
-    const allViolations = Object.values(violations).flat();
+    const allViolations = Object.values(violations).flat().filter(isViolationInDateRange);
     if (allViolations.length === 0) return 0;
     return Math.max(...allViolations.map(v => v.Speed));
   };
 
-  // Export functions
+  // Export functions (updated to use filtered data)
   const generatePDFReport = () => {
-    const allViolations = Object.values(violations).flat();
+    const allViolations = Object.values(violations).flat().filter(isViolationInDateRange);
     const severityData = getSeverityDistribution();
     const vehicleRankingData = getVehicleRankingData();
     
-    // Create HTML content for PDF
     const reportContent = `
       <!DOCTYPE html>
       <html>
@@ -303,7 +363,7 @@ const SpeedViolations = () => {
           }
           .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
           }
@@ -363,7 +423,7 @@ const SpeedViolations = () => {
           .severity-critical { background-color: #fecaca; color: #991b1b; }
           .two-column {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 30px;
           }
           .footer {
@@ -391,6 +451,9 @@ const SpeedViolations = () => {
             hour: '2-digit',
             minute: '2-digit'
           })}</p>
+          <p>Filter Period: ${dateFilter === 'custom' && (customDateFrom || customDateTo) ? 
+            `${customDateFrom || 'Start'} to ${customDateTo || 'End'}` : 
+            dateFilter.charAt(0).toUpperCase() + dateFilter.slice(1)}</p>
         </div>
 
         <div class="stats-grid">
@@ -425,7 +488,8 @@ const SpeedViolations = () => {
               </thead>
               <tbody>
                 ${severityData.map(item => {
-                  const percentage = ((item.value / getTotalViolations()) * 100).toFixed(1);
+                  const total = getTotalViolations();
+                  const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0.0';
                   const severityClass = item.name.includes('Low') ? 'severity-low' : 
                                        item.name.includes('Medium') ? 'severity-medium' :
                                        item.name.includes('High') ? 'severity-high' : 'severity-critical';
@@ -468,81 +532,6 @@ const SpeedViolations = () => {
           </div>
         </div>
 
-        <div class="section">
-          <h2 class="section-title">All Vehicle Violations Summary</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Vehicle Plate</th>
-                <th>Total Violations</th>
-                <th>Max Speed (km/h)</th>
-                <th>Avg Speed (km/h)</th>
-                <th>Max Exceeds By (km/h)</th>
-                <th>Avg Exceeds By (km/h)</th>
-                <th>Risk Level</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${Object.entries(violations).map(([plate, vehicleViolations]) => {
-                const maxSpeed = Math.max(...vehicleViolations.map(v => v.Speed));
-                const avgSpeed = Math.round(vehicleViolations.reduce((sum, v) => sum + v.Speed, 0) / vehicleViolations.length);
-                const maxExceedsBy = Math.max(...vehicleViolations.map(v => v.ExceedsBy));
-                const avgExceedsBy = Math.round(vehicleViolations.reduce((sum, v) => sum + v.ExceedsBy, 0) / vehicleViolations.length);
-                const riskLevel = maxExceedsBy <= 10 ? 'Low' : maxExceedsBy <= 20 ? 'Medium' : maxExceedsBy <= 30 ? 'High' : 'Critical';
-                const riskClass = maxExceedsBy <= 10 ? 'severity-low' : maxExceedsBy <= 20 ? 'severity-medium' : maxExceedsBy <= 30 ? 'severity-high' : 'severity-critical';
-                
-                return `
-                  <tr>
-                    <td><strong>${plate}</strong></td>
-                    <td>${vehicleViolations.length}</td>
-                    <td>${maxSpeed}</td>
-                    <td>${avgSpeed}</td>
-                    <td>${maxExceedsBy}</td>
-                    <td>${avgExceedsBy}</td>
-                    <td><span class="${riskClass}">${riskLevel}</span></td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="section">
-          <h2 class="section-title">Detailed Violations Log</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Vehicle Plate</th>
-                <th>Date & Time</th>
-                <th>Speed (km/h)</th>
-                <th>Exceeds By (km/h)</th>
-                <th>Severity</th>
-                <th>Location</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${allViolations
-                .sort((a, b) => new Date(b.Timestamp.split('/').reverse().join('-')) - new Date(a.Timestamp.split('/').reverse().join('-')))
-                .map(violation => {
-                  const plate = Object.keys(violations).find(key => violations[key].includes(violation));
-                  const severity = violation.ExceedsBy <= 10 ? 'Low' : violation.ExceedsBy <= 20 ? 'Medium' : violation.ExceedsBy <= 30 ? 'High' : 'Critical';
-                  const severityClass = violation.ExceedsBy <= 10 ? 'severity-low' : violation.ExceedsBy <= 20 ? 'severity-medium' : violation.ExceedsBy <= 30 ? 'severity-high' : 'severity-critical';
-                  
-                  return `
-                    <tr>
-                      <td><strong>${plate}</strong></td>
-                      <td>${formatDate(violation.Timestamp)}</td>
-                      <td>${violation.Speed}</td>
-                      <td>+${violation.ExceedsBy}</td>
-                      <td><span class="${severityClass}">${severity}</span></td>
-                      <td>${violation.Latitude && violation.Longitude ? `${violation.Latitude}, ${violation.Longitude}` : 'N/A'}</td>
-                    </tr>
-                  `;
-                }).join('')}
-            </tbody>
-          </table>
-        </div>
-
         <div class="footer">
           <p>This report contains ${getTotalViolations()} speed violations across ${getTotalVehicles()} vehicles.</p>
           <p>Report generated by Speed Violations Dashboard System</p>
@@ -551,12 +540,10 @@ const SpeedViolations = () => {
       </html>
     `;
 
-    // Create and download PDF
     const printWindow = window.open('', '_blank');
     printWindow.document.write(reportContent);
     printWindow.document.close();
     
-    // Wait for content to load, then print
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
@@ -564,7 +551,7 @@ const SpeedViolations = () => {
   };
 
   const exportToCSV = () => {
-    const allViolations = Object.values(violations).flat();
+    const allViolations = Object.values(violations).flat().filter(isViolationInDateRange);
     const csvData = [
       ['Vehicle Plate', 'Date & Time', 'Speed (km/h)', 'Exceeds By (km/h)', 'Severity', 'Latitude', 'Longitude'],
       ...allViolations.map(violation => {
@@ -637,7 +624,7 @@ const SpeedViolations = () => {
           }
           .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
           }
@@ -704,15 +691,15 @@ const SpeedViolations = () => {
             <div class="stat-label">Total Violations</div>
           </div>
           <div class="stat-card">
-            <div class="stat-number">${Math.max(...vehicleViolations.map(v => v.Speed))} km/h</div>
+            <div class="stat-number">${vehicleViolations.length > 0 ? Math.max(...vehicleViolations.map(v => v.Speed)) : 0} km/h</div>
             <div class="stat-label">Max Speed</div>
           </div>
           <div class="stat-card">
-            <div class="stat-number">${Math.max(...vehicleViolations.map(v => v.ExceedsBy))} km/h</div>
+            <div class="stat-number">${vehicleViolations.length > 0 ? Math.max(...vehicleViolations.map(v => v.ExceedsBy)) : 0} km/h</div>
             <div class="stat-label">Max Exceeds By</div>
           </div>
           <div class="stat-card">
-            <div class="stat-number">${Math.round(vehicleViolations.reduce((sum, v) => sum + v.ExceedsBy, 0) / vehicleViolations.length)} km/h</div>
+            <div class="stat-number">${vehicleViolations.length > 0 ? Math.round(vehicleViolations.reduce((sum, v) => sum + v.ExceedsBy, 0) / vehicleViolations.length) : 0} km/h</div>
             <div class="stat-label">Avg Exceeds By</div>
           </div>
         </div>
@@ -758,9 +745,17 @@ const SpeedViolations = () => {
     }, 1000);
   };
 
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setFilterExceedsBy('all');
+    setDateFilter('all');
+    setCustomDateFrom('');
+    setCustomDateTo('');
+  };
+
   const SortableHeader = ({ label, field, className = '' }) => (
     <th 
-      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 transition-colors ${className}`}
+      className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 transition-colors ${className}`}
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center">
@@ -820,19 +815,19 @@ const SpeedViolations = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Speed Violations Dashboard</h1>
-              <p className="text-gray-600">Real-time monitoring and analysis of vehicle speed violations</p>
+        <div className="mb-6 lg:mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="mb-4 lg:mb-0">
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Speed Violations Dashboard</h1>
+              <p className="text-gray-600 text-sm lg:text-base">Real-time monitoring and analysis of vehicle speed violations</p>
             </div>
-            <div className="mt-4 sm:mt-0 flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={fetchViolations}
                 disabled={loading}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -840,7 +835,7 @@ const SpeedViolations = () => {
               
               {/* Export Dropdown */}
               <div className="relative group">
-                <button className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                <button className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors w-full sm:w-auto">
                   <Download className="h-4 w-4 mr-2" />
                   Export
                   <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -872,9 +867,9 @@ const SpeedViolations = () => {
         </div>
 
         {/* View Mode Tabs */}
-        <div className="mb-8">
+        <div className="mb-6 lg:mb-8">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex space-x-4 lg:space-x-8 overflow-x-auto">
               {[
                 { id: 'overview', label: 'Overview', icon: BarChart3 },
                 { id: 'charts', label: 'Analytics', icon: Activity },
@@ -883,7 +878,7 @@ const SpeedViolations = () => {
                 <button
                   key={id}
                   onClick={() => setViewMode(id)}
-                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     viewMode === id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -898,19 +893,19 @@ const SpeedViolations = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
           <div className="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
-            <div className="p-6">
+            <div className="p-4 lg:p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  <div className="w-10 h-10 lg:w-12 lg:h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <AlertTriangle className="h-5 w-5 lg:h-6 lg:w-6 text-red-600" />
                   </div>
                 </div>
-                <div className="ml-4 w-0 flex-1">
+                <div className="ml-3 lg:ml-4 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Violations</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{getTotalViolations().toLocaleString()}</dd>
+                    <dt className="text-xs lg:text-sm font-medium text-gray-500 truncate">Total Violations</dt>
+                    <dd className="text-lg lg:text-2xl font-bold text-gray-900">{getTotalViolations().toLocaleString()}</dd>
                   </dl>
                 </div>
               </div>
@@ -918,17 +913,17 @@ const SpeedViolations = () => {
           </div>
 
           <div className="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
-            <div className="p-6">
+            <div className="p-4 lg:p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Car className="h-6 w-6 text-blue-600" />
+                  <div className="w-10 h-10 lg:w-12 lg:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Car className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600" />
                   </div>
                 </div>
-                <div className="ml-4 w-0 flex-1">
+                <div className="ml-3 lg:ml-4 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Vehicles Involved</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{getTotalVehicles()}</dd>
+                    <dt className="text-xs lg:text-sm font-medium text-gray-500 truncate">Vehicles Involved</dt>
+                    <dd className="text-lg lg:text-2xl font-bold text-gray-900">{getTotalVehicles()}</dd>
                   </dl>
                 </div>
               </div>
@@ -936,17 +931,17 @@ const SpeedViolations = () => {
           </div>
 
           <div className="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
-            <div className="p-6">
+            <div className="p-4 lg:p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-yellow-600" />
+                  <div className="w-10 h-10 lg:w-12 lg:h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-600" />
                   </div>
                 </div>
-                <div className="ml-4 w-0 flex-1">
+                <div className="ml-3 lg:ml-4 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Avg. Exceeds By</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{getAverageExceedsBy()} km/h</dd>
+                    <dt className="text-xs lg:text-sm font-medium text-gray-500 truncate">Avg. Exceeds By</dt>
+                    <dd className="text-lg lg:text-2xl font-bold text-gray-900">{getAverageExceedsBy()} km/h</dd>
                   </dl>
                 </div>
               </div>
@@ -954,17 +949,17 @@ const SpeedViolations = () => {
           </div>
 
           <div className="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
-            <div className="p-6">
+            <div className="p-4 lg:p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-purple-600" />
+                  <div className="w-10 h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Clock className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600" />
                   </div>
                 </div>
-                <div className="ml-4 w-0 flex-1">
+                <div className="ml-3 lg:ml-4 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Highest Speed</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{getHighestSpeed()} km/h</dd>
+                    <dt className="text-xs lg:text-sm font-medium text-gray-500 truncate">Highest Speed</dt>
+                    <dd className="text-lg lg:text-2xl font-bold text-gray-900">{getHighestSpeed()} km/h</dd>
                   </dl>
                 </div>
               </div>
@@ -974,100 +969,106 @@ const SpeedViolations = () => {
 
         {/* Content based on view mode */}
         {viewMode === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             {/* Severity Distribution */}
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            <div className="bg-white p-4 lg:p-6 rounded-xl shadow-lg border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Violation Severity Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={severityData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {severityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="h-64 lg:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={severityData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name.split(' ')[0]}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius="80%"
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {severityData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Top Violating Vehicles */}
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            <div className="bg-white p-4 lg:p-6 rounded-xl shadow-lg border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Violating Vehicles</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={vehicleRankingData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="plate" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-64 lg:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={vehicleRankingData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="plate" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      fontSize={12}
+                    />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         )}
 
         {viewMode === 'charts' && (
-          <div className="space-y-8">
+          <div className="space-y-6 lg:space-y-8">
             {/* Time Series */}
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            <div className="bg-white p-4 lg:p-6 rounded-xl shadow-lg border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Violations Over Time</h3>
-              <ResponsiveContainer width="100%" height={400}>
-                <AreaChart data={timeSeriesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="count" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div className="h-64 lg:h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={timeSeriesData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="date" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      fontSize={12}
+                    />
+                    <YAxis />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="count" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Hourly Distribution */}
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            <div className="bg-white p-4 lg:p-6 rounded-xl shadow-lg border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Violations by Hour of Day</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={hourlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#10b981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Speed vs Exceeds By Scatter */}
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Speed vs Exceeds By Analysis</h3>
-              <ResponsiveContainer width="100%" height={400}>
-                <ScatterChart data={Object.values(violations).flat()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="Speed" name="Speed" unit="km/h" />
-                  <YAxis dataKey="ExceedsBy" name="Exceeds By" unit="km/h" />
-                  <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                  <Scatter name="Violations" data={Object.values(violations).flat()} fill="#8884d8" />
-                </ScatterChart>
-              </ResponsiveContainer>
+              <div className="h-64 lg:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={hourlyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="hour" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#10b981" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         )}
 
         {viewMode === 'table' && (
           <>
-            {/* Filters */}
+            {/* Enhanced Filters */}
             <div className="bg-white shadow-lg rounded-xl mb-6 border border-gray-100">
-              <div className="px-6 py-5">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
+              <div className="px-4 lg:px-6 py-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                  <div className="md:col-span-2 lg:col-span-1 xl:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <Search className="h-4 w-4 inline mr-1" />
                       Search Vehicle
@@ -1102,30 +1103,57 @@ const SpeedViolations = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       <Calendar className="h-4 w-4 inline mr-1" />
-                      Date Range
+                      Date Filter
                     </label>
                     <select
-                      value={dateRange}
-                      onChange={(e) => setDateRange(e.target.value)}
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     >
                       <option value="all">All Time</option>
                       <option value="today">Today</option>
+                      <option value="yesterday">Yesterday</option>
                       <option value="week">This Week</option>
                       <option value="month">This Month</option>
+                      <option value="last30">Last 30 Days</option>
+                      <option value="custom">Custom Range</option>
                     </select>
                   </div>
 
-                  <div className="flex items-end">
+                  {dateFilter === 'custom' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          From Date
+                        </label>
+                        <input
+                          type="date"
+                          value={customDateFrom}
+                          onChange={(e) => setCustomDateFrom(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          To Date
+                        </label>
+                        <input
+                          type="date"
+                          value={customDateTo}
+                          onChange={(e) => setCustomDateTo(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className={`flex items-end ${dateFilter === 'custom' ? 'xl:col-start-6' : ''}`}>
                     <button
-                      onClick={() => {
-                        setSearchTerm('');
-                        setFilterExceedsBy('all');
-                        setDateRange('all');
-                      }}
+                      onClick={clearAllFilters}
                       className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
                     >
-                      Clear Filters
+                      Clear All
                     </button>
                   </div>
                 </div>
@@ -1134,18 +1162,18 @@ const SpeedViolations = () => {
 
             {/* Violations Table */}
             <div className="bg-white shadow-lg overflow-hidden rounded-xl border border-gray-100">
-              <div className="px-6 py-4 border-b border-gray-200">
+              <div className="px-4 lg:px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg leading-6 font-semibold text-gray-900">
                   Vehicle Speed Violations ({filteredViolations.length} vehicles)
                 </h3>
               </div>
               
               {filteredViolations.length === 0 ? (
-                <div className="text-center py-16">
-                  <Car className="mx-auto h-16 w-16 text-gray-400" />
+                <div className="text-center py-12 lg:py-16">
+                  <Car className="mx-auto h-12 w-12 lg:h-16 lg:w-16 text-gray-400" />
                   <h3 className="mt-4 text-lg font-medium text-gray-900">No violations found</h3>
                   <p className="mt-2 text-sm text-gray-500">
-                    {searchTerm || filterExceedsBy !== 'all' 
+                    {searchTerm || filterExceedsBy !== 'all' || dateFilter !== 'all'
                       ? 'Try adjusting your search or filter criteria.'
                       : 'No speed violations have been recorded.'
                     }
@@ -1160,40 +1188,39 @@ const SpeedViolations = () => {
                         <SortableHeader label="Violations Count" field="count" />
                         <SortableHeader label="Max Speed" field="maxSpeed" />
                         <SortableHeader label="Max Exceeds By" field="maxExceedsBy" />
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Risk Level
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredViolations.map(([plate, vehicleViolations]) => {
-                        const maxSpeed = Math.max(...vehicleViolations.map(v => v.Speed));
-                        const maxExceedsBy = Math.max(...vehicleViolations.map(v => v.ExceedsBy));
+                        const maxSpeed = vehicleViolations.length > 0 ? Math.max(...vehicleViolations.map(v => v.Speed)) : 0;
+                        const maxExceedsBy = vehicleViolations.length > 0 ? Math.max(...vehicleViolations.map(v => v.ExceedsBy)) : 0;
                         const violationCount = vehicleViolations.length;
-                        const avgExceedsBy = Math.round(vehicleViolations.reduce((sum, v) => sum + v.ExceedsBy, 0) / vehicleViolations.length);
                         
                         return (
                           <tr key={plate} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">{plate}</div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                                 {violationCount}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {formatSpeed(maxSpeed)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getExceedsByColor(maxExceedsBy)}`}>
                                 +{maxExceedsBy} km/h
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <div className={`w-3 h-3 rounded-full mr-2`} style={{backgroundColor: getSeverityColor(maxExceedsBy)}}></div>
                                 <span className="text-sm text-gray-900">
@@ -1201,13 +1228,14 @@ const SpeedViolations = () => {
                                 </span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <button
                                 onClick={() => setSelectedVehicle({ plate, violations: vehicleViolations })}
                                 className="inline-flex items-center text-blue-600 hover:text-blue-900 transition-colors"
                               >
                                 <Eye className="h-4 w-4 mr-1" />
-                                View Details
+                                <span className="hidden sm:inline">View Details</span>
+                                <span className="sm:hidden">Details</span>
                               </button>
                             </td>
                           </tr>
@@ -1225,9 +1253,9 @@ const SpeedViolations = () => {
         {selectedVehicle && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
             <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between p-4 lg:p-6 border-b border-gray-200">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">
+                  <h3 className="text-lg lg:text-xl font-semibold text-gray-900">
                     Violations for {selectedVehicle.plate}
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
@@ -1243,53 +1271,52 @@ const SpeedViolations = () => {
               </div>
               
               {/* Modal Stats */}
-              <div className="p-6 border-b border-gray-200 bg-gray-50">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-4 lg:p-6 border-b border-gray-200 bg-gray-50">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-xl lg:text-2xl font-bold text-gray-900">
                       {selectedVehicle.violations.length}
                     </div>
-                    <div className="text-sm text-gray-500">Total Violations</div>
+                    <div className="text-xs lg:text-sm text-gray-500">Total Violations</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {Math.max(...selectedVehicle.violations.map(v => v.Speed))} km/h
+                    <div className="text-xl lg:text-2xl font-bold text-gray-900">
+                      {selectedVehicle.violations.length > 0 ? Math.max(...selectedVehicle.violations.map(v => v.Speed)) : 0} km/h
                     </div>
-                    <div className="text-sm text-gray-500">Max Speed</div>
+                    <div className="text-xs lg:text-sm text-gray-500">Max Speed</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {Math.max(...selectedVehicle.violations.map(v => v.ExceedsBy))} km/h
+                    <div className="text-xl lg:text-2xl font-bold text-gray-900">
+                      {selectedVehicle.violations.length > 0 ? Math.max(...selectedVehicle.violations.map(v => v.ExceedsBy)) : 0} km/h
                     </div>
-                    <div className="text-sm text-gray-500">Max Exceeds By</div>
+                    <div className="text-xs lg:text-sm text-gray-500">Max Exceeds By</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {Math.round(selectedVehicle.violations.reduce((sum, v) => sum + v.ExceedsBy, 0) / selectedVehicle.violations.length)} km/h
+                    <div className="text-xl lg:text-2xl font-bold text-gray-900">
+                      {selectedVehicle.violations.length > 0 ? Math.round(selectedVehicle.violations.reduce((sum, v) => sum + v.ExceedsBy, 0) / selectedVehicle.violations.length) : 0} km/h
                     </div>
-                    <div className="text-sm text-gray-500">Avg Exceeds By</div>
                   </div>
                 </div>
               </div>
 
-              <div className="overflow-y-auto max-h-96 p-6">
+              <div className="overflow-y-auto max-h-96 p-4 lg:p-6">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Date & Time
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Speed
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Exceeds By
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Severity
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Location
                         </th>
                       </tr>
@@ -1297,18 +1324,18 @@ const SpeedViolations = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {selectedVehicle.violations.map((violation, index) => (
                         <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {formatDate(violation.Timestamp)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {formatSpeed(violation.Speed)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getExceedsByColor(violation.ExceedsBy)}`}>
                               +{violation.ExceedsBy} km/h
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className={`w-2 h-2 rounded-full mr-2`} style={{backgroundColor: getSeverityColor(violation.ExceedsBy)}}></div>
                               <span className="text-sm text-gray-900">
@@ -1316,7 +1343,7 @@ const SpeedViolations = () => {
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {violation.Latitude && violation.Longitude 
                               ? (
                                 <a
@@ -1326,7 +1353,8 @@ const SpeedViolations = () => {
                                   className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
                                 >
                                   <MapPin className="h-4 w-4 mr-1" />
-                                  View on Map
+                                  <span className="hidden sm:inline">View on Map</span>
+                                  <span className="sm:hidden">Map</span>
                                 </a>
                               )
                               : (
@@ -1341,7 +1369,7 @@ const SpeedViolations = () => {
                 </div>
               </div>
 
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+              <div className="px-4 lg:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
                 <button
                   onClick={() => setSelectedVehicle(null)}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"

@@ -43,6 +43,7 @@ import UserManagement from './components/UserManagement';
 import OpenStreetMapApp from './components/OpenStreetMap';
 import Portfolio from './portfolio';
 import CV from './cv';
+import SpeedViolations from './components/SpeedViolations';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -420,6 +421,13 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/speed-violations" element={
+            <ProtectedRoute>
+              <Layout>
+                <SpeedViolations />
+              </Layout>
+            </ProtectedRoute>
+          } />
 
           {/* Catch-all redirect to login */}
           <Route path="*" element={<Navigate to="/landing-page" replace />} />

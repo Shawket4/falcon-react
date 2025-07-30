@@ -135,6 +135,12 @@ const Layout = ({ children }) => {
           label: 'Oil Changes',
           isActive: location.pathname === '/oil-changes-list' || location.pathname.includes('/edit-oil-change/')
         },
+        { 
+          path: '/speed-violations', 
+          icon: <BarChart4 size={18} />, 
+          label: 'Speed Violations',
+          isActive: location.pathname === '/speed-violations'
+        },
       ])
     },
     {

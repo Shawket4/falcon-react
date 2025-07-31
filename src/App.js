@@ -44,6 +44,7 @@ import OpenStreetMapApp from './components/OpenStreetMap';
 import Portfolio from './portfolio';
 import CV from './cv';
 import SpeedViolations from './components/SpeedViolations';
+import LogsViewer from './components/LogsViewer';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -425,6 +426,14 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <SpeedViolations />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/logs" element={
+            <ProtectedRoute minPermissionLevel={4}>
+              <Layout>
+                <LogsViewer />
               </Layout>
             </ProtectedRoute>
           } />

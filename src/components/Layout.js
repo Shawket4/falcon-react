@@ -141,6 +141,13 @@ const Layout = ({ children }) => {
           label: 'Speed Violations',
           isActive: location.pathname === '/speed-violations'
         },
+        { 
+          path: '/logs', 
+          icon: <FileText size={18} />, 
+          label: 'System Logs',
+          isActive: location.pathname === '/logs',
+          minPermissionLevel: 4
+        },
       ])
     },
     {

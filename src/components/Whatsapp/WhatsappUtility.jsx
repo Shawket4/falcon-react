@@ -15,15 +15,25 @@ export const whatsappAPI = {
       console.log('Making WhatsApp login check with token:', token.substring(0, 20) + '...');
       
       const response = await apiClient.get('/api/protected/CheckWPLogin');
-      console.log('WhatsApp login check response:', response.status);
+      console.log('WhatsApp login check response:', response.status, response.data);
       
+      // Check if response contains an error (not logged in to WhatsApp)
+      if (response.data && response.data.error) {
+        console.log('WhatsApp not logged in:', response.data.error);
+        return { success: true, loggedIn: false, message: response.data.error };
+      }
+      
+      // If no error, user is logged in to WhatsApp
+      console.log('WhatsApp is logged in');
       return { success: true, loggedIn: true };
     } catch (error) {
       console.error('WhatsApp login check error:', error.response?.status, error.response?.data);
       
+      // If it's a 401, it means JWT auth failed, not WhatsApp login
       if (error.response && error.response.status === 401) {
-        return { success: true, loggedIn: false };
+        throw new Error('Authentication failed - please log in again');
       }
+      
       throw error;
     }
   },
@@ -60,10 +70,12 @@ export const whatsappAPI = {
     const pollInterval = setInterval(async () => {
       try {
         const result = await whatsappAPI.checkLoginStatus();
+        console.log('Polling result:', result);
         if (result.loggedIn) {
           clearInterval(pollInterval);
           onSuccess();
         }
+        // If not logged in, continue polling (result.loggedIn will be false)
       } catch (error) {
         clearInterval(pollInterval);
         onError(error);
@@ -71,11 +83,12 @@ export const whatsappAPI = {
     }, interval);
 
     // Stop polling after timeout (default 5 minutes)
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       clearInterval(pollInterval);
+      console.log('WhatsApp polling timeout reached');
     }, timeout);
 
-    return pollInterval; // Return interval ID so it can be cleared if needed
+    return { pollInterval, timeoutId }; // Return both IDs so they can be cleared if needed
   }
 };
 

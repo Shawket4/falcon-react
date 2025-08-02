@@ -5,9 +5,22 @@ export const whatsappAPI = {
   // Check if WhatsApp is logged in
   checkLoginStatus: async () => {
     try {
+      // Debug: Check if token exists
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        console.error('No JWT token found for WhatsApp API call');
+        throw new Error('No authentication token');
+      }
+
+      console.log('Making WhatsApp login check with token:', token.substring(0, 20) + '...');
+      
       const response = await apiClient.get('/api/protected/CheckWPLogin');
+      console.log('WhatsApp login check response:', response.status);
+      
       return { success: true, loggedIn: true };
     } catch (error) {
+      console.error('WhatsApp login check error:', error.response?.status, error.response?.data);
+      
       if (error.response && error.response.status === 401) {
         return { success: true, loggedIn: false };
       }
@@ -18,6 +31,14 @@ export const whatsappAPI = {
   // Get QR code for WhatsApp login
   getQRCode: async () => {
     try {
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        console.error('No JWT token found for WhatsApp QR API call');
+        return { success: false, error: 'No authentication token' };
+      }
+
+      console.log('Getting WhatsApp QR code...');
+      
       const response = await apiClient.get('/api/protected/GetWhatsAppQRCode', {
         responseType: 'blob'
       });
@@ -26,10 +47,11 @@ export const whatsappAPI = {
       const qrBlob = new Blob([response.data], { type: 'image/png' });
       const qrUrl = URL.createObjectURL(qrBlob);
       
+      console.log('QR code retrieved successfully');
       return { success: true, qrUrl };
     } catch (error) {
-      console.error('Error getting QR code:', error);
-      return { success: false, error: error.message };
+      console.error('Error getting QR code:', error.response?.status, error.response?.data);
+      return { success: false, error: error.response?.data?.error || error.message };
     }
   },
 

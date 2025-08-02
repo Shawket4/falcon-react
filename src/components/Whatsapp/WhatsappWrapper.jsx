@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import WhatsAppLogin from './WhatsappLogin';
 
@@ -8,8 +8,20 @@ const WhatsAppWrapper = ({ children }) => {
     isLoading, 
     needsWhatsappSetup, 
     completeWhatsappLogin, 
-    skipWhatsappLogin 
+    skipWhatsappLogin,
+    userPermission 
   } = useAuth();
+
+  // Debug effect to track auth state
+  useEffect(() => {
+    console.log('WhatsApp Wrapper - Auth state:', {
+      isAuthenticated,
+      isLoading,
+      userPermission,
+      needsWhatsapp: needsWhatsappSetup(),
+      token: !!localStorage.getItem('jwt')
+    });
+  }, [isAuthenticated, isLoading, userPermission]);
 
   // Show loading while auth is being initialized
   if (isLoading) {
@@ -25,6 +37,7 @@ const WhatsAppWrapper = ({ children }) => {
 
   // If user is authenticated but needs WhatsApp setup, show WhatsApp login
   if (isAuthenticated && needsWhatsappSetup()) {
+    console.log('Showing WhatsApp login screen');
     return (
       <WhatsAppLogin 
         onComplete={completeWhatsappLogin}

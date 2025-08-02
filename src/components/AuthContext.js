@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('jwt');
       
       if (token) {
-        // Set the default authorization header
+        // Set the default authorization header FIRST
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
         try {
@@ -41,7 +41,10 @@ export const AuthProvider = ({ children }) => {
           // Check if WhatsApp check is required for this user
           const permissionLevel = parseInt(permission) || 0;
           if (permissionLevel >= 4 && !whatsappSkipped) {
-            setWhatsappRequired(true);
+            // Delay WhatsApp check slightly to ensure axios headers are set
+            setTimeout(() => {
+              setWhatsappRequired(true);
+            }, 100);
           } else {
             setWhatsappChecked(true);
           }
@@ -59,6 +62,8 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
           console.error('Auth initialization error:', error);
         }
+      } else {
+        setWhatsappChecked(true);
       }
       
       setIsLoading(false);
@@ -106,8 +111,11 @@ export const AuthProvider = ({ children }) => {
         // Check if WhatsApp check is required for this user
         const permissionLevel = parseInt(response.data.permission) || 0;
         if (permissionLevel >= 4) {
-          setWhatsappRequired(true);
-          setWhatsappChecked(false);
+          // Delay WhatsApp check to ensure axios headers are properly set
+          setTimeout(() => {
+            setWhatsappRequired(true);
+            setWhatsappChecked(false);
+          }, 200);
         } else {
           setWhatsappRequired(false);
           setWhatsappChecked(true);

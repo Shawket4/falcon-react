@@ -13,6 +13,10 @@ const WhatsAppLogin = ({ onComplete, onSkip }) => {
       setLoading(true);
       setError(null);
       
+      // Debug: Check if we have auth
+      const token = localStorage.getItem('jwt');
+      console.log('Checking WhatsApp status, token exists:', !!token);
+      
       const result = await whatsappAPI.checkLoginStatus();
       
       if (result.loggedIn) {
@@ -26,7 +30,7 @@ const WhatsAppLogin = ({ onComplete, onSkip }) => {
       }
     } catch (error) {
       setWhatsappStatus('error');
-      setError('Failed to check WhatsApp status');
+      setError('Failed to check WhatsApp status: ' + (error.message || 'Unknown error'));
       console.error('WhatsApp status check error:', error);
     } finally {
       setLoading(false);

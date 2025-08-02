@@ -10,6 +10,8 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [userPermission, setUserPermission] = useState(null);
   const [user, setUser] = useState(null);
+  const [whatsappRequired, setWhatsappRequired] = useState(false);
+  const [whatsappChecked, setWhatsappChecked] = useState(false);
 
   // Initialize auth state
   useEffect(() => {
@@ -28,12 +30,21 @@ export const AuthProvider = ({ children }) => {
           const permission = localStorage.getItem('permission');
           const userName = localStorage.getItem('user_name');
           const userEmail = localStorage.getItem('user_email');
+          const whatsappSkipped = localStorage.getItem('whatsapp_skipped');
           
           setUserPermission(permission);
           setUser({
             name: userName,
             email: userEmail
           });
+
+          // Check if WhatsApp check is required for this user
+          const permissionLevel = parseInt(permission) || 0;
+          if (permissionLevel >= 4 && !whatsappSkipped) {
+            setWhatsappRequired(true);
+          } else {
+            setWhatsappChecked(true);
+          }
           
           // Optional background validation
           axios.get(`${SERVER_IP}/api/validate-token`, {
@@ -80,6 +91,9 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user_name', response.data.name || email);
         localStorage.setItem('user_email', email);
         
+        // Clear any previous WhatsApp skip status
+        localStorage.removeItem('whatsapp_skipped');
+        
         axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.jwt}`;
         
         setIsAuthenticated(true);
@@ -88,6 +102,16 @@ export const AuthProvider = ({ children }) => {
           name: response.data.name || email,
           email: email
         });
+
+        // Check if WhatsApp check is required for this user
+        const permissionLevel = parseInt(response.data.permission) || 0;
+        if (permissionLevel >= 4) {
+          setWhatsappRequired(true);
+          setWhatsappChecked(false);
+        } else {
+          setWhatsappRequired(false);
+          setWhatsappChecked(true);
+        }
         
         return true;
       }
@@ -103,17 +127,33 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('permission');
     localStorage.removeItem('user_name');
     localStorage.removeItem('user_email');
+    localStorage.removeItem('whatsapp_skipped');
     
     delete axios.defaults.headers.common['Authorization'];
     
     setIsAuthenticated(false);
     setUserPermission(null);
     setUser(null);
+    setWhatsappRequired(false);
+    setWhatsappChecked(false);
     
     // Redirect to login if needed
     if (window.location.pathname !== '/landing-page') {
       window.location.href = '/landing-page';
     }
+  };
+
+  // Handle WhatsApp login completion
+  const completeWhatsappLogin = () => {
+    setWhatsappRequired(false);
+    setWhatsappChecked(true);
+  };
+
+  // Handle WhatsApp skip
+  const skipWhatsappLogin = () => {
+    localStorage.setItem('whatsapp_skipped', 'true');
+    setWhatsappRequired(false);
+    setWhatsappChecked(true);
   };
 
   // Check if user has required permission role
@@ -129,6 +169,11 @@ export const AuthProvider = ({ children }) => {
     return permissionLevel >= minLevel;
   };
 
+  // Check if user needs WhatsApp setup
+  const needsWhatsappSetup = () => {
+    return whatsappRequired && !whatsappChecked;
+  };
+
   const authContextValue = {
     isAuthenticated,
     isLoading,
@@ -137,7 +182,12 @@ export const AuthProvider = ({ children }) => {
     hasPermission,
     hasMinPermissionLevel,
     userPermission,
-    user
+    user,
+    whatsappRequired,
+    whatsappChecked,
+    needsWhatsappSetup,
+    completeWhatsappLogin,
+    skipWhatsappLogin
   };
 
   return (

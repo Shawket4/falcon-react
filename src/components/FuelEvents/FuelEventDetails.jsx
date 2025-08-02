@@ -290,7 +290,7 @@ const FuelEventDetails = ({ serverIp }) => {
                 <DetailItem 
                   icon={<Clock size={20} />}
                   label="Time"
-                  value={event.Time}
+                  value={event.Time || "Not Specified"}
                 />
                 
                 <DetailItem 

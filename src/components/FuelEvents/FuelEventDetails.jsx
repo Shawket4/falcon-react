@@ -54,6 +54,7 @@ const FuelEventDetails = ({ serverIp }) => {
             CarNoPlate: eventData.car_no_plate,
             DriverName: eventData.driver_name,
             Date: eventData.date,
+            Time: eventData.time,
             Liters: parseFloat(parseFloat(eventData.liters).toFixed(2)),
             PricePerLiter: parseFloat(parseFloat(eventData.price_per_liter).toFixed(2)),
             Price: parseFloat(parseFloat(eventData.price).toFixed(2)),

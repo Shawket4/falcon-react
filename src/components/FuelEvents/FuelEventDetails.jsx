@@ -290,7 +290,7 @@ const FuelEventDetails = ({ serverIp }) => {
                 <DetailItem 
                   icon={<Clock size={20} />}
                   label="Time"
-                  value={new Date(event.Date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  value={event.Time}
                 />
                 
                 <DetailItem 

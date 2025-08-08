@@ -264,6 +264,21 @@ const TripForm = () => {
       car_no_plate: car.car_no_plate,
       tank_capacity: car.tank_capacity || 0
     }));
+    if (car.driver_id && car.driver_id !== 0) {
+    // Find the driver in the drivers list
+    const assignedDriver = drivers.find(driver => 
+      (driver.ID === car.driver_id) || (driver.id === car.driver_id)
+    );
+    
+    if (assignedDriver) {
+      // Auto-select the assigned driver
+      setTripData(prev => ({
+        ...prev,
+        driver_id: assignedDriver.ID || assignedDriver.id,
+        driver_name: assignedDriver.name || assignedDriver.driver_name
+      }));
+    };
+  }
     setCarDropdownVisible(false);
     setCarSearch('');
   };

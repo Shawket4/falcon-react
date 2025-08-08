@@ -161,6 +161,12 @@ const Layout = ({ children }) => {
           isActive: location.pathname === '/trips-list' || location.pathname.includes('/trip-details/')
         },
         { 
+          path: '/add-trip', 
+          icon: <PlusCircle size={18} />, 
+          label: 'Add Trip',
+          isActive: location.pathname === '/add-trip'
+        },
+        { 
           path: '/fees', 
           icon: <DollarSign size={18} />, 
           label: 'Fee Mappings',

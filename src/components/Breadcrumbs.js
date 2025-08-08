@@ -1,8 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { 
+  ChevronRight, 
+  Home,
+  Fuel,
+  Truck,
+  Users,
+  Container,
+  Droplet,
+  Building,
+  DollarSign,
+  Map,
+  Settings,
+  Disc,
+  FileText,
+  AlertCircle,
+  BarChart4,
+  CreditCard,
+  PieChart,
+  Shield,
+  Gauge,
+  Plus
+} from 'lucide-react';
 import apiClient from '../apiClient';
-import { pathNames } from '../App';
 
 const Breadcrumbs = () => {
   const location = useLocation();
@@ -10,389 +30,305 @@ const Breadcrumbs = () => {
   const params = useParams();
   const pathnames = location.pathname.split('/').filter(x => x);
   
-  // State variables for fetching entity details
-  const [driverName, setDriverName] = useState('');
-  const [truckDetails, setTruckDetails] = useState(null);
-  const [tripDetails, setTripDetails] = useState(null);
-  const [vendorName, setVendorName] = useState('');
-  const [expenseDetails, setExpenseDetails] = useState(null);
+  // State for entity details
+  const [entityDetails, setEntityDetails] = useState({
+    driver: null,
+    truck: null,
+    trip: null,
+    vendor: null,
+    expense: null,
+    oilChange: null
+  });
   
-  // Prevent duplicate API calls
+  // Loading state
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Cache management
+  const cache = useRef({});
   const currentPathRef = useRef(location.pathname);
-  const fetchInProgressRef = useRef(false);
-  const driverIDRef = useRef(null);
-  const vendorIDRef = useRef(null);
   
+  // Fetch entity details based on route
   useEffect(() => {
-    // If the path hasn't changed, don't do anything
-    if (currentPathRef.current === location.pathname) {
-      return;
-    }
-    
-    // Update current path reference
+    if (currentPathRef.current === location.pathname) return;
     currentPathRef.current = location.pathname;
     
-    // Reset state when path changes
-    setDriverName('');
-    setTruckDetails(null);
-    setTripDetails(null);
-    setVendorName('');
-    setExpenseDetails(null);
+    const fetchDetails = async () => {
+      setIsLoading(true);
+      const newDetails = { ...entityDetails };
+      
+      try {
+        // Driver details
+        if (pathnames.includes('driver') || pathnames.includes('drivers')) {
+          const driverId = params.id || pathnames[1];
+          if (driverId && driverId !== 'expenses' && driverId !== 'loans' && driverId !== 'salaries') {
+            const cacheKey = `driver-${driverId}`;
+            if (cache.current[cacheKey]) {
+              newDetails.driver = cache.current[cacheKey];
+            } else {
+              const response = await apiClient.post('/api/GetDriverProfileData', {});
+              const driver = response.data?.find(d => d.ID.toString() === driverId);
+              if (driver) {
+                cache.current[cacheKey] = driver;
+                newDetails.driver = driver;
+              }
+            }
+          }
+        }
+        
+        // Truck details
+        if (pathnames[0] === 'trucks' && pathnames[1] && pathnames[1] !== 'create') {
+          const truckId = pathnames[1];
+          const cacheKey = `truck-${truckId}`;
+          if (cache.current[cacheKey]) {
+            newDetails.truck = cache.current[cacheKey];
+          } else {
+            const response = await apiClient.get(`/api/trucks/${truckId}`);
+            if (response.data) {
+              cache.current[cacheKey] = response.data;
+              newDetails.truck = response.data;
+            }
+          }
+        }
+        
+        // Trip details
+        if (pathnames.includes('trip-details') || (pathnames[0] === 'trips' && pathnames[1])) {
+          const tripId = pathnames[1] || params.tripId;
+          if (tripId) {
+            const cacheKey = `trip-${tripId}`;
+            if (cache.current[cacheKey]) {
+              newDetails.trip = cache.current[cacheKey];
+            } else {
+              const response = await apiClient.get(`/api/trips/${tripId}`);
+              if (response.data) {
+                cache.current[cacheKey] = response.data;
+                newDetails.trip = response.data;
+              }
+            }
+          }
+        }
+        
+        // Vendor details
+        if (pathnames.includes('vendor') || pathnames.includes('vendors')) {
+          const vendorId = params.vendorId || params.id || pathnames[1];
+          if (vendorId && vendorId !== 'create') {
+            const cacheKey = `vendor-${vendorId}`;
+            if (cache.current[cacheKey]) {
+              newDetails.vendor = cache.current[cacheKey];
+            } else {
+              const response = await apiClient.get(`/api/vendors/${vendorId}`);
+              if (response.data) {
+                cache.current[cacheKey] = response.data;
+                newDetails.vendor = response.data;
+              }
+            }
+          }
+        }
+        
+        setEntityDetails(newDetails);
+      } catch (error) {
+        console.error('Error fetching entity details:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    const fetchEntityDetails = async () => {
-      // Prevent concurrent fetches
-      if (fetchInProgressRef.current) {
+    fetchDetails();
+  }, [location.pathname, params]);
+  
+  // Route configuration with icons and labels
+  const routeConfig = useMemo(() => ({
+    // Root sections
+    'fuel': { label: 'Fuel Events', icon: Fuel, color: 'text-emerald-600' },
+    'add-fuel': { label: 'Add Fuel Event', icon: Plus, color: 'text-emerald-600' },
+    'edit-fuel': { label: 'Edit Fuel Event', icon: Fuel, color: 'text-emerald-600' },
+    'details': { label: 'Event Details', icon: FileText, color: 'text-emerald-600' },
+    
+    // Fleet
+    'trucks': { label: 'Vehicle Fleet', icon: Truck, color: 'text-blue-600' },
+    'add-car': { label: 'Add Vehicle', icon: Plus, color: 'text-blue-600' },
+    'car-management': { label: 'Fleet Management', icon: Settings, color: 'text-blue-600' },
+    'map': { label: 'Station Locator', icon: Map, color: 'text-blue-600' },
+    
+    // Maintenance
+    'tires': { label: 'Tire Management', icon: Disc, color: 'text-amber-600' },
+    'oil-changes-list': { label: 'Oil Changes', icon: Droplet, color: 'text-amber-600' },
+    'add-oil-change': { label: 'Add Oil Change', icon: Plus, color: 'text-amber-600' },
+    'edit-oil-change': { label: 'Edit Oil Change', icon: Droplet, color: 'text-amber-600' },
+    'speed-violations': { label: 'Speed Violations', icon: AlertCircle, color: 'text-amber-600' },
+    
+    // Trips
+    'trips-list': { label: 'All Trips', icon: Container, color: 'text-purple-600' },
+    'add-trip': { label: 'Register Trip', icon: Plus, color: 'text-purple-600' },
+    'trip-details': { label: 'Trip Details', icon: Container, color: 'text-purple-600' },
+    'trips': { label: 'Edit Trip', icon: Container, color: 'text-purple-600' },
+    'fees': { label: 'Fee Mappings', icon: DollarSign, color: 'text-purple-600' },
+    'distances': { label: 'Distance Mappings', icon: Map, color: 'text-purple-600' },
+    
+    // Personnel
+    'drivers': { label: 'Driver Registry', icon: Users, color: 'text-cyan-600' },
+    'driver': { label: 'Driver Details', icon: Users, color: 'text-cyan-600' },
+    'add-driver': { label: 'Add Driver', icon: Plus, color: 'text-cyan-600' },
+    'loans': { label: 'Loans', icon: DollarSign, color: 'text-cyan-600' },
+    'expenses': { label: 'Expenses', icon: CreditCard, color: 'text-cyan-600' },
+    'salaries': { label: 'Salaries', icon: DollarSign, color: 'text-cyan-600' },
+    
+    // Finance
+    'finance-dashboard': { label: 'Financial Dashboard', icon: BarChart4, color: 'text-rose-600' },
+    'vendors': { label: 'Vendor Directory', icon: Building, color: 'text-rose-600' },
+    'vendor': { label: 'Vendor Details', icon: Building, color: 'text-rose-600' },
+    'transactions': { label: 'Transactions', icon: CreditCard, color: 'text-rose-600' },
+    'reports': { label: 'Financial Reports', icon: PieChart, color: 'text-rose-600' },
+    
+    // System
+    'admin': { label: 'Admin Panel', icon: Shield, color: 'text-slate-600' },
+    'user-management': { label: 'User Management', icon: Users, color: 'text-slate-600' },
+    'logs': { label: 'System Logs', icon: FileText, color: 'text-slate-600' },
+    'settings': { label: 'Settings', icon: Settings, color: 'text-slate-600' },
+    
+    // Analytics
+    'driver-analytics': { label: 'Driver Analytics', icon: BarChart4, color: 'text-indigo-600' }
+  }), []);
+  
+  // Build breadcrumb items
+  const breadcrumbItems = useMemo(() => {
+    const items = [];
+    
+    // Always add home
+    items.push({
+      label: 'Apex Fleet',
+      icon: Home,
+      path: '/',
+      isActive: location.pathname === '/',
+      color: 'text-gray-600'
+    });
+    
+    // If we're on the home page, return just the home item
+    if (location.pathname === '/' || pathnames.length === 0) {
+      return items;
+    }
+    
+    // Build breadcrumb trail based on pathname
+    let currentPath = '';
+    pathnames.forEach((segment, index) => {
+      currentPath += `/${segment}`;
+      const isLast = index === pathnames.length - 1;
+      
+      // Skip numeric IDs in breadcrumbs unless they're the last item
+      if (!isNaN(segment) && !isLast) {
         return;
       }
       
-      fetchInProgressRef.current = true;
+      // Get config for this segment
+      const config = routeConfig[segment] || {};
       
-      // Fetch driver name when on driver routes
-      const driverId = params.id || (pathnames[0] === 'driver' && pathnames[1]);
+      // Handle special cases with entity names
+      let label = config.label || segment;
+      let icon = config.icon;
+      let color = config.color || 'text-gray-600';
       
-      // Only fetch if we have a driver ID and we're on a driver-related page
-      // Also prevent duplicate fetches for the same driver
-      if (driverId && 
-          (pathnames[0] === 'driver' || pathnames[2] === 'loans') && 
-          driverIDRef.current !== driverId) {
-        
-        driverIDRef.current = driverId; // Update the current driver ID
-        
-        try {
-          const response = await apiClient.post(
-            '/api/GetDriverProfileData',
-            {},
-            { headers: { 'Content-Type': 'application/json' } }
-          );
-          
-          if (response.data) {
-            const driverData = response.data.find(d => d.ID.toString() === driverId);
-            if (driverData) {
-              setDriverName(driverData.name);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching driver name:', error);
+      // Replace with actual entity names where available
+      if (segment === 'driver' || (pathnames[0] === 'driver' && index === 1)) {
+        if (entityDetails.driver) {
+          label = entityDetails.driver.name;
+          icon = Users;
         }
+      } else if (pathnames[0] === 'trucks' && index === 1 && pathnames[1] !== 'create') {
+        if (entityDetails.truck) {
+          label = entityDetails.truck.plate_number || 'Truck Details';
+          icon = Truck;
+        }
+      } else if (pathnames[0] === 'trip-details' && index === 1) {
+        if (entityDetails.trip) {
+          label = `Trip #${entityDetails.trip.id || segment}`;
+          icon = Container;
+        }
+      } else if ((pathnames[0] === 'vendor' || pathnames[0] === 'vendors') && index === 1) {
+        if (entityDetails.vendor) {
+          label = entityDetails.vendor.name;
+          icon = Building;
+        }
+      } else if (pathnames[0] === 'edit-oil-change' && index === 1) {
+        label = `Oil Change #${segment}`;
+        icon = Droplet;
       }
       
-      // Fetch truck details
-      if (pathnames[0] === 'trucks' && pathnames.length > 1 && pathnames[1] !== 'create') {
-        try {
-          const truckId = pathnames[1];
-          const response = await apiClient.get(`/api/trucks/${truckId}`);
-          if (response.data) {
-            setTruckDetails(response.data);
-          }
-        } catch (error) {
-          console.error('Error fetching truck details:', error);
-        }
+      // Handle nested routes
+      if (segment === 'loans' || segment === 'expenses' || segment === 'salaries') {
+        const parentConfig = routeConfig[pathnames[0]] || {};
+        color = parentConfig.color || color;
       }
       
-      // Fetch trip details
-      if ((pathnames[0] === 'trip-details' || pathnames[0] === 'trips') && pathnames.length > 1) {
-        try {
-          const tripId = pathnames[1];
-          const response = await apiClient.get(`/api/trips/${tripId}`);
-          if (response.data) {
-            setTripDetails(response.data);
-          }
-        } catch (error) {
-          console.error('Error fetching trip details:', error);
-        }
+      // Handle 'add' segments
+      if (segment === 'add') {
+        label = 'Add';
+        icon = Plus;
       }
       
-      // Fetch vendor name when on vendor routes
-      const vendorId = params.vendorId || params.id || (pathnames[0] === 'vendor' && pathnames[1]);
-      
-      // Only fetch if we have a vendor ID and we're on a vendor-related page
-      if (vendorId && 
-          (pathnames[0] === 'vendor' || pathnames[0] === 'edit-vendor' || 
-           (pathnames[0] === 'add-expense' && pathnames.length > 1) || 
-           (pathnames[0] === 'edit-expense' && pathnames.length > 1)) && 
-          vendorIDRef.current !== vendorId) {
-        
-        vendorIDRef.current = vendorId; // Update the current vendor ID
-        
-        try {
-          const response = await apiClient.get(`/api/vendors/${vendorId}`);
-          if (response.data) {
-            setVendorName(response.data.name);
-          }
-        } catch (error) {
-          console.error('Error fetching vendor name:', error);
-        }
+      // Handle 'create' segments
+      if (segment === 'create') {
+        label = 'Create';
+        icon = Plus;
       }
       
-      // Fetch expense details
-      if (pathnames[0] === 'edit-expense' && pathnames.length > 2) {
-        try {
-          const vendorId = pathnames[1];
-          const expenseId = pathnames[2];
-          const response = await apiClient.get(`/api/vendors/${vendorId}/expenses/${expenseId}`);
-          if (response.data) {
-            setExpenseDetails(response.data);
-          }
-        } catch (error) {
-          console.error('Error fetching expense details:', error);
-        }
-      }
-      
-      fetchInProgressRef.current = false;
-    };
+      items.push({
+        label,
+        icon,
+        path: isLast ? null : currentPath,
+        isActive: isLast,
+        color
+      });
+    });
     
-    fetchEntityDetails();
-    
-    // Clean up function to reset refs when component unmounts
-    return () => {
-      fetchInProgressRef.current = false;
-      driverIDRef.current = null;
-      vendorIDRef.current = null;
-    };
-  }, [location.pathname, params.id, params.vendorId, params.expenseId]);
-
-  // Don't render breadcrumbs on home page
-  if (location.pathname === '/') {
+    return items;
+  }, [pathnames, location.pathname, entityDetails, routeConfig]);
+  
+  // Render loading skeleton
+  if (isLoading && breadcrumbItems.length <= 2) {
     return (
-      <span className="cursor-pointer hover:text-blue-600 font-medium dark:hover:text-blue-400"
-        onClick={() => navigate('/')}>
-        Apex
-      </span>
+      <div className="flex items-center gap-2">
+        <div className="h-5 w-20 bg-gray-200 rounded animate-pulse" />
+        <ChevronRight size={16} className="text-gray-400" />
+        <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
+      </div>
     );
   }
   
-  // Home label is different for vendor expense dashboard
-  const getHomeLabel = () => {
-    if (location.pathname.includes('/vendor') || 
-        location.pathname.includes('/expense') || 
-        location.pathname === '/vendors' || 
-        location.pathname === '/expenses' ||
-        location.pathname === '/vendor-dashboard') {
-      return 'Expense Dashboard';
-    }
-    return 'Apex';
-  };
-  
-  // Home path is different for vendor expense dashboard
-  const getHomePath = () => {
-    if (location.pathname.includes('/vendor') || 
-        location.pathname.includes('/expense') || 
-        location.pathname === '/vendors' || 
-        location.pathname === '/expenses' ||
-        location.pathname === '/vendor-dashboard') {
-      return '/vendor-dashboard';
-    }
-    return '/';
-  };
-  
-  // Custom rendering for specific routes
-  const renderBreadcrumbs = () => {
-    // Base breadcrumb
-    const homeLabel = getHomeLabel();
-    const homePath = getHomePath();
-    
-    const breadcrumbs = [
-      <span key="home" 
-        className="cursor-pointer hover:text-blue-600 font-medium dark:hover:text-blue-400"
-        onClick={() => navigate(homePath)}>
-        {homeLabel}
-      </span>
-    ];
-    
-    // Helper function to add a breadcrumb item
-    const addBreadcrumb = (key, text, path = null, isActive = false) => {
-      // Add chevron separator
-      breadcrumbs.push(<ChevronRight key={`chevron-${key}`} size={16} />);
-      
-      // Add the breadcrumb item
-      if (path && !isActive) {
-        breadcrumbs.push(
-          <span
-            key={key}
-            className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-            onClick={() => navigate(path)}
-          >
-            {text}
-          </span>
-        );
-      } else {
-        breadcrumbs.push(
-          <span key={key} className="text-gray-500 dark:text-gray-400">
-            {text}
-          </span>
-        );
-      }
-    };
-    
-    // DRIVERS SECTION
-    if (pathnames[0] === 'drivers') {
-      addBreadcrumb('drivers', 'Drivers', null, true);
-    }
-    
-    // DRIVER DETAILS SECTION
-    else if (pathnames[0] === 'driver') {
-      addBreadcrumb('drivers', 'Drivers', '/drivers');
-      
-      // If we're on driver loans page
-      if (pathnames[2] === 'loans') {
-        // Add Driver name breadcrumb with link
-        addBreadcrumb('driver-name', driverName || 'Driver Details', `/driver/${pathnames[1]}`);
-        
-        // Add Loans breadcrumb
-        if (pathnames[3] === 'add') {
-          addBreadcrumb('loans', 'Loans', `/driver/loans/${pathnames[1]}`);
-          addBreadcrumb('add-loan', 'Add Loan', null, true);
-        } else {
-          addBreadcrumb('loans', 'Loans', null, true);
-        }
-      } 
-      // Just driver details page
-      else {
-        addBreadcrumb('driver-name', driverName || 'Driver Details', null, true);
-      }
-    }
-    
-    // FUEL EVENTS SECTION
-    else if (pathnames[0] === 'add-fuel') {
-      addBreadcrumb('add-fuel', 'Add Fuel Event', null, true);
-    }
-    else if (pathnames[0] === 'details') {
-      addBreadcrumb('fuel-events', 'Fuel Events', '/');
-      addBreadcrumb('details', 'Details', null, true);
-    }
-    else if (pathnames[0] === 'edit-fuel') {
-      addBreadcrumb('fuel-events', 'Fuel Events', '/');
-      addBreadcrumb('edit', 'Edit Event', null, true);
-    }
-    
-    // TRUCKS SECTION
-    else if (pathnames[0] === 'trucks') {
-      if (pathnames.length === 1) {
-        addBreadcrumb('trucks', 'Trucks', null, true);
-      } else if (pathnames[1] === 'create') {
-        addBreadcrumb('trucks', 'Trucks', '/trucks');
-        addBreadcrumb('create-truck', 'Add Truck', null, true);
-      } else {
-        addBreadcrumb('trucks', 'Trucks', '/trucks');
-        addBreadcrumb('truck-details', truckDetails?.plate_number || 'Truck Details', null, true);
-      }
-    }
-    
-    // TIRES SECTION
-    else if (pathnames[0] === 'tires') {
-      if (pathnames.length === 1) {
-        addBreadcrumb('tires', 'Tires', null, true);
-      } else if (pathnames[1] === 'create') {
-        addBreadcrumb('tires', 'Tires', '/tires');
-        addBreadcrumb('create-tire', 'Add Tire', null, true);
-      } else {
-        addBreadcrumb('tires', 'Tires', '/tires');
-        addBreadcrumb('tire-details', 'Tire Details', null, true);
-      }
-    }
-    
-    // MAPPINGS SECTION
-    else if (pathnames[0] === 'distances') {
-      addBreadcrumb('distances', 'Distance Mappings', null, true);
-    }
-    else if (pathnames[0] === 'fees') {
-      addBreadcrumb('fees', 'Fee Mappings', null, true);
-    }
-    
-    // TRIPS SECTION
-    else if (pathnames[0] === 'trips-list') {
-      addBreadcrumb('trips', 'Trips', null, true);
-    }
-    else if (pathnames[0] === 'add-trip') {
-      addBreadcrumb('trips', 'Trips', '/trips-list');
-      addBreadcrumb('add-trip', 'Add Trip', null, true);
-    }
-    else if (pathnames[0] === 'trips' && pathnames.length > 1) {
-      addBreadcrumb('trips', 'Trips', '/trips-list');
-      addBreadcrumb('edit-trip', 'Edit Trip', null, true);
-    }
-    else if (pathnames[0] === 'trip-details') {
-      addBreadcrumb('trips', 'Trips', '/trips-list');
-      addBreadcrumb('trip-details', 'Trip Details', null, true);
-    }
-    
-    // OIL CHANGES SECTION
-    else if (pathnames[0] === 'oil-changes-list') {
-      addBreadcrumb('oil-changes', 'Oil Changes', null, true);
-    }
-    else if (pathnames[0] === 'add-oil-change') {
-      addBreadcrumb('oil-changes', 'Oil Changes', '/oil-changes-list');
-      addBreadcrumb('add-oil-change', 'Add Oil Change', null, true);
-    }
-    else if (pathnames[0] === 'edit-oil-change') {
-      addBreadcrumb('oil-changes', 'Oil Changes', '/oil-changes-list');
-      addBreadcrumb('edit-oil-change', 'Edit Oil Change', null, true);
-    }
-    
-    // VENDOR EXPENSE SECTIONS
-    else if (pathnames[0] === 'vendor-dashboard') {
-      addBreadcrumb('vendor-dashboard', 'Expense Dashboard', null, true);
-    }
-    else if (pathnames[0] === 'vendors') {
-      addBreadcrumb('vendors', 'Vendors', null, true);
-    }
-    else if (pathnames[0] === 'add-vendor') {
-      addBreadcrumb('vendors', 'Vendors', '/vendors');
-      addBreadcrumb('add-vendor', 'Add Vendor', null, true);
-    }
-    else if (pathnames[0] === 'edit-vendor') {
-      addBreadcrumb('vendors', 'Vendors', '/vendors');
-      addBreadcrumb('edit-vendor', 'Edit Vendor', null, true);
-    }
-    else if (pathnames[0] === 'expenses') {
-      addBreadcrumb('expenses', 'All Expenses', null, true);
-    }
-    else if (pathnames[0] === 'add-expense' && !pathnames[1]) {
-      addBreadcrumb('expenses', 'All Expenses', '/expenses');
-      addBreadcrumb('add-expense', 'Add Expense', null, true);
-    }
-    else if (pathnames[0] === 'vendor' && pathnames[2] === 'expenses') {
-      addBreadcrumb('vendors', 'Vendors', '/vendors');
-      addBreadcrumb('vendor-name', vendorName || 'Vendor Details', null, true);
-      addBreadcrumb('expenses', 'Expenses', null, true);
-    }
-    else if (pathnames[0] === 'add-expense' && pathnames[1]) {
-      addBreadcrumb('vendors', 'Vendors', '/vendors');
-      addBreadcrumb('vendor-name', vendorName || 'Vendor', `/vendor/${pathnames[1]}/expenses`);
-      addBreadcrumb('add-expense', 'Add Expense', null, true);
-    }
-    else if (pathnames[0] === 'edit-expense') {
-      addBreadcrumb('vendors', 'Vendors', '/vendors');
-      addBreadcrumb('vendor-name', vendorName || 'Vendor', `/vendor/${pathnames[1]}/expenses`);
-      addBreadcrumb('edit-expense', 'Edit Expense', null, true);
-    }
-    
-    // ADMIN SECTION
-    else if (pathnames[0] === 'admin') {
-      addBreadcrumb('admin', 'Admin Dashboard', null, true);
-    }
-    else if (pathnames[0] === 'settings') {
-      addBreadcrumb('settings', 'Settings', null, true);
-    }
-    else if (pathnames[0] === 'users') {
-      addBreadcrumb('users', 'Users', null, true);
-    }
-    
-    // Try to use the pathNames mapping for unknown routes
-    else {
-      const path = pathnames.join('/');
-      if (pathNames[path]) {
-        addBreadcrumb(path, pathNames[path], null, true);
-      }
-    }
-    
-    return breadcrumbs;
-  };
-  
   return (
-    <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-      {renderBreadcrumbs()}
-    </div>
+    <nav className="flex items-center">
+      <ol className="flex items-center space-x-1 md:space-x-2">
+        {breadcrumbItems.map((item, index) => {
+          const Icon = item.icon;
+          const isLast = index === breadcrumbItems.length - 1;
+          
+          return (
+            <li key={index} className="flex items-center">
+              {index > 0 && (
+                <ChevronRight size={16} className="mx-1 text-gray-400" />
+              )}
+              
+              {isLast || !item.path ? (
+                <div className={`flex items-center gap-2 px-2 py-1 rounded-lg bg-gray-100 ${item.color}`}>
+                  {Icon && <Icon size={16} />}
+                  <span className="text-sm font-medium">
+                    {item.label}
+                  </span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => navigate(item.path)}
+                  className={`flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors ${item.color} hover:${item.color}`}
+                >
+                  {Icon && <Icon size={16} />}
+                  <span className="text-sm font-medium">
+                    {item.label}
+                  </span>
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 };
 

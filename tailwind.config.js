@@ -22,7 +22,7 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['Poppins', 'ui-sans-serif', 'system-ui'],
+        sans: ['Axios Pro', 'sans-serif'],
       },
       boxShadow: {
         'custom': '0 2px 8px rgba(0, 0, 0, 0.1)',

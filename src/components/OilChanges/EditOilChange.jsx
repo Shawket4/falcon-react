@@ -152,7 +152,7 @@ const EditOilChange = (props) => {
 
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
-    navigate('/oil-changes');
+    navigate('/oil-changes-list');
   };
 
   const handleCloseErrorModal = () => {
@@ -160,7 +160,7 @@ const EditOilChange = (props) => {
   };
 
   const handleCancel = () => {
-    navigate('/oil-changes');
+    navigate('/oil-changes-list');
   };
 
   // Loading state

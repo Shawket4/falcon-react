@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../apiClient';
 import { 
@@ -15,16 +15,25 @@ import {
   User,
   DollarSign,
   Gauge,
-  Clock
+  Clock,
+  Search,
+  Filter,
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  Car,
+  Wrench
 } from 'lucide-react';
 
 const OilChangeList = ({ jwt }) => {
   const [oilChanges, setOilChanges] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState({
-    key: 'CarNoPlate',
-    direction: 'ascending'
+    key: 'Date',
+    direction: 'descending'
   });
   const [expandedView, setExpandedView] = useState({});
   
@@ -40,7 +49,6 @@ const OilChangeList = ({ jwt }) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return "Invalid Date";
     
-    // Format to dd/MM/yyyy & h:mm a
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
@@ -48,22 +56,23 @@ const OilChangeList = ({ jwt }) => {
     let hours = date.getHours();
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12;
-    hours = hours ? hours : 12; // the hour '0' should be '12'
+    hours = hours ? hours : 12;
     const minutes = date.getMinutes().toString().padStart(2, '0');
     
     return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
   };
 
-  // Group by car plate function
-  const groupByCarPlate = (data) => {
-    const groups = {};
-    data.forEach(item => {
-      if (!groups[item.CarNoPlate]) {
-        groups[item.CarNoPlate] = [];
-      }
-      groups[item.CarNoPlate].push(item);
-    });
-    return groups;
+  // Format short date
+  const formatShortDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
   };
 
   useEffect(() => {
@@ -77,7 +86,6 @@ const OilChangeList = ({ jwt }) => {
     try {
       const response = await apiClient.get('/api/GetAllOilChanges');
       
-      // Transform the data to match the expected structure
       const transformedData = response.data.map(event => ({
         ID: event.ID,
         CarNoPlate: event.car_no_plate,
@@ -90,7 +98,7 @@ const OilChangeList = ({ jwt }) => {
         Cost: parseFloat(event.cost),
         Difference: parseFloat(event.current_odometer) - parseFloat(event.odometer_at_change),
         MileageLeft: parseFloat(event.mileage) - (parseFloat(event.current_odometer) - parseFloat(event.odometer_at_change)),
-        LastUpdated: event.updated_at || event.UpdatedAt // Handle both lowercase and uppercase versions
+        LastUpdated: event.updated_at || event.UpdatedAt
       }));
       
       setOilChanges(transformedData);
@@ -118,7 +126,7 @@ const OilChangeList = ({ jwt }) => {
     setTimeout(() => {
       setItemToDelete(null);
       setDeleteSuccess(false);
-    }, 200); // Clear after animation
+    }, 200);
   };
 
   const handleDelete = async () => {
@@ -146,27 +154,50 @@ const OilChangeList = ({ jwt }) => {
     }));
   };
 
-  // Apply sorting to oil changes
-  const sortedOilChanges = React.useMemo(() => {
-    let sortableItems = [...oilChanges];
+  // Get mileage status
+  const getMileageStatus = (mileageLeft) => {
+    if (mileageLeft <= 1500) return { color: 'bg-red-100 text-red-700 border-red-200', icon: AlertCircle, label: 'Critical' };
+    if (mileageLeft <= 3000) return { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: AlertTriangle, label: 'Warning' };
+    return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: Check, label: 'Good' };
+  };
+
+  // Filter and search logic
+  const filteredAndSortedOilChanges = useMemo(() => {
+    let filtered = [...oilChanges];
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(change =>
+        change.CarNoPlate?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        change.Supervisor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        change.DriverName?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(change => {
+        const status = getMileageStatus(change.MileageLeft);
+        return status.label.toLowerCase() === statusFilter.toLowerCase();
+      });
+    }
+
+    // Sorting
     if (sortConfig.key) {
-      sortableItems.sort((a, b) => {
+      filtered.sort((a, b) => {
         let aValue = a[sortConfig.key];
         let bValue = b[sortConfig.key];
         
-        // Handle numeric values
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           return sortConfig.direction === 'ascending' ? aValue - bValue : bValue - aValue;
         }
         
-        // Handle date values
         if (sortConfig.key === 'Date' || sortConfig.key === 'LastUpdated') {
           return sortConfig.direction === 'ascending' 
             ? new Date(aValue) - new Date(bValue) 
             : new Date(bValue) - new Date(aValue);
         }
         
-        // Handle string values (case insensitive)
         if (aValue && bValue) {
           aValue = aValue.toString().toLowerCase();
           bValue = bValue.toString().toLowerCase();
@@ -178,13 +209,21 @@ const OilChangeList = ({ jwt }) => {
         return 0;
       });
     }
-    return sortableItems;
-  }, [oilChanges, sortConfig]);
 
-  // Group sorted oil changes by car plate
-  const groupedOilChanges = React.useMemo(() => {
-    return groupByCarPlate(sortedOilChanges);
-  }, [sortedOilChanges]);
+    return filtered;
+  }, [oilChanges, searchTerm, statusFilter, sortConfig]);
+
+  // Group by car plate
+  const groupedOilChanges = useMemo(() => {
+    const groups = {};
+    filteredAndSortedOilChanges.forEach(item => {
+      if (!groups[item.CarNoPlate]) {
+        groups[item.CarNoPlate] = [];
+      }
+      groups[item.CarNoPlate].push(item);
+    });
+    return groups;
+  }, [filteredAndSortedOilChanges]);
 
   // Request sort function
   const requestSort = (key) => {
@@ -194,177 +233,177 @@ const OilChangeList = ({ jwt }) => {
     }
     setSortConfig({ key, direction });
   };
-  
-  // Get mileage status color
-  const getMileageStatusColor = (mileageLeft) => {
-    if (mileageLeft <= 1500) return 'text-red-600';
-    if (mileageLeft <= 3000) return 'text-orange-500';
-    return 'text-green-600';
-  };
+
+  // Calculate statistics
+  const statistics = useMemo(() => {
+    const critical = oilChanges.filter(c => c.MileageLeft <= 1500).length;
+    const warning = oilChanges.filter(c => c.MileageLeft > 1500 && c.MileageLeft <= 3000).length;
+    const good = oilChanges.filter(c => c.MileageLeft > 3000).length;
+    const totalCost = oilChanges.reduce((sum, c) => sum + c.Cost, 0);
+    const avgMileage = oilChanges.length > 0 
+      ? oilChanges.reduce((sum, c) => sum + c.Mileage, 0) / oilChanges.length 
+      : 0;
+    
+    return { critical, warning, good, totalCost, avgMileage };
+  }, [oilChanges]);
 
   // Loading state
   if (isLoading && !oilChanges.length) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-64 p-8">
-        <div className="relative w-16 h-16">
-          <div className="w-16 h-16 border-4 border-blue-200 border-solid rounded-full"></div>
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent border-solid rounded-full animate-spin absolute top-0"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-gray-200 rounded-full"></div>
+          <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
         </div>
-        <p className="text-gray-600 font-medium mt-4">Loading oil changes...</p>
+        <p className="text-gray-600 font-medium mt-6 text-lg">Loading oil changes...</p>
       </div>
     );
   }
 
-  // Error state with no data
+  // Error state
   if (error && !oilChanges.length) {
     return (
-      <div className="max-w-3xl mx-auto mt-8">
-        <div className="flex flex-col items-center justify-center min-h-64 p-8 bg-red-50 rounded-lg shadow-sm border border-red-100">
-          <div className="text-red-500 mb-4">
-            <AlertTriangle size={48} />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-red-500 mb-4 flex justify-center">
+            <AlertCircle size={64} />
           </div>
-          <p className="text-red-700 font-medium mb-2 text-xl">Error Loading Oil Changes</p>
-          <p className="text-red-600 mb-6">{error}</p>
+          <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">Error Loading Data</h2>
+          <p className="text-center text-gray-600 mb-6">{error}</p>
           <button 
             onClick={handleRefresh}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
+            className="w-full px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-medium flex items-center justify-center shadow-lg hover:shadow-xl"
           >
-            <RefreshCw size={18} className="mr-2" />
-            Refresh
+            <RefreshCw size={20} className="mr-2" />
+            Try Again
           </button>
         </div>
       </div>
     );
   }
 
-  // Table header component for reuse
+  // Table header component
   const TableHeader = ({ requestSort, sortConfig }) => (
-    <thead className="bg-gray-50">
+    <thead className="bg-gray-50 border-b border-gray-200">
       <tr>
-        <SortableHeader 
-          label="Date" 
-          field="Date" 
-          sortConfig={sortConfig} 
-          requestSort={requestSort}
-        />
-        <SortableHeader 
-          label="Last Updated" 
-          field="LastUpdated" 
-          sortConfig={sortConfig} 
-          requestSort={requestSort}
-        />
-        <SortableHeader 
-          label="Supervisor" 
-          field="Supervisor" 
-          sortConfig={sortConfig} 
-          requestSort={requestSort}
-        />
-        <SortableHeader 
-          label="Driver" 
-          field="DriverName" 
-          sortConfig={sortConfig} 
-          requestSort={requestSort}
-        />
-        <SortableHeader 
-          label="Odometer at Change" 
-          field="OdometerAtChange" 
-          sortConfig={sortConfig} 
-          requestSort={requestSort}
-        />
-        <SortableHeader 
-          label="Current Odometer" 
-          field="CurrentOdometer" 
-          sortConfig={sortConfig} 
-          requestSort={requestSort}
-        />
-        <SortableHeader 
-          label="Mileage" 
-          field="Mileage" 
-          sortConfig={sortConfig} 
-          requestSort={requestSort}
-        />
-        <SortableHeader 
-          label="Mileage Left" 
-          field="MileageLeft" 
-          sortConfig={sortConfig} 
-          requestSort={requestSort}
-        />
-        <SortableHeader 
-          label="Cost" 
-          field="Cost" 
-          sortConfig={sortConfig} 
-          requestSort={requestSort}
-        />
-        <th scope="col" className="relative px-3 py-3 text-right">
-          <span className="sr-only">Actions</span>
+        <th onClick={() => requestSort('Date')} className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+          <div className="flex items-center">
+            Date
+            {sortConfig.key === 'Date' && (
+              sortConfig.direction === 'ascending' ? 
+                <ChevronUp size={14} className="ml-1 text-blue-600" /> : 
+                <ChevronDown size={14} className="ml-1 text-blue-600" />
+            )}
+          </div>
+        </th>
+        <th onClick={() => requestSort('Supervisor')} className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+          <div className="flex items-center">
+            Supervisor
+            {sortConfig.key === 'Supervisor' && (
+              sortConfig.direction === 'ascending' ? 
+                <ChevronUp size={14} className="ml-1 text-blue-600" /> : 
+                <ChevronDown size={14} className="ml-1 text-blue-600" />
+            )}
+          </div>
+        </th>
+        <th onClick={() => requestSort('DriverName')} className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+          <div className="flex items-center">
+            Driver
+            {sortConfig.key === 'DriverName' && (
+              sortConfig.direction === 'ascending' ? 
+                <ChevronUp size={14} className="ml-1 text-blue-600" /> : 
+                <ChevronDown size={14} className="ml-1 text-blue-600" />
+            )}
+          </div>
+        </th>
+        <th onClick={() => requestSort('OdometerAtChange')} className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+          <div className="flex items-center">
+            Changed At
+            {sortConfig.key === 'OdometerAtChange' && (
+              sortConfig.direction === 'ascending' ? 
+                <ChevronUp size={14} className="ml-1 text-blue-600" /> : 
+                <ChevronDown size={14} className="ml-1 text-blue-600" />
+            )}
+          </div>
+        </th>
+        <th onClick={() => requestSort('CurrentOdometer')} className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+          <div className="flex items-center">
+            Current
+            {sortConfig.key === 'CurrentOdometer' && (
+              sortConfig.direction === 'ascending' ? 
+                <ChevronUp size={14} className="ml-1 text-blue-600" /> : 
+                <ChevronDown size={14} className="ml-1 text-blue-600" />
+            )}
+          </div>
+        </th>
+        <th onClick={() => requestSort('MileageLeft')} className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+          <div className="flex items-center">
+            Remaining
+            {sortConfig.key === 'MileageLeft' && (
+              sortConfig.direction === 'ascending' ? 
+                <ChevronUp size={14} className="ml-1 text-blue-600" /> : 
+                <ChevronDown size={14} className="ml-1 text-blue-600" />
+            )}
+          </div>
+        </th>
+        <th onClick={() => requestSort('Cost')} className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+          <div className="flex items-center">
+            Cost
+            {sortConfig.key === 'Cost' && (
+              sortConfig.direction === 'ascending' ? 
+                <ChevronUp size={14} className="ml-1 text-blue-600" /> : 
+                <ChevronDown size={14} className="ml-1 text-blue-600" />
+            )}
+          </div>
+        </th>
+        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          Actions
         </th>
       </tr>
     </thead>
   );
 
-  // Sortable header component
-  const SortableHeader = ({ label, field, sortConfig, requestSort }) => (
-    <th 
-      scope="col" 
-      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-      onClick={() => requestSort(field)}
-    >
-      <div className="flex items-center">
-        {label}
-        {sortConfig.key === field && (
-          <span className="ml-1">
-            {sortConfig.direction === 'ascending' ? 
-              <ChevronUp size={16} className="text-blue-500" /> : 
-              <ChevronDown size={16} className="text-blue-500" />
-            }
-          </span>
-        )}
-      </div>
-    </th>
-  );
-
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all">
             {deleteSuccess ? (
               <div className="text-center">
-                <div className="bg-green-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                  <Check size={32} className="text-green-600" />
+                <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Check size={40} className="text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Successfully Deleted</h3>
-                <p className="text-gray-600 mb-2">The oil change record has been deleted.</p>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Success!</h3>
+                <p className="text-gray-600">The oil change record has been deleted.</p>
               </div>
             ) : (
               <>
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-red-100 rounded-full mr-3">
-                    <Trash2 size={24} className="text-red-600" />
+                <div className="flex items-center mb-6">
+                  <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl mr-4 shadow-lg">
+                    <Trash2 size={24} className="text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800">Delete Oil Change Record</h3>
+                  <h3 className="text-xl font-bold text-gray-800">Confirm Deletion</h3>
                 </div>
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-600 mb-8">
                   Are you sure you want to delete this oil change record? This action cannot be undone.
                 </p>
-                <div className="flex justify-end space-x-3">
+                <div className="flex gap-3">
                   <button 
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center"
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium"
                     onClick={closeDeleteModal}
                     disabled={isDeleting}
                   >
-                    <X size={18} className="mr-2" />
                     Cancel
                   </button>
                   <button 
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl flex items-center justify-center"
                     onClick={handleDelete}
                     disabled={isDeleting}
                   >
                     {isDeleting ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-t-white border-white border-opacity-20 rounded-full animate-spin mr-2"></div>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                         Deleting...
                       </>
                     ) : (
@@ -381,241 +420,353 @@ const OilChangeList = ({ jwt }) => {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center">
-              <Gauge className="mr-3 text-blue-500" size={24} />
-              Oil Change Management
-            </h1>
-            
-            <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
-              <button
-                onClick={handleRefresh}
-                className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-              >
-                <RefreshCw size={18} className="mr-2" />
-                <span>Refresh</span>
-              </button>
-              <Link
-                to="/add-oil-change"
-                className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <Plus size={18} className="mr-2" />
-                <span>Add New Oil Change</span>
-              </Link>
+      <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        {/* Header Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center">
+                  <Wrench className="mr-3" size={28} />
+                  Oil Change Management
+                </h1>
+                <p className="text-blue-100 mt-1">Track and manage vehicle maintenance</p>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRefresh}
+                  className="px-4 py-2.5 bg-white/20 backdrop-blur text-white rounded-xl hover:bg-white/30 transition-all duration-200 flex items-center font-medium"
+                >
+                  <RefreshCw size={18} className="mr-2" />
+                  Refresh
+                </button>
+                <Link
+                  to="/add-oil-change"
+                  className="px-4 py-2.5 bg-white text-blue-600 rounded-xl hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center font-medium"
+                >
+                  <Plus size={18} className="mr-2" />
+                  Add New
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Statistics Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-gray-50/50">
+            <div className="bg-white rounded-xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Total</p>
+                  <p className="text-2xl font-bold text-gray-800">{oilChanges.length}</p>
+                </div>
+                <Car className="text-gray-400" size={24} />
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-emerald-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-emerald-600 uppercase tracking-wide">Good</p>
+                  <p className="text-2xl font-bold text-emerald-700">{statistics.good}</p>
+                </div>
+                <Check className="text-emerald-500" size={24} />
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-amber-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-amber-600 uppercase tracking-wide">Warning</p>
+                  <p className="text-2xl font-bold text-amber-700">{statistics.warning}</p>
+                </div>
+                <AlertTriangle className="text-amber-500" size={24} />
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-red-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-red-600 uppercase tracking-wide">Critical</p>
+                  <p className="text-2xl font-bold text-red-700">{statistics.critical}</p>
+                </div>
+                <AlertCircle className="text-red-500" size={24} />
+              </div>
             </div>
           </div>
         </div>
-        
-        <div className="p-6 space-y-6">
-          {/* Error alert */}
-          {error && (
-            <div className="flex items-start p-4 mb-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-              <AlertTriangle size={20} className="text-red-500 mr-3 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-red-800">Error</p>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
+
+        {/* Search and Filter Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Search by car plate, supervisor, or driver..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              />
             </div>
-          )}
-          
-          {/* Stats summary */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-sm text-gray-500 mb-4">
-            <div>
-              {isLoading ? 'Loading oil changes...' : (
-                oilChanges.length > 0 ? `Showing ${oilChanges.length} oil changes` : 'No oil changes found'
-              )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  statusFilter === 'all' 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                All ({oilChanges.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('good')}
+                className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  statusFilter === 'good' 
+                    ? 'bg-emerald-600 text-white shadow-lg' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Good ({statistics.good})
+              </button>
+              <button
+                onClick={() => setStatusFilter('warning')}
+                className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  statusFilter === 'warning' 
+                    ? 'bg-amber-600 text-white shadow-lg' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Warning ({statistics.warning})
+              </button>
+              <button
+                onClick={() => setStatusFilter('critical')}
+                className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  statusFilter === 'critical' 
+                    ? 'bg-red-600 text-white shadow-lg' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Critical ({statistics.critical})
+              </button>
             </div>
           </div>
-         
-          {/* List of oil changes grouped by car */}
-          <div className="space-y-6">
-            {Object.keys(groupedOilChanges).length === 0 ? (
-              <div className="bg-white p-8 rounded-lg border border-gray-200 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Gauge size={32} className="text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-1">No oil changes found</h3>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">Get started by creating a new oil change record to track maintenance for your vehicles.</p>
+        </div>
+
+        {/* Error alert */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start">
+            <AlertCircle className="text-red-500 mr-3 mt-0.5 flex-shrink-0" size={20} />
+            <div>
+              <p className="font-semibold text-red-800">Error</p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content */}
+        <div className="space-y-6">
+          {Object.keys(groupedOilChanges).length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Wrench size={40} className="text-gray-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">No oil changes found</h3>
+              <p className="text-gray-500 mb-8 max-w-md mx-auto">
+                {searchTerm || statusFilter !== 'all' 
+                  ? 'Try adjusting your search or filter criteria'
+                  : 'Get started by creating a new oil change record to track maintenance for your vehicles.'}
+              </p>
+              {(!searchTerm && statusFilter === 'all') && (
                 <Link
                   to="/add-oil-change"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
                 >
-                  <Plus size={18} className="mr-2" />
-                  New Oil Change
+                  <Plus size={20} className="mr-2" />
+                  Create First Record
                 </Link>
-              </div>
-            ) : (
-              Object.entries(groupedOilChanges).map(([carPlate, changes]) => (
-                <div key={carPlate} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="bg-gray-800 text-white px-6 py-3">
-                    <h3 className="text-lg font-medium">{carPlate}</h3>
+              )}
+            </div>
+          ) : (
+            Object.entries(groupedOilChanges).map(([carPlate, changes]) => {
+              const latestChange = changes[0];
+              const status = getMileageStatus(latestChange.MileageLeft);
+              const StatusIcon = status.icon;
+              
+              return (
+                <div key={carPlate} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
+                  <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Car className="mr-3" size={20} />
+                      <h3 className="text-lg font-semibold">{carPlate}</h3>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium flex items-center border ${status.color}`}>
+                      <StatusIcon size={14} className="mr-1" />
+                      {status.label}
+                    </div>
                   </div>
 
-                  {/* Desktop view (md and up) - Regular table */}
+                  {/* Desktop view */}
                   <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
+                    <table className="w-full">
                       <TableHeader 
                         requestSort={requestSort}
                         sortConfig={sortConfig}
                       />
-                      <tbody className="divide-y divide-gray-200 bg-white">
-                        {changes.map((oilChange) => (
-                          <tr key={oilChange.ID} className="hover:bg-gray-50">
-                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
-                              {oilChange.Date}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                              {formatDate(oilChange.LastUpdated)}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                              {oilChange.Supervisor}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                              {oilChange.DriverName}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                              {oilChange.OdometerAtChange.toLocaleString()}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                              {oilChange.CurrentOdometer.toLocaleString()}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                              {oilChange.Mileage.toLocaleString()}
-                            </td>
-                            <td className={`whitespace-nowrap px-3 py-4 text-sm font-medium ${getMileageStatusColor(oilChange.MileageLeft)}`}>
-                              {oilChange.MileageLeft.toLocaleString()}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
-                              ${oilChange.Cost.toFixed(2)}
-                            </td>
-                            <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium">
-                              <div className="flex justify-end space-x-3">
-                                <Link
-                                  to={`/edit-oil-change/${oilChange.ID}`}
-                                  className="text-blue-600 hover:text-blue-800 flex items-center"
-                                >
-                                  <Edit size={16} className="mr-1" />
-                                  Edit
-                                </Link>
-                                <button
-                                  onClick={() => openDeleteModal(oilChange.ID)}
-                                  className="text-red-600 hover:text-red-800 flex items-center"
-                                >
-                                  <Trash2 size={16} className="mr-1" />
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                      <tbody className="divide-y divide-gray-100">
+                        {changes.map((oilChange, index) => {
+                          const changeStatus = getMileageStatus(oilChange.MileageLeft);
+                          return (
+                            <tr key={oilChange.ID} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 text-sm text-gray-900">
+                                <div className="flex items-center">
+                                  <Calendar size={14} className="mr-2 text-gray-400" />
+                                  {formatShortDate(oilChange.Date)}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-600">{oilChange.Supervisor || '-'}</td>
+                              <td className="px-6 py-4 text-sm text-gray-600">{oilChange.DriverName || '-'}</td>
+                              <td className="px-6 py-4 text-sm text-gray-900 font-mono">
+                                {oilChange.OdometerAtChange.toLocaleString()} km
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900 font-mono">
+                                {oilChange.CurrentOdometer.toLocaleString()} km
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className={`inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-medium ${changeStatus.color}`}>
+                                  {oilChange.MileageLeft.toLocaleString()} km
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                                ${oilChange.Cost.toFixed(2)}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Link
+                                    to={`/edit-oil-change/${oilChange.ID}`}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Edit"
+                                  >
+                                    <Edit size={16} />
+                                  </Link>
+                                  <button
+                                    onClick={() => openDeleteModal(oilChange.ID)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
 
-                  {/* Mobile & Tablet view (sm and below) - Card-based layout */}
-                  <div className="md:hidden divide-y divide-gray-200">
-                    {changes.map((oilChange) => (
-                      <div key={oilChange.ID} className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="font-medium text-gray-900 flex items-center">
-                              <Calendar size={16} className="mr-2 text-gray-400" />
-                              {oilChange.Date}
+                  {/* Mobile view */}
+                  <div className="md:hidden">
+                    {changes.map((oilChange) => {
+                      const changeStatus = getMileageStatus(oilChange.MileageLeft);
+                      const ChangeStatusIcon = changeStatus.icon;
+                      
+                      return (
+                        <div key={oilChange.ID} className="border-b border-gray-100 last:border-0">
+                          <div className="p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center text-gray-900 font-medium mb-1">
+                                  <Calendar size={16} className="mr-2 text-gray-400" />
+                                  {formatShortDate(oilChange.Date)}
+                                </div>
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <User size={14} className="mr-2 text-gray-400" />
+                                  {oilChange.Supervisor || 'No supervisor'}
+                                </div>
+                              </div>
+                              <div className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center ${changeStatus.color}`}>
+                                <ChangeStatusIcon size={14} className="mr-1" />
+                                {oilChange.MileageLeft.toLocaleString()} km
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-600 mt-1 flex items-center">
-                              <User size={14} className="mr-2 text-gray-400" />
-                              {oilChange.Supervisor || 'No supervisor'}
-                            </div>
-                          </div>
-                          <div className={`text-sm font-medium ${getMileageStatusColor(oilChange.MileageLeft)} px-2 py-1 rounded-full bg-gray-100`}>
-                            {oilChange.MileageLeft.toLocaleString()} km left
-                          </div>
-                        </div>
 
-                        <button 
-                          className="flex items-center text-sm text-blue-600 mb-2"
-                          onClick={() => toggleExpandRow(oilChange.ID)}
-                        >
-                          {expandedView[oilChange.ID] ? 'Hide details' : 'Show details'}
-                          {expandedView[oilChange.ID] ? 
-                            <ChevronUp size={16} className="ml-1" /> : 
-                            <ChevronDown size={16} className="ml-1" />
-                          }
-                        </button>
-                             
-                        {expandedView[oilChange.ID] && (
-                          <div className="space-y-3 mt-3 bg-gray-50 p-3 rounded-lg text-sm">
-                            <div className="grid grid-cols-2 gap-1">
-                              <div className="text-gray-500 flex items-center">
-                                <Clock size={14} className="mr-1 text-gray-400" />
-                                Last Updated:
+                            <button 
+                              className="w-full text-left"
+                              onClick={() => toggleExpandRow(oilChange.ID)}
+                            >
+                              <div className="flex items-center justify-between py-2 text-sm text-blue-600 font-medium">
+                                <span>View details</span>
+                                {expandedView[oilChange.ID] ? 
+                                  <ChevronUp size={16} /> : 
+                                  <ChevronDown size={16} />
+                                }
                               </div>
-                              <div>{formatDate(oilChange.LastUpdated)}</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1">
-                              <div className="text-gray-500 flex items-center">
-                                <User size={14} className="mr-1 text-gray-400" />
-                                Driver:
+                            </button>
+                            
+                            {expandedView[oilChange.ID] && (
+                              <div className="mt-3 space-y-3 bg-gray-50 rounded-xl p-4">
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                  <div>
+                                    <p className="text-gray-500 mb-1">Driver</p>
+                                    <p className="font-medium text-gray-900">{oilChange.DriverName || '-'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 mb-1">Cost</p>
+                                    <p className="font-semibold text-gray-900">${oilChange.Cost.toFixed(2)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 mb-1">Changed at</p>
+                                    <p className="font-medium text-gray-900">{oilChange.OdometerAtChange.toLocaleString()} km</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 mb-1">Current</p>
+                                    <p className="font-medium text-gray-900">{oilChange.CurrentOdometer.toLocaleString()} km</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 mb-1">Service interval</p>
+                                    <p className="font-medium text-gray-900">{oilChange.Mileage.toLocaleString()} km</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 mb-1">Distance covered</p>
+                                    <p className="font-medium text-gray-900">{oilChange.Difference.toLocaleString()} km</p>
+                                  </div>
+                                </div>
+                                <div className="pt-3 border-t border-gray-200">
+                                  <p className="text-xs text-gray-500 mb-1">Last updated</p>
+                                  <p className="text-sm text-gray-700">{formatDate(oilChange.LastUpdated)}</p>
+                                </div>
                               </div>
-                              <div>{oilChange.DriverName}</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1">
-                              <div className="text-gray-500 flex items-center">
-                                <Gauge size={14} className="mr-1 text-gray-400" />
-                                Odometer at Change:
-                              </div>
-                              <div>{oilChange.OdometerAtChange.toLocaleString()}</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1">
-                              <div className="text-gray-500 flex items-center">
-                                <Gauge size={14} className="mr-1 text-gray-400" />
-                                Current Odometer:
-                              </div>
-                              <div>{oilChange.CurrentOdometer.toLocaleString()}</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1">
-                              <div className="text-gray-500 flex items-center">
-                                <Gauge size={14} className="mr-1 text-gray-400" />
-                                Mileage:
-                              </div>
-                              <div>{oilChange.Mileage.toLocaleString()}</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1">
-                              <div className="text-gray-500 flex items-center">
-                                <DollarSign size={14} className="mr-1 text-gray-400" />
-                                Cost:
-                              </div>
-                              <div>${oilChange.Cost.toFixed(2)}</div>
+                            )}
+                            
+                            <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
+                              <Link
+                                to={`/edit-oil-change/${oilChange.ID}`}
+                                className="flex-1 flex justify-center items-center py-2.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+                              >
+                                <Edit size={16} className="mr-2" />
+                                Edit
+                              </Link>
+                              <button
+                                onClick={() => openDeleteModal(oilChange.ID)}
+                                className="flex-1 flex justify-center items-center py-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium"
+                              >
+                                <Trash2 size={16} className="mr-2" />
+                                Delete
+                              </button>
                             </div>
                           </div>
-                        )}
-                             
-                        <div className="flex mt-3 pt-2 border-t border-gray-100">
-                          <Link
-                            to={`/edit-oil-change/${oilChange.ID}`}
-                            className="flex-1 flex justify-center items-center py-2 text-sm text-blue-600"
-                          >
-                            <Edit size={16} className="mr-1" />
-                            Edit
-                          </Link>
-                          <button
-                            onClick={() => openDeleteModal(oilChange.ID)}
-                            className="flex-1 flex justify-center items-center py-2 text-sm text-red-600"
-                          >
-                            <Trash2 size={16} className="mr-1" />
-                            Delete
-                          </button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 text-center text-sm text-gray-500">
+          <p>© {new Date().getFullYear()} Shawket Ibrahim. All rights reserved.</p>
         </div>
       </div>
     </div>

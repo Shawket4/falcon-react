@@ -136,7 +136,7 @@ const AddOilChange = (props) => {
 
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
-    navigate('/oil-changes');
+    navigate('/oil-changes-list');
   };
 
   const handleCloseErrorModal = () => {
@@ -144,7 +144,7 @@ const AddOilChange = (props) => {
   };
 
   const handleCancel = () => {
-    navigate('/oil-changes');
+    navigate('/oil-changes-list');
   };
 
   if (isLoading && !cars.length) {

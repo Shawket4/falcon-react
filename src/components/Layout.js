@@ -238,7 +238,6 @@ const Layout = ({ children }) => {
             icon: Building, 
             label: 'Vendor Directory',
             description: 'Manage vendors',
-            pathIncludes: ['/vendors/', '!/vendors/create']
           },
           { 
             path: '/transactions', 
@@ -351,8 +350,8 @@ const Layout = ({ children }) => {
     if (!userPermission) return null;
     
     const badges = {
-      1: { label: 'Viewer', color: 'bg-gray-100 text-gray-700 border-gray-200' },
-      2: { label: 'Editor', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+      1: { label: 'Office', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+      2: { label: 'Office', color: 'bg-blue-100 text-blue-700 border-blue-200' },
       3: { label: 'Manager', color: 'bg-purple-100 text-purple-700 border-purple-200' },
       4: { label: 'Admin', color: 'bg-red-100 text-red-700 border-red-200' }
     };

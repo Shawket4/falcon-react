@@ -125,8 +125,6 @@ const DriverDetails = () => {
   
   const handleEditDriver = () => {
     if (!canEditDelete) return;
-    
-    // Navigate to edit driver page (not implemented in this example)
     navigate(`/driver/edit/${id}`);
   };
   

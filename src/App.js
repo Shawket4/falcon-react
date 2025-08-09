@@ -46,6 +46,7 @@ import Portfolio from './portfolio';
 import CV from './cv';
 import SpeedViolations from './components/SpeedViolations';
 import LogsViewer from './components/LogsViewer';
+import EditDriver from './components/Drivers/EditDriver';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -132,6 +133,13 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <DriverDetails />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/driver/edit/:id" element={
+              <ProtectedRoute>
+                <Layout>
+                  <EditDriver />
                 </Layout>
               </ProtectedRoute>
             } />

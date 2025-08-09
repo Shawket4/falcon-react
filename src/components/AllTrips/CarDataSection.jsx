@@ -9,10 +9,6 @@ import {
   Legend, 
   ResponsiveContainer, 
   Cell, 
-  PieChart, 
-  Pie,
-  LineChart,
-  Line,
   Treemap
 } from 'recharts';
 
@@ -42,11 +38,42 @@ const CarDataSection = ({ carTotals, hasFinancialAccess, formatNumber, formatCur
   const [sortConfig, setSortConfig] = useState({ key: 'base_revenue', direction: 'desc' });
   const [showAllCars, setShowAllCars] = useState(false);
   
+  // Calculate enhanced car data with revenue percentages
+  const enhancedCarData = useMemo(() => {
+    if (!carTotals || !carTotals.length || !hasFinancialAccess) return carTotals || [];
+    
+    // Calculate average revenue per liter and per km across all cars
+    const totalRevenue = carTotals.reduce((sum, car) => sum + ((car.base_revenue || 0) + (car.vat || 0) + (car.rent || 0)), 0);
+    const totalVolume = carTotals.reduce((sum, car) => sum + (car.liters || 0), 0);
+    const totalDistance = carTotals.reduce((sum, car) => sum + (car.distance || 0), 0);
+    
+    const avgRevenuePerLiter = totalVolume > 0 ? totalRevenue / totalVolume : 0;
+    const avgRevenuePerKm = totalDistance > 0 ? totalRevenue / totalDistance : 0;
+    
+    return carTotals.map(car => {
+      const carTotalRevenue = (car.base_revenue || 0) + (car.vat || 0) + (car.rent || 0);
+      const carRevenuePerLiter = car.liters > 0 ? carTotalRevenue / car.liters : 0;
+      const carRevenuePerKm = car.distance > 0 ? carTotalRevenue / car.distance : 0;
+      
+      // Calculate percentage relative to average (100% = average performance)
+      const volumeRevenuePercentage = avgRevenuePerLiter > 0 ? (carRevenuePerLiter / avgRevenuePerLiter) * 100 : 0;
+      const distanceRevenuePercentage = avgRevenuePerKm > 0 ? (carRevenuePerKm / avgRevenuePerKm) * 100 : 0;
+      
+      return {
+        ...car,
+        revenuePerLiter: carRevenuePerLiter,
+        revenuePerKm: carRevenuePerKm,
+        volumeRevenuePercentage,
+        distanceRevenuePercentage
+      };
+    });
+  }, [carTotals, hasFinancialAccess]);
+  
   // Sort cars based on current sort configuration - Must be called before any early returns
   const sortedCarTotals = useMemo(() => {
-    if (!carTotals || !carTotals.length) return [];
+    if (!enhancedCarData || !enhancedCarData.length) return [];
     
-    let sortable = [...carTotals];
+    let sortable = [...enhancedCarData];
     
     // Default sort by revenue descending if financial access available
     if (hasFinancialAccess && !sortConfig.key) {
@@ -75,7 +102,7 @@ const CarDataSection = ({ carTotals, hasFinancialAccess, formatNumber, formatCur
     }
     
     return sortable;
-  }, [carTotals, sortConfig, hasFinancialAccess]);
+  }, [enhancedCarData, sortConfig, hasFinancialAccess]);
 
   // No data handling - Now AFTER the useMemo hook
   if (!carTotals || !carTotals.length) {
@@ -124,6 +151,16 @@ const CarDataSection = ({ carTotals, hasFinancialAccess, formatNumber, formatCur
   const getSortDirectionIndicator = (key) => {
     if (sortConfig.key !== key) return null;
     return sortConfig.direction === 'asc' ? '↑' : '↓';
+  };
+
+  // Helper function to get performance indicator color and text
+  const getPerformanceIndicator = (percentage) => {
+    if (percentage >= 120) return { color: 'text-green-700 bg-green-100', text: 'Excellent' };
+    if (percentage >= 110) return { color: 'text-green-600 bg-green-50', text: 'Very Good' };
+    if (percentage >= 100) return { color: 'text-blue-600 bg-blue-50', text: 'Good' };
+    if (percentage >= 90) return { color: 'text-yellow-600 bg-yellow-50', text: 'Average' };
+    if (percentage >= 80) return { color: 'text-orange-600 bg-orange-50', text: 'Below Avg' };
+    return { color: 'text-red-600 bg-red-50', text: 'Poor' };
   };
 
   // Calculate total values
@@ -193,7 +230,7 @@ const CarDataSection = ({ carTotals, hasFinancialAccess, formatNumber, formatCur
             <div className="flex items-center">
               <div className="hidden sm:flex p-2 sm:p-3 rounded-lg bg-blue-100 text-blue-600 mr-3 sm:mr-4">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 002 2z" />
                 </svg>
               </div>
               <div>
@@ -248,6 +285,42 @@ const CarDataSection = ({ carTotals, hasFinancialAccess, formatNumber, formatCur
           )}
         </div>
       </div>
+
+      {/* Performance Legend - Only show if financial access is available */}
+      {hasFinancialAccess && (
+        <div className="bg-white p-4 sm:p-6 rounded-lg sm:rounded-xl shadow-sm border border-gray-100">
+          <h4 className="text-base sm:text-lg font-semibold text-gray-800 mb-3">Performance Legend</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-green-100 border border-green-200 rounded mr-2"></div>
+              <span className="text-green-700">≥120% Excellent</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-green-50 border border-green-100 rounded mr-2"></div>
+              <span className="text-green-600">110-119% Very Good</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-blue-50 border border-blue-100 rounded mr-2"></div>
+              <span className="text-blue-600">100-109% Good</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-yellow-50 border border-yellow-100 rounded mr-2"></div>
+              <span className="text-yellow-600">90-99% Average</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-orange-50 border border-orange-100 rounded mr-2"></div>
+              <span className="text-orange-600">80-89% Below Avg</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-red-50 border border-red-100 rounded mr-2"></div>
+              <span className="text-red-600">&lt;80% Poor</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Performance percentages are calculated relative to fleet average (100% = average revenue per liter/km)
+          </p>
+        </div>
+      )}
 
       {/* Top Performers Section - Mobile-friendly cards */}
       {hasFinancialAccess && (
@@ -490,210 +563,274 @@ const CarDataSection = ({ carTotals, hasFinancialAccess, formatNumber, formatCur
                     {getSortDirectionIndicator('liters')}
                   </div>
                 </th>
-<th 
-  scope="col" 
-  className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-  onClick={() => requestSort('distance')}
->
-  <div className="flex items-center">
-    <span className="whitespace-nowrap">Distance</span>
-    {getSortDirectionIndicator('distance')}
-  </div>
-</th>
-{hasFinancialAccess && (
-  <>
-    <th 
-      scope="col" 
-      className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-      onClick={() => requestSort('base_revenue')}
-    >
-      <div className="flex items-center">
-        <span className="whitespace-nowrap">Revenue</span>
-        {getSortDirectionIndicator('base_revenue')}
-      </div>
-    </th>
-    {hasVAT && (
-      <th 
-        scope="col" 
-        className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-        onClick={() => requestSort('vat')}
-      >
-        <div className="flex items-center">
-          <span className="whitespace-nowrap">VAT</span>
-          {getSortDirectionIndicator('vat')}
+                <th 
+                  scope="col" 
+                  className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => requestSort('distance')}
+                >
+                  <div className="flex items-center">
+                    <span className="whitespace-nowrap">Distance</span>
+                    {getSortDirectionIndicator('distance')}
+                  </div>
+                </th>
+                {hasFinancialAccess && (
+                  <>
+                    <th 
+                      scope="col" 
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => requestSort('base_revenue')}
+                    >
+                      <div className="flex items-center">
+                        <span className="whitespace-nowrap">Revenue</span>
+                        {getSortDirectionIndicator('base_revenue')}
+                      </div>
+                    </th>
+                    {hasVAT && (
+                      <th 
+                        scope="col" 
+                        className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => requestSort('vat')}
+                      >
+                        <div className="flex items-center">
+                          <span className="whitespace-nowrap">VAT</span>
+                          {getSortDirectionIndicator('vat')}
+                        </div>
+                      </th>
+                    )}
+                    {hasRent && (
+                      <th 
+                        scope="col" 
+                        className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => requestSort('rent')}
+                      >
+                        <div className="flex items-center">
+                          <span className="whitespace-nowrap">Rental</span>
+                          {getSortDirectionIndicator('rent')}
+                        </div>
+                      </th>
+                    )}
+                    {(hasVAT || hasRent) && (
+                      <th 
+                        scope="col" 
+                        className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => requestSort('totalAmount')}
+                      >
+                        <div className="flex items-center">
+                          <span className="whitespace-nowrap">Total</span>
+                          {getSortDirectionIndicator('totalAmount')}
+                        </div>
+                      </th>
+                    )}
+                    {/* New Performance Columns */}
+                    <th 
+                      scope="col" 
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => requestSort('volumeRevenuePercentage')}
+                    >
+                      <div className="flex items-center">
+                        <span className="whitespace-nowrap">Rev/Vol %</span>
+                        {getSortDirectionIndicator('volumeRevenuePercentage')}
+                      </div>
+                    </th>
+                    <th 
+                      scope="col" 
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => requestSort('distanceRevenuePercentage')}
+                    >
+                      <div className="flex items-center">
+                        <span className="whitespace-nowrap">Rev/Dist %</span>
+                        {getSortDirectionIndicator('distanceRevenuePercentage')}
+                      </div>
+                    </th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {displayedCars.map((car, index) => (
+                <tr 
+                  key={index} 
+                  className={`${selectedCar === car.car_no_plate ? 'bg-blue-50' : 'hover:bg-gray-50'} transition-colors duration-150 ease-in-out`}
+                  onClick={() => setSelectedCar(selectedCar === car.car_no_plate ? null : car.car_no_plate)}
+                >
+                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
+                    {car.car_no_plate}
+                  </td>
+                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                    {formatNumber(car.liters || 0)}
+                  </td>
+                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                    {formatNumber(car.distance || 0)}
+                  </td>
+                  {hasFinancialAccess && (
+                    <>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                        {formatCurrency(car.base_revenue || 0)}
+                      </td>
+                      {hasVAT && (
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                          {formatCurrency(car.vat || 0)}
+                        </td>
+                      )}
+                      {hasRent && (
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                          {formatCurrency(car.rent || 0)}
+                        </td>
+                      )}
+                      {(hasVAT || hasRent) && (
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
+                          {formatCurrency((car.base_revenue || 0) + (car.vat || 0) + (car.rent || 0))}
+                        </td>
+                      )}
+                      {/* New Performance Percentage Columns */}
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm">
+                        <div className="flex items-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPerformanceIndicator(car.volumeRevenuePercentage || 0).color}`}>
+                            {(car.volumeRevenuePercentage || 0).toFixed(0)}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm">
+                        <div className="flex items-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPerformanceIndicator(car.distanceRevenuePercentage || 0).color}`}>
+                            {(car.distanceRevenuePercentage || 0).toFixed(0)}%
+                          </span>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+            {/* Table footer with totals */}
+            <tfoot className="bg-gray-100">
+              <tr>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                  TOTAL
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                  {formatNumber(totalLiters)}
+                </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                  {formatNumber(totalDistance)}
+                </td>
+                {hasFinancialAccess && (
+                  <>
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                      {formatCurrency(totalRevenue)}
+                    </td>
+                    {hasVAT && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                        {formatCurrency(totalVAT)}
+                      </td>
+                    )}
+                    {hasRent && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                        {formatCurrency(totalRent)}
+                      </td>
+                    )}
+                    {(hasVAT || hasRent) && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                        {formatCurrency(totalAmount)}
+                      </td>
+                    )}
+                    {/* Average performance indicators */}
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                        100%
+                      </span>
+                    </td>
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                        100%
+                      </span>
+                    </td>
+                  </>
+                )}
+              </tr>
+            </tfoot>
+          </table>
         </div>
-      </th>
-    )}
-    {hasRent && (
-      <th 
-        scope="col" 
-        className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-        onClick={() => requestSort('rent')}
-      >
-        <div className="flex items-center">
-          <span className="whitespace-nowrap">Rental</span>
-          {getSortDirectionIndicator('rent')}
-        </div>
-      </th>
-    )}
-    {(hasVAT || hasRent) && (
-      <th 
-        scope="col" 
-        className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-        onClick={() => requestSort('totalAmount')}
-      >
-        <div className="flex items-center">
-          <span className="whitespace-nowrap">Total</span>
-          {getSortDirectionIndicator('totalAmount')}
-        </div>
-      </th>
-    )}
-  </>
-)}
-</tr>
-</thead>
-<tbody className="bg-white divide-y divide-gray-200">
-{displayedCars.map((car, index) => (
-  <tr 
-    key={index} 
-    className={`${selectedCar === car.car_no_plate ? 'bg-blue-50' : 'hover:bg-gray-50'} transition-colors duration-150 ease-in-out`}
-    onClick={() => setSelectedCar(selectedCar === car.car_no_plate ? null : car.car_no_plate)}
-  >
-    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
-      {car.car_no_plate}
-    </td>
-    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
-      {formatNumber(car.liters || 0)}
-    </td>
-    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
-      {formatNumber(car.distance || 0)}
-    </td>
-    {hasFinancialAccess && (
-      <>
-        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
-          {formatCurrency(car.base_revenue || 0)}
-        </td>
-        {hasVAT && (
-          <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
-            {formatCurrency(car.vat || 0)}
-          </td>
-        )}
-        {hasRent && (
-          <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-600">
-            {formatCurrency(car.rent || 0)}
-          </td>
-        )}
-        {(hasVAT || hasRent) && (
-          <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
-            {formatCurrency((car.base_revenue || 0) + (car.vat || 0) + (car.rent || 0))}
-          </td>
-        )}
-      </>
-    )}
-  </tr>
-))}
-</tbody>
-{/* Table footer with totals */}
-<tfoot className="bg-gray-100">
-  <tr>
-    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
-      TOTAL
-    </td>
-    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
-      {formatNumber(totalLiters)}
-    </td>
-    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
-      {formatNumber(totalDistance)}
-    </td>
-    {hasFinancialAccess && (
-      <>
-        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
-          {formatCurrency(totalRevenue)}
-        </td>
-        {hasVAT && (
-          <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
-            {formatCurrency(totalVAT)}
-          </td>
-        )}
-        {hasRent && (
-          <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
-            {formatCurrency(totalRent)}
-          </td>
-        )}
-        {(hasVAT || hasRent) && (
-          <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
-            {formatCurrency(totalAmount)}
-          </td>
-        )}
-      </>
-    )}
-  </tr>
-</tfoot>
-</table>
-</div>
-<div className="mt-4 text-xs sm:text-sm text-gray-500 flex flex-wrap gap-2 justify-between items-center">
-  <p>Click on column headers to sort. Click on a car row to highlight.</p>
-  {carTotals.length > 10 && !showAllCars && (
-    <button 
-      className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-800"
-      onClick={() => setShowAllCars(true)}
-    >
-      View all {carTotals.length} cars
-    </button>
-  )}
-</div>
-</div>
-
-{/* Efficiency Metrics Section - Conditionally shown if financial access is available */}
-{hasFinancialAccess && (
-  <div className="bg-white p-4 sm:p-6 rounded-lg sm:rounded-xl shadow-sm border border-gray-100">
-    <h4 className="text-base sm:text-lg font-semibold text-gray-800 mb-4 sm:mb-6">Efficiency Metrics</h4>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-      {sortedCarTotals.slice(0, 6).map((car, idx) => {
-        const revenuePerLiter = car.liters ? (car.base_revenue / car.liters) : 0;
-        const revenuePerKm = car.distance ? (car.base_revenue / car.distance) : 0;
-        
-        return (
-          <div 
-            key={idx} 
-            className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border transition-all duration-150 ${
-              selectedCar === car.car_no_plate 
-                ? 'border-indigo-300 bg-indigo-50' 
-                : 'border-gray-200 hover:border-indigo-200 hover:bg-indigo-50'
-            }`}
-            onClick={() => setSelectedCar(selectedCar === car.car_no_plate ? null : car.car_no_plate)}
-          >
-            <h5 className="text-sm sm:text-base font-medium text-gray-800 mb-2">{car.car_no_plate}</h5>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs text-gray-500">Revenue per L</p>
-                <p className="text-sm sm:text-lg font-semibold text-indigo-600">{formatCurrency(revenuePerLiter)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Revenue per km</p>
-                <p className="text-sm sm:text-lg font-semibold text-indigo-600">{formatCurrency(revenuePerKm)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Volume</p>
-                <p className="text-xs sm:text-sm text-gray-700">{formatNumber(car.liters)} L</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Revenue</p>
-                <p className="text-xs sm:text-sm text-gray-700">{formatCurrency(car.base_revenue)}</p>
-              </div>
-            </div>
+        <div className="mt-4 text-xs sm:text-sm text-gray-500 flex flex-wrap gap-2 justify-between items-center">
+          <div className="flex flex-wrap items-center gap-4">
+            <p>Click on column headers to sort. Click on a car row to highlight.</p>
+            {hasFinancialAccess && (
+              <p className="text-xs text-gray-400">
+                Rev/Vol % = Revenue efficiency per liter • Rev/Dist % = Revenue efficiency per km
+              </p>
+            )}
           </div>
-        );
-      })}
-    </div>
-    {sortedCarTotals.length > 6 && (
-      <div className="mt-4 text-center">
-        <p className="text-xs sm:text-sm text-gray-500">Showing top 6 cars by revenue. See table above for all cars.</p>
+          {carTotals.length > 10 && !showAllCars && (
+            <button 
+              className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-800"
+              onClick={() => setShowAllCars(true)}
+            >
+              View all {carTotals.length} cars
+            </button>
+          )}
+        </div>
       </div>
-    )}
-  </div>
-)}
-</div>
-  )
-}
+
+      {/* Efficiency Metrics Section - Enhanced with percentage indicators */}
+      {hasFinancialAccess && (
+        <div className="bg-white p-4 sm:p-6 rounded-lg sm:rounded-xl shadow-sm border border-gray-100">
+          <h4 className="text-base sm:text-lg font-semibold text-gray-800 mb-4 sm:mb-6">Efficiency Metrics</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {sortedCarTotals.slice(0, 6).map((car, idx) => {
+              const totalRevenue = (car.base_revenue || 0) + (car.vat || 0) + (car.rent || 0);
+const revenuePerLiter = car.liters ? (totalRevenue / car.liters) : 0;
+const revenuePerKm = car.distance ? (totalRevenue / car.distance) : 0;
+              const volumeIndicator = getPerformanceIndicator(car.volumeRevenuePercentage || 0);
+              const distanceIndicator = getPerformanceIndicator(car.distanceRevenuePercentage || 0);
+              
+              return (
+                <div 
+                  key={idx} 
+                  className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border transition-all duration-150 ${
+                    selectedCar === car.car_no_plate 
+                      ? 'border-indigo-300 bg-indigo-50' 
+                      : 'border-gray-200 hover:border-indigo-200 hover:bg-indigo-50'
+                  }`}
+                  onClick={() => setSelectedCar(selectedCar === car.car_no_plate ? null : car.car_no_plate)}
+                >
+                  <h5 className="text-sm sm:text-base font-medium text-gray-800 mb-2">{car.car_no_plate}</h5>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500">Revenue per L</p>
+                      <p className="text-sm sm:text-lg font-semibold text-indigo-600">{formatCurrency(revenuePerLiter)}</p>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${volumeIndicator.color}`}>
+                        {(car.volumeRevenuePercentage || 0).toFixed(0)}% {volumeIndicator.text}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Revenue per km</p>
+                      <p className="text-sm sm:text-lg font-semibold text-indigo-600">{formatCurrency(revenuePerKm)}</p>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${distanceIndicator.color}`}>
+                        {(car.distanceRevenuePercentage || 0).toFixed(0)}% {distanceIndicator.text}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Volume</p>
+                      <p className="text-xs sm:text-sm text-gray-700">{formatNumber(car.liters)} L</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Revenue</p>
+                      <p className="text-xs sm:text-sm text-gray-700">{formatCurrency(car.base_revenue)}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {sortedCarTotals.length > 6 && (
+            <div className="mt-4 text-center">
+              <p className="text-xs sm:text-sm text-gray-500">Showing top 6 cars by revenue. See table above for all cars.</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default CarDataSection;

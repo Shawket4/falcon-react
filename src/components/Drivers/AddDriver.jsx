@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import apiClient from '../../apiClient';
@@ -177,7 +177,6 @@ const handleSubmit = async () => {
   
   // Get date range for year picker (current year to 10 years from now)
   const minYear = today.getFullYear();
-  const maxYear = minYear + 10;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -332,32 +331,35 @@ const handleSubmit = async () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => console.log('Cancel')}
-                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className={`px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium shadow-lg hover:from-blue-700 hover:to-indigo-700 transform transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 ${
-                    loading ? 'opacity-75 cursor-not-allowed' : ''
-                  }`}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <span className="flex items-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
-                      Processing...
-                    </span>
-                  ) : (
-                    'Register Driver'
-                  )}
-                </button>
-              </div>
+              <div className="flex justify-end space-x-2 sm:space-x-4 pt-6 border-t border-gray-200">
+  {/* Cancel Button */}
+  <button
+    type="button"
+    onClick={() => console.log('Cancel')}
+    className="px-4 sm:px-6 py-2 sm:py-3 border border-gray-300 bg-white text-gray-700 rounded-lg font-medium shadow-sm hover:bg-gray-50 active:bg-gray-100 transition-colors"
+  >
+    Cancel
+  </button>
+
+  {/* Primary Button */}
+  <button
+    type="button"
+    onClick={handleSubmit}
+    className={`px-5 sm:px-8 py-2 sm:py-3 bg-blue-600 text-white rounded-lg font-medium shadow-md hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-200
+      ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+    disabled={loading}
+  >
+    {loading ? (
+      <span className="flex items-center justify-center">
+        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+        Processing...
+      </span>
+    ) : (
+      'Register Driver'
+    )}
+  </button>
+</div>
+
             </div>
           </div>
         </div>

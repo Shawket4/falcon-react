@@ -500,46 +500,52 @@ const EditDriver = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className={`px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors ${
-                    !hasChanges ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={!hasChanges}
-                >
-                  Reset Changes
-                </button>
-                
-                <div className="flex space-x-4">
-                  <button
-                    type="button"
-                    onClick={() => window.location.href = '/drivers'}
-                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    className={`px-8 py-3 bg-blue-600 text-white rounded-lg font-medium shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 ${
-                      (updating || !hasChanges) ? 'opacity-75 cursor-not-allowed' : ''
-                    }`}
-                    disabled={updating || !hasChanges}
-                  >
-                    {updating ? (
-                      <span className="flex items-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
-                        Updating...
-                      </span>
-                    ) : (
-                      'Update Driver'
-                    )}
-                  </button>
-                </div>
-              </div>
+             {/* Action Buttons */}
+<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pt-6 border-t border-gray-200">
+  
+  {/* Right Side Buttons (Cancel + Update) */}
+  <div className="flex flex-row gap-3 w-full sm:w-auto justify-between sm:justify-start">
+    {/* Cancel */}
+    <button
+      type="button"
+      onClick={() => window.location.href = '/drivers'}
+      className="px-4 py-2 sm:px-5 sm:py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+    >
+      Cancel
+    </button>
+
+    {/* Update */}
+    <button
+      type="button"
+      onClick={handleSubmit}
+      className={`px-5 py-2 sm:px-6 sm:py-2.5 bg-blue-600 text-white rounded-lg font-medium shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300
+        ${(updating || !hasChanges) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+      disabled={updating || !hasChanges}
+    >
+      {updating ? (
+        <span className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-2 border-white border-t-transparent mr-2"></div>
+          Updating...
+        </span>
+      ) : (
+        'Update Driver'
+      )}
+    </button>
+  </div>
+
+  {/* Reset Button */}
+  <button
+    type="button"
+    onClick={handleReset}
+    className={`px-4 py-2 sm:px-5 sm:py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium transition-colors
+      ${!hasChanges ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}
+      order-last sm:order-first w-full sm:w-auto`}
+    disabled={!hasChanges}
+  >
+    Reset Changes
+  </button>
+</div>
+
             </div>
           </div>
         </div>

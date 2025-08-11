@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Search, Filter } from 'lucide-react';
 import { useAuth } from '../AuthContext';
@@ -25,9 +25,7 @@ const FuelEventsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showTimeSeriesAnalysis, setShowTimeSeriesAnalysis] = useState(false);
-  
-  // Add method filter state
-  const [methodFilter, setMethodFilter] = useState('all');
+  const [isPetroAppOnly, setIsPetroAppOnly] = useState(false); // Toggle state
 
   const [localDateRange, setLocalDateRange] = useState({
     startDate: null,
@@ -40,25 +38,15 @@ const FuelEventsList = () => {
     error, 
     fetchEvents, 
     activeFilter, 
-    setActiveFilter 
+    setActiveFilter,
+    toggleMethodFilter
   } = useFuelEventsState();
-  
-  // Modified fetch function to include method filter
-  const fetchEventsWithFilters = useCallback((dateRange = localDateRange, method = methodFilter) => {
-    // Pass both date range and method filter to fetchEvents
-    // You'll need to modify your fetchEvents function in useFuelEventsState 
-    // to accept and handle the method parameter
-    fetchEvents({ 
-      ...dateRange, 
-      method: method 
-    });
-  }, [fetchEvents, localDateRange, methodFilter]);
   
   // Fetch events on component mount if authenticated
   useEffect(() => {
     if (isAuthenticated) {
       // Initial fetch will use default date range (current month) from backend
-      fetchEventsWithFilters();
+      fetchEvents();
     }
     // Only run this effect once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,29 +54,31 @@ const FuelEventsList = () => {
 
   // Update local date range when active filter changes
   useEffect(() => {
-    setLocalDateRange(activeFilter);
+    setLocalDateRange({
+      startDate: activeFilter.startDate,
+      endDate: activeFilter.endDate
+    });
   }, [activeFilter]);
 
-  // Apply date filter (modified to include method)
+  // Handle method toggle
+  const handleMethodToggle = useCallback(() => {
+    const newToggleState = !isPetroAppOnly;
+    setIsPetroAppOnly(newToggleState);
+    toggleMethodFilter(newToggleState);
+  }, [isPetroAppOnly, toggleMethodFilter]);
+
+  // Apply date filter
   const applyDateFilter = useCallback((dateRange) => {
     // Send the new date range to fetch data from the backend
-    fetchEventsWithFilters(dateRange, methodFilter);
-  }, [fetchEventsWithFilters, methodFilter]);
+    fetchEvents(dateRange);
+  }, [fetchEvents]);
 
-  // Handle method filter change
-  const handleMethodFilterChange = useCallback((method) => {
-    setMethodFilter(method);
-    // Fetch with new method filter
-    fetchEventsWithFilters(localDateRange, method);
-  }, [fetchEventsWithFilters, localDateRange]);
-
-  // Reset date range filter (modified to reset method filter too)
+  // Reset date range filter
   const resetDateFilter = useCallback(() => {
     const emptyDateRange = { startDate: null, endDate: null };
-    setMethodFilter('all');
     // Fetch with null values to use backend defaults (current month)
-    fetchEventsWithFilters(emptyDateRange, 'all');
-  }, [fetchEventsWithFilters]);
+    fetchEvents(emptyDateRange);
+  }, [fetchEvents]);
 
   // Apply current month filter
   const applyCurrentMonthFilter = useCallback(() => {
@@ -107,8 +97,8 @@ const FuelEventsList = () => {
     };
     
     // No need to set local date range here, it will be updated by the fetchEvents call
-    fetchEventsWithFilters(currentMonthRange, methodFilter);
-  }, [fetchEventsWithFilters, methodFilter]);
+    fetchEvents(currentMonthRange);
+  }, [fetchEvents]);
 
   // Memoized filtering for client-side search
   const filteredEvents = useMemo(() => {
@@ -299,8 +289,8 @@ const FuelEventsList = () => {
 
   // Check if custom filter is active (not the default current month)
   const isCustomFilter = useMemo(() => {
-    return localDateRange.startDate !== null || localDateRange.endDate !== null || methodFilter !== 'all';
-  }, [localDateRange, methodFilter]);
+    return localDateRange.startDate !== null || localDateRange.endDate !== null;
+  }, [localDateRange]);
 
   return (
     <ErrorBoundary>
@@ -330,18 +320,15 @@ const FuelEventsList = () => {
             </div>
             <button 
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded-lg transition-colors relative ${
+              className={`p-2 rounded-lg transition-colors ${
                 showFilters || isCustomFilter
                   ? 'bg-blue-500 text-white hover:bg-blue-600' 
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
               aria-label="Filter"
-              title="Filter by date and method"
+              title="Filter by date"
             >
               <Filter size={20} />
-              {methodFilter === 'PetroApp' && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full"></span>
-              )}
             </button>
 
             <button 
@@ -355,7 +342,9 @@ const FuelEventsList = () => {
           </div>
         </div>
 
-        {/* Date Filter Modal with Method Filter */}
+
+
+        {/* Date Filter Modal */}
         {showFilters && (
           <DateFilterModal 
             dateRange={localDateRange} 
@@ -364,68 +353,59 @@ const FuelEventsList = () => {
             resetDateFilter={resetDateFilter} 
             applyCurrentMonthFilter={applyCurrentMonthFilter}
             setShowFilters={setShowFilters}
-            methodFilter={methodFilter}
-            onMethodFilterChange={handleMethodFilterChange}
+            isPetroAppOnly={isPetroAppOnly}
+            onMethodToggle={handleMethodToggle}
           />
         )}
         
-        {/* Active Filters Display - Modified to show method filter */}
+        {/* Active Filters Display */}
         {isCustomFilter && (
           <ActiveFilters 
             dateRange={localDateRange}
             resetDateFilter={resetDateFilter}
             applyCurrentMonthFilter={applyCurrentMonthFilter}
-            methodFilter={methodFilter}
           />
         )}
         
         {/* Global Statistics */}
         {sortedCarPlates.length > 0 && (
-          <GlobalStatistics stats={globalStats} showMethodFilter={methodFilter === 'PetroApp'} />
+          <GlobalStatistics stats={globalStats} />
         )}
         
         {/* Time Series Analysis Dropdown */}
-        {(
-          <div className="mb-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-              <div className="bg-gray-50 px-5 py-3 border-b border-gray-200 flex justify-between items-center">
-                <h3 className="font-semibold text-gray-800 flex items-center">
-                  <BarChart3 size={18} className="mr-2 text-purple-600" />
-                  Fuel Time Series Analysis
-                  {methodFilter === 'PetroApp' && (
-                    <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                      PetroApp Only
-                    </span>
-                  )}
-                </h3>
-                <button
-                  onClick={() => setShowTimeSeriesAnalysis(!showTimeSeriesAnalysis)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  {showTimeSeriesAnalysis ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
-              </div>
-              
-              {showTimeSeriesAnalysis && (
-                <div className="p-5">
-                  <FuelTimeSeriesAnalysis 
-                    dateRange={{
-                      startDate: activeFilter.startDate, 
-                      endDate: activeFilter.endDate
-                    }}
-                    methodFilter={methodFilter}
-                  />
-                </div>
-              )}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-gray-50 px-5 py-3 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="font-semibold text-gray-800 flex items-center">
+                <BarChart3 size={18} className="mr-2 text-purple-600" />
+                Fuel Time Series Analysis
+              </h3>
+              <button
+                onClick={() => setShowTimeSeriesAnalysis(!showTimeSeriesAnalysis)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                {showTimeSeriesAnalysis ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </button>
             </div>
+            
+            {showTimeSeriesAnalysis && (
+              <div className="p-5">
+                <FuelTimeSeriesAnalysis 
+                  dateRange={{
+                    startDate: activeFilter.startDate, 
+                    endDate: activeFilter.endDate
+                  }} 
+                />
+              </div>
+            )}
           </div>
-        )}
-        
+        </div>
+
         {/* Content Area */}
         {loading ? (
           <LoadingState />
         ) : error ? (
-          <ErrorState error={error} retry={() => fetchEventsWithFilters(localDateRange, methodFilter)} />
+          <ErrorState error={error} retry={fetchEvents} />
         ) : sortedCarPlates.length === 0 ? (
           <EmptyState navigate={navigate} />
         ) : (

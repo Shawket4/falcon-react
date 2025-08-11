@@ -12,7 +12,8 @@ export const useFuelEventsState = () => {
   // Initialize with null values to use backend defaults (current month)
   const [activeFilter, setActiveFilter] = useState({
     startDate: null,
-    endDate: null
+    endDate: null,
+    method: 'all' // Default to 'all' on mount
   });
   
   // Use a ref to track API calls in progress
@@ -31,6 +32,10 @@ export const useFuelEventsState = () => {
     }
     if (filterToUse.endDate) {
       params.append('endDate', format(filterToUse.endDate, 'yyyy-MM-dd'));
+    }
+    // Add method parameter
+    if (filterToUse.method && filterToUse.method !== 'all') {
+      params.append('method', filterToUse.method);
     }
     
     const queryString = params.toString();
@@ -63,31 +68,45 @@ export const useFuelEventsState = () => {
   }, []);
   
   // Public fetch function that queues API calls to prevent duplicates
-  const fetchEvents = useCallback((dateRange = null) => {
+  const fetchEvents = useCallback((dateRange = null, methodFilter = null) => {
     // Don't fetch if not authenticated
     if (!isAuthenticated) {
       setError("Authentication required");
       return;
     }
     
-    // Update active filter if dateRange is provided
+    // Create new filter object
+    let newFilter = { ...activeFilter };
+    
+    // Update date range if provided
     if (dateRange) {
-      setActiveFilter(dateRange);
+      newFilter = { ...newFilter, ...dateRange };
     }
     
-    // Use the provided dateRange or fall back to the current activeFilter
-    const filterToUse = dateRange || activeFilter;
+    // Update method filter if provided
+    if (methodFilter !== null) {
+      newFilter = { ...newFilter, method: methodFilter };
+    }
+    
+    // Update active filter
+    setActiveFilter(newFilter);
     
     // If an API call is already in progress, queue this one for later
     if (apiCallInProgressRef.current) {
       console.log("API call already in progress, queueing next call");
-      pendingCallRef.current = filterToUse;
+      pendingCallRef.current = newFilter;
       return;
     }
     
     // Otherwise make the API call immediately
-    makeApiCall(filterToUse);
+    makeApiCall(newFilter);
   }, [isAuthenticated, activeFilter, makeApiCall]);
+  
+  // Function to toggle method filter
+  const toggleMethodFilter = useCallback((isPetroAppOnly) => {
+    const methodFilter = isPetroAppOnly ? 'PetroApp' : 'all';
+    fetchEvents(null, methodFilter);
+  }, [fetchEvents]);
   
   // Reset filter when component unmounts
   useEffect(() => {
@@ -104,6 +123,7 @@ export const useFuelEventsState = () => {
     error, 
     fetchEvents,
     activeFilter,
-    setActiveFilter
+    setActiveFilter,
+    toggleMethodFilter
   };
 };

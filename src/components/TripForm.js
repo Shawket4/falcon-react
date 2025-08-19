@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import { debounce } from 'lodash'; // Import lodash for debouncing
-
+import LocationDialog from './LocationDialog';
 const TripForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -39,6 +39,12 @@ const TripForm = () => {
   const [companyDropdownVisible, setCompanyDropdownVisible] = useState(false);
   const [terminalDropdownVisible, setTerminalDropdownVisible] = useState(false);
   
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [locationData, setLocationData] = useState({
+  dropOffLocation: null,
+  terminalLocation: null
+  });
+
   // Refs for dropdown containers
   const carDropdownRef = useRef(null);
   const driverDropdownRef = useRef(null);
@@ -339,60 +345,80 @@ const TripForm = () => {
     setTripData({ ...tripData, [name]: value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!tripData.company || !tripData.terminal || !tripData.drop_off_point) {
+    setError('Please select a company, terminal, and a drop-off location');
+    return;
+  }
+  
+  if (!tripData.car_no_plate || !tripData.driver_name) {
+    setError('Please select a car and driver');
+    return;
+  }
+  
+  if (!tripData.receipt_no) {
+    setError('Receipt number is required');
+    return;
+  }
+  
+  setIsLoading(true);
+  setError('');
+  
+  try {
+    // Format the data for submission
+    const dataToSubmit = {
+      ...tripData,
+      car_id: parseInt(tripData.car_id, 10),
+      driver_id: parseInt(tripData.driver_id, 10),
+      tank_capacity: parseInt(tripData.tank_capacity, 10),
+      revenue: parseFloat(tripData.revenue),
+      mileage: parseFloat(tripData.mileage),
+      transporter: 'Apex'
+    };
     
-    if (!tripData.company || !tripData.terminal || !tripData.drop_off_point) {
-      setError('Please select a company, terminal, and a drop-off location');
-      return;
+    // Ensure these are valid numbers and not NaN
+    if (isNaN(dataToSubmit.car_id)) dataToSubmit.car_id = 0;
+    if (isNaN(dataToSubmit.driver_id)) dataToSubmit.driver_id = 0;
+    if (isNaN(dataToSubmit.tank_capacity)) dataToSubmit.tank_capacity = 0;
+    if (isNaN(dataToSubmit.revenue)) dataToSubmit.revenue = 0;
+    if (isNaN(dataToSubmit.mileage)) dataToSubmit.mileage = 0;
+    
+    let response;
+    if (id) {
+      response = await apiClient.put(`/api/trips/${id}`, dataToSubmit);
+    } else {
+      response = await apiClient.post(`/api/trips`, dataToSubmit);
     }
     
-    if (!tripData.car_no_plate || !tripData.driver_name) {
-      setError('Please select a car and driver');
-      return;
-    }
-    
-    if (!tripData.receipt_no) {
-      setError('Receipt number is required');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError('');
-    
-    try {
-      // Format the data for submission
-      const dataToSubmit = {
-        ...tripData,
-        car_id: parseInt(tripData.car_id, 10),
-        driver_id: parseInt(tripData.driver_id, 10),
-        tank_capacity: parseInt(tripData.tank_capacity, 10),
-        revenue: parseFloat(tripData.revenue),
-        mileage: parseFloat(tripData.mileage),
-        transporter: 'Apex' // Ensure transporter is always 'Apex'
-      };
+    // Only show location dialog if we have location data
+    if (response.data && 
+        response.data.drop_off_point_location && 
+        response.data.terminal_location &&
+        response.data.drop_off_point_location.lat && 
+        response.data.drop_off_point_location.lng &&
+        response.data.terminal_location.lat && 
+        response.data.terminal_location.lng) {
       
-      // Ensure these are valid numbers and not NaN
-      if (isNaN(dataToSubmit.car_id)) dataToSubmit.car_id = 0;
-      if (isNaN(dataToSubmit.driver_id)) dataToSubmit.driver_id = 0;
-      if (isNaN(dataToSubmit.tank_capacity)) dataToSubmit.tank_capacity = 0;
-      if (isNaN(dataToSubmit.revenue)) dataToSubmit.revenue = 0;
-      if (isNaN(dataToSubmit.mileage)) dataToSubmit.mileage = 0;
-      
-      if (id) {
-        await apiClient.put(`/api/trips/${id}`, dataToSubmit);
-      } else {
-        await apiClient.post(`/api/trips`, dataToSubmit);
-      }
-      
+      setLocationData({
+        dropOffLocation: response.data.drop_off_point_location,
+        terminalLocation: response.data.terminal_location,
+        routeData: response.data.route_data || null // Allow route_data to be null
+      });
+      setShowLocationDialog(true);
+    } else {
+      // If no location data, just navigate directly to trips list
       navigate('/trips-list');
-    } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
     }
-  };
+    
+  } catch (err) {
+    setError(err.response?.data?.message || 'An error occurred');
+    console.error(err);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Pagination handlers
   const handleNextPage = () => {
@@ -896,6 +922,25 @@ const TripForm = () => {
           )}
         </div>
       </div>
+
+ <LocationDialog
+  isOpen={showLocationDialog}
+  onClose={() => {
+    setShowLocationDialog(false);
+    navigate('/trips-list');
+  }}
+  dropOffLocation={locationData.dropOffLocation}
+  terminalLocation={locationData.terminalLocation}
+  isEdit={!!id}
+  tripDetails={{
+    company: tripData.company,
+    terminal: tripData.terminal,
+    drop_off_point: tripData.drop_off_point,
+    receipt_no: tripData.receipt_no,
+    mileage: tripData.mileage
+  }}
+  routeData={locationData.routeData} // Add this line
+/>
       
       {/* Copyright footer */}
       <div className="py-3 px-6 mt-6 bg-white border border-gray-200 rounded-md text-center text-gray-500 text-sm">

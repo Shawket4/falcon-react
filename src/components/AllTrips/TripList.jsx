@@ -141,7 +141,7 @@ const TripList = () => {
     setIsExporting(true);
     try {
       let url = `/api/trips`;
-      let params = { limit: 1000 }; // Request a large number to get all trips
+      let params = { limit: 10000 }; // Request a large number to get all trips
       
       // Add search term to params if provided
       if (searchTerm) {

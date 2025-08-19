@@ -17,13 +17,11 @@ import TableHeader from './TableHeader';
 import EmptyTableState from './EmptyTableState';
 
 const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetails }) => {
-  const formatCurrency = (amount) => {
+   const formatCurrency = (amount) => {
     if (typeof amount !== 'number') return amount || '—';
     return new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
-      currency: 'USD',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 0
     }).format(amount);
   };
 

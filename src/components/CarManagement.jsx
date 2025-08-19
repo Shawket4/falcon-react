@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../apiClient';
 import SearchableDropdown from './SearchableDropdown';
@@ -576,14 +577,46 @@ const CarManagement = () => {
                     
                     {/* Location Information */}
                     {car.location && (
-                      <div className="mt-5 pt-4 border-t border-gray-100">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                          <span className="font-medium">Current Location:</span>
-                          <span className="ml-2">{car.location}</span>
-                        </div>
-                      </div>
-                    )}
+  <div className="mt-5 pt-4 border-t border-gray-100">
+    <div 
+      className="flex items-center text-sm text-gray-600 cursor-pointer hover:text-blue-600 hover:bg-gray-50 p-2 -m-2 rounded transition-all"
+      onClick={() => window.open(`https://www.google.com/maps?q=${car.lat},${car.long}`, '_blank')}
+    >
+      <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+      <span className="font-medium">Current Location:</span>
+      <span className="ml-2">{car.location}</span>
+      <ExternalLink className="h-3 w-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </div>
+  </div>
+)}
+{car.engine_status && (
+      <div className="flex items-center text-sm text-gray-600 mt-3">
+        <div className={`h-2 w-2 rounded-full mr-3 ${
+          car.engine_status === 'Ignition On' ? 'bg-green-500' : 'bg-red-500'
+        }`} />
+        <span className="font-medium">Engine Status:</span>
+        <span className={`ml-2 ${
+          car.engine_status === 'Ignition On' ? 'text-green-600' : 'text-red-600'
+        }`}>
+          {car.engine_status}
+        </span>
+      </div>
+    )}
+    {car.speed !== undefined && car.speed !== null && (
+  <div className="flex items-center text-sm text-gray-600 mt-3">
+    <Gauge className={`h-4 w-4 mr-2 ${
+      car.speed === 0 ? 'text-gray-400' : 
+      car.speed > 80 ? 'text-red-500' : 'text-green-500'
+    }`} />
+    <span className="font-medium">Speed:</span>
+    <span className={`ml-2 font-mono ${
+      car.speed === 0 ? 'text-gray-500' : 
+      car.speed > 80 ? 'text-red-600' : 'text-green-600'
+    }`}>
+      {car.speed} km/h
+    </span>
+  </div>
+)}
                   </div>
                 )}
               </div>

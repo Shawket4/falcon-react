@@ -1,182 +1,278 @@
 // File: components/trips/TripTable.jsx
 import { Link } from 'react-router-dom';
+import { 
+  Edit3, 
+  FileText, 
+  Trash2, 
+  Calendar, 
+  Building2, 
+  MapPin, 
+  User, 
+  Car, 
+  Fuel,
+  DollarSign,
+  Route
+} from 'lucide-react';
 import TableHeader from './TableHeader';
 import EmptyTableState from './EmptyTableState';
 
-const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete }) => {
+const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetails }) => {
+  const formatCurrency = (amount) => {
+    if (typeof amount !== 'number') return amount || '—';
+    return new Intl.NumberFormat('en-US', { 
+      style: 'currency', 
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
+
+  const formatDistance = (distance) => {
+    if (typeof distance !== 'number') return distance || '—';
+    return `${distance.toFixed(1)} km`;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '—';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    // You can expand this based on trip status if available
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        Completed
+      </span>
+    );
+  };
+
   return (
-    <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm w-full">
-      <table className="w-full min-w-[800px] divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <TableHeader
-              label="Receipt No"
-              field="receipt_no"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="py-3 pl-4 pr-3 w-24"
-            />
-            <TableHeader
-              label="Date"
-              field="date"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="px-3 py-3 w-24"
-            />
-            <TableHeader
-              label="Company"
-              field="company"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="px-3 py-3 w-32"
-            />
-            <TableHeader
-              label="Terminal"
-              field="terminal"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="px-3 py-3 w-32"
-            />
-            <TableHeader
-              label="Drop-off"
-              field="drop_off_point"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="px-3 py-3 w-32"
-            />
-            <TableHeader
-              label="Tank"
-              field="tank_capacity"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="px-3 py-3 w-24"
-            />
-            <TableHeader
-              label="Driver"
-              field="driver_name"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="px-3 py-3 w-32"
-            />
-            <TableHeader
-              label="Car"
-              field="car_no_plate"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="px-3 py-3 w-24"
-            />
-            <TableHeader
-              label="Distance"
-              field="mileage"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="px-3 py-3 w-24"
-              icon={
-                <svg className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              }
-            />
-            <TableHeader
-              label="Fee"
-              field="fee"
-              sortConfig={sortConfig}
-              onSort={onSort}
-              className="px-3 py-3 w-24"
-              icon={
-                <svg className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              }
-            />
-            <th scope="col" className="relative px-3 py-3 text-right w-28">
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
-          {isLoading && !trips.length ? (
-            <tr>
-              <td colSpan="11" className="px-4 py-8 text-center text-sm text-gray-500">
-                <div className="flex justify-center">
-                  <svg className="animate-spin h-6 w-6 text-blue-500 mr-3" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1200px]">
+          <thead>
+            <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <TableHeader
+                label="Receipt No"
+                field="receipt_no"
+                sortConfig={sortConfig}
+                onSort={onSort}
+                className="py-4 pl-6 pr-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+              />
+              <TableHeader
+                label="Date"
+                field="date"
+                sortConfig={sortConfig}
+                onSort={onSort}
+                className="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+              />
+              <TableHeader
+                label="Company"
+                field="company"
+                sortConfig={sortConfig}
+                onSort={onSort}
+                className="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+              />
+              <TableHeader
+                label="Route"
+                field="terminal"
+                sortConfig={sortConfig}
+                onSort={onSort}
+                className="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+              />
+              <TableHeader
+                label="Vehicle & Driver"
+                field="car_no_plate"
+                sortConfig={sortConfig}
+                onSort={onSort}
+                className="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+              />
+              <TableHeader
+                label="Tank"
+                field="tank_capacity"
+                sortConfig={sortConfig}
+                onSort={onSort}
+                className="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+              />
+              <TableHeader
+                label="Distance & Fee"
+                field="mileage"
+                sortConfig={sortConfig}
+                onSort={onSort}
+                className="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                icon={
+                  <svg className="h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
-                  <span>Loading trips...</span>
-                </div>
-              </td>
+                }
+              />
+              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
-          ) : trips.length === 0 ? (
-            <tr>
-              <td colSpan="11">
-                <EmptyTableState />
-              </td>
-            </tr>
-          ) : (
-            trips.map((trip) => (
-              <tr key={trip.ID} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 truncate">
-                  {trip.receipt_no || '—'}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
-                  {trip.date}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
-                  {trip.company}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
-                  {trip.terminal}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
-                  {trip.drop_off_point}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
-                  {trip.tank_capacity || '—'}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
-                  {trip.driver_name}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate">
-                  {trip.car_no_plate}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
-                  {typeof trip.mileage === 'number' ? 
-                    `${trip.mileage.toFixed(2)} km` : 
-                    trip.mileage}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
-                  {typeof trip.fee === 'number' ? 
-                    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(trip.fee) : 
-                    trip.fee}
-                </td>
-                <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium">
-                  <div className="flex justify-end space-x-2">
-                    <Link
-                      to={`/trips/${trip.ID}`}
-                      className="text-blue-600 hover:text-blue-900 flex items-center"
-                    >
-                      <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => onDelete(trip.ID)}
-                      className="text-red-600 hover:text-red-900 flex items-center"
-                    >
-                      <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Delete
-                    </button>
+          </thead>
+                      <tbody className="divide-y divide-gray-100">
+            {isLoading && !trips.length ? (
+              <tr>
+                <td colSpan="8" className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                    <p className="text-gray-500 text-sm">Loading trips...</p>
                   </div>
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : trips.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="px-6 py-12">
+                  <EmptyTableState />
+                </td>
+              </tr>
+            ) : (
+              trips.map((trip, index) => (
+                <tr 
+                  key={trip.ID} 
+                  className={`hover:bg-blue-50/50 transition-colors duration-150 ${
+                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                  }`}
+                >
+                  {/* Receipt */}
+                  <td className="py-4 pl-6 pr-3">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <FileText className="h-5 w-5 text-blue-600" />
+                        </div>
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-sm font-semibold text-gray-900">
+                          #{trip.receipt_no || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Date */}
+                  <td className="px-3 py-4">
+                    <div className="text-sm font-medium text-gray-900">
+                      {formatDate(trip.date)}
+                    </div>
+                  </td>
+
+                  {/* Company */}
+                  <td className="px-3 py-4">
+                    <div className="text-sm font-medium text-gray-900 truncate max-w-[120px]" title={trip.company}>
+                      {trip.company}
+                    </div>
+                  </td>
+
+                  {/* Route */}
+                  <td className="px-3 py-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center text-xs">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        <span className="text-gray-700 truncate" style={{ direction: 'ltr', textAlign: 'left' }} title={trip.terminal}>
+                          {trip.terminal}
+                        </span>
+                      </div>
+                      <div className="flex items-center text-xs">
+                        <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+                        <span className="text-gray-700 truncate" style={{ direction: 'ltr', textAlign: 'left' }} title={trip.drop_off_point}>
+                          {trip.drop_off_point}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Vehicle & Driver */}
+                  <td className="px-3 py-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <Car className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                        <div className="text-sm font-medium text-gray-900">{trip.car_no_plate}</div>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center mr-2 flex-shrink-0">
+                          <User className="h-2.5 w-2.5 text-gray-500" />
+                        </div>
+                        <div 
+                          className="text-sm text-gray-700 truncate" 
+                          style={{ direction: 'ltr', textAlign: 'left' }}
+                          title={trip.driver_name}
+                        >
+                          {trip.driver_name}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Tank */}
+                  <td className="px-3 py-4">
+                    <div className="flex items-center">
+                      <Fuel className="h-4 w-4 text-gray-400 mr-2" />
+                      <div className="text-sm font-medium text-gray-900">
+                        {trip.tank_capacity || '—'}L
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Distance & Fee */}
+                  <td className="px-3 py-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                        <div className="text-sm font-semibold text-gray-900">
+                          {formatDistance(trip.mileage)}
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <DollarSign className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                        <div className="text-sm font-semibold text-green-600">
+                          {formatCurrency(trip.fee)}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end space-x-2">
+                      <Link
+                        to={`/trips/${trip.ID}`}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-100 transition-colors"
+                        title="Edit Trip"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Link>
+                      <button
+                        onClick={() => onShowDetails(trip.ID)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-green-600 hover:text-green-700 hover:bg-green-100 transition-colors"
+                        title="View Details"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(trip.ID)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-100 transition-colors"
+                        title="Delete Trip"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

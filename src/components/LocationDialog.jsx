@@ -1,5 +1,152 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Copy, ExternalLink, X, Navigation, CheckCircle, Clock } from 'lucide-react';
+
+// Polyline decoder function
+const decodePolyline = (encoded, precision = 5) => {
+  if (!encoded || typeof encoded !== 'string') return [];
+  
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  const coordinates = [];
+  const factor = Math.pow(10, precision);
+
+  while (index < encoded.length) {
+    let byte, shift = 0, result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    
+    const deltaLat = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
+    lat += deltaLat;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    
+    const deltaLng = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
+    lng += deltaLng;
+
+    coordinates.push([lat / factor, lng / factor]);
+  }
+
+  return coordinates;
+};
+
+const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+
+  useEffect(() => {
+    if (!mapRef.current || !terminalLocation || !dropOffLocation) return;
+
+    // Load Leaflet dynamically
+    const loadLeaflet = async () => {
+      if (window.L) {
+        initializeMap();
+        return;
+      }
+
+      // Load Leaflet CSS
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+
+      // Load Leaflet JS
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initializeMap;
+      document.head.appendChild(script);
+    };
+
+    const initializeMap = () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+      }
+
+      const L = window.L;
+      
+      // Calculate bounds
+      const bounds = L.latLngBounds([
+        [terminalLocation.lat, terminalLocation.lng],
+        [dropOffLocation.lat, dropOffLocation.lng]
+      ]);
+
+      // Initialize map
+      const map = L.map(mapRef.current).fitBounds(bounds, { padding: [20, 20] });
+      mapInstanceRef.current = map;
+
+      // Add OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Add terminal marker (green)
+      const terminalIcon = L.divIcon({
+        html: '<div style="background-color: #16a34a; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">T</div>',
+        className: 'custom-marker',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      L.marker([terminalLocation.lat, terminalLocation.lng], { icon: terminalIcon })
+        .addTo(map)
+        .bindPopup('<strong>Terminal Location</strong><br/>Starting point');
+
+      // Add drop-off marker (red)
+      const dropOffIcon = L.divIcon({
+        html: '<div style="background-color: #dc2626; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">D</div>',
+        className: 'custom-marker',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      L.marker([dropOffLocation.lat, dropOffLocation.lng], { icon: dropOffIcon })
+        .addTo(map)
+        .bindPopup('<strong>Drop-off Location</strong><br/>Destination');
+
+      // Add route line if available
+      if (routeData && routeData.geometry) {
+        try {
+          const routeCoordinates = decodePolyline(routeData.geometry);
+          if (routeCoordinates.length > 0) {
+            L.polyline(routeCoordinates, {
+              color: '#2563eb',
+              weight: 4,
+              opacity: 0.8
+            }).addTo(map);
+          }
+        } catch (error) {
+          console.error('Error decoding route geometry:', error);
+        }
+      }
+    };
+
+    loadLeaflet();
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [terminalLocation, dropOffLocation, routeData]);
+
+  return (
+    <div 
+      ref={mapRef} 
+      style={{ width: '100%', height: '400px' }}
+      className="border rounded-lg overflow-hidden"
+    />
+  );
+};
 
 const LocationDialog = ({ 
   isOpen, 
@@ -33,20 +180,6 @@ const LocationDialog = ({
   const routeUrl = (terminalLocation && dropOffLocation)
     ? `https://www.google.com/maps/dir/${terminalLocation.lat},${terminalLocation.lng}/${dropOffLocation.lat},${dropOffLocation.lng}`
     : '';
-
-  // OpenStreetMap embed URL with both markers
-  const osmEmbedUrl = () => {
-    if (!terminalLocation || !dropOffLocation) return '';
-    
-    const bbox = {
-      minLng: Math.min(terminalLocation.lng, dropOffLocation.lng) - 0.01,
-      minLat: Math.min(terminalLocation.lat, dropOffLocation.lat) - 0.01,
-      maxLng: Math.max(terminalLocation.lng, dropOffLocation.lng) + 0.01,
-      maxLat: Math.max(terminalLocation.lat, dropOffLocation.lat) + 0.01
-    };
-    
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox.minLng},${bbox.minLat},${bbox.maxLng},${bbox.maxLat}&layer=mapnik&marker=${terminalLocation.lat}%2C${terminalLocation.lng}&marker=${dropOffLocation.lat}%2C${dropOffLocation.lng}`;
-  };
 
   const copyToClipboard = async (url, type) => {
     try {
@@ -301,29 +434,22 @@ const LocationDialog = ({
                 </div>
               )}
 
-              {/* OpenStreetMap Embed */}
-              <div className="border rounded-lg overflow-hidden">
-                <iframe
-                  width="100%"
-                  height="400"
-                  frameBorder="0"
-                  scrolling="no"
-                  marginHeight="0"
-                  marginWidth="0"
-                  src={osmEmbedUrl()}
-                  style={{ border: 0 }}
-                  title="Route Map"
-                ></iframe>
-                <div className="p-3 bg-gray-50 border-t text-xs text-gray-500 text-center">
-                  Map data © OpenStreetMap contributors
-                  {routeData && (
-                    <span className="ml-2">
-                      • Route: {typeof routeData.distance === 'number' 
-                        ? routeData.distance.toFixed(1) 
-                        : routeData.distance} km, ~{formatDuration(routeData.duration)}
-                    </span>
-                  )}
-                </div>
+              {/* Interactive Map with Route */}
+              <RouteMap 
+                terminalLocation={terminalLocation}
+                dropOffLocation={dropOffLocation}
+                routeData={routeData}
+              />
+              
+              <div className="p-3 bg-gray-50 border rounded text-xs text-gray-500 text-center">
+                Map data © OpenStreetMap contributors
+                {routeData && (
+                  <span className="ml-2">
+                    • Route: {typeof routeData.distance === 'number' 
+                      ? routeData.distance.toFixed(1) 
+                      : routeData.distance} km, ~{formatDuration(routeData.duration)}
+                  </span>
+                )}
               </div>
 
               {/* Route URL */}

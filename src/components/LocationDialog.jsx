@@ -39,6 +39,35 @@ const decodePolyline = (encoded, precision = 5) => {
   return coordinates;
 };
 
+// Enhanced marker creation with styling from OpenStreetMapApp
+const createMarker = (color, size = 24, label = '') => {
+  return window.L.divIcon({
+    html: `
+      <div style="
+        width: ${size}px;
+        height: ${size}px;
+        background-color: ${color};
+        border: 2px solid white;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: ${size * 0.5}px;
+        transition: transform 0.2s ease;
+      ">
+        ${label}
+      </div>
+    `,
+    className: 'custom-marker',
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
+    popupAnchor: [0, -size/2]
+  });
+};
+
 const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -79,40 +108,68 @@ const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
         [dropOffLocation.lat, dropOffLocation.lng]
       ]);
 
-      // Initialize map
-      const map = L.map(mapRef.current).fitBounds(bounds, { padding: [20, 20] });
+      // Initialize map with enhanced styling
+      const map = L.map(mapRef.current, {
+        zoomControl: true,
+        doubleClickZoom: true,
+        scrollWheelZoom: true,
+        touchZoom: true
+      }).fitBounds(bounds, { padding: [20, 20] });
+      
       mapInstanceRef.current = map;
 
-      // Add OpenStreetMap tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+      // Use enhanced tile layer from OpenStreetMapApp
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 20
       }).addTo(map);
 
-      // Add terminal marker (green)
-      const terminalIcon = L.divIcon({
-        html: '<div style="background-color: #16a34a; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">T</div>',
-        className: 'custom-marker',
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
-      });
-
-      L.marker([terminalLocation.lat, terminalLocation.lng], { icon: terminalIcon })
+      // Add terminal marker with enhanced styling
+      const terminalMarker = createMarker('#16a34a', 26, 'T');
+      L.marker([terminalLocation.lat, terminalLocation.lng], { icon: terminalMarker })
         .addTo(map)
-        .bindPopup('<strong>Terminal Location</strong><br/>Starting point');
+        .bindPopup(`
+          <div class="p-4">
+            <h3 class="font-semibold text-green-700 text-base mb-3 flex items-center gap-2">
+              <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+              </svg>
+              Terminal Location
+            </h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600">Coordinates:</span>
+                <span class="font-mono text-xs">${terminalLocation.lat.toFixed(6)}, ${terminalLocation.lng.toFixed(6)}</span>
+              </div>
+              <div class="text-green-600 text-xs">Starting point for your journey</div>
+            </div>
+          </div>
+        `);
 
-      // Add drop-off marker (red)
-      const dropOffIcon = L.divIcon({
-        html: '<div style="background-color: #dc2626; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">D</div>',
-        className: 'custom-marker',
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
-      });
-
-      L.marker([dropOffLocation.lat, dropOffLocation.lng], { icon: dropOffIcon })
+      // Add drop-off marker with enhanced styling
+      const dropOffMarker = createMarker('#dc2626', 26, 'D');
+      L.marker([dropOffLocation.lat, dropOffLocation.lng], { icon: dropOffMarker })
         .addTo(map)
-        .bindPopup('<strong>Drop-off Location</strong><br/>Destination');
+        .bindPopup(`
+          <div class="p-4">
+            <h3 class="font-semibold text-red-700 text-base mb-3 flex items-center gap-2">
+              <svg class="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+              </svg>
+              Drop-off Location
+            </h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600">Coordinates:</span>
+                <span class="font-mono text-xs">${dropOffLocation.lat.toFixed(6)}, ${dropOffLocation.lng.toFixed(6)}</span>
+              </div>
+              <div class="text-red-600 text-xs">Destination point</div>
+            </div>
+          </div>
+        `);
 
-      // Add route line if available
+      // Add route line with enhanced styling if available
       if (routeData && routeData.geometry) {
         try {
           const routeCoordinates = decodePolyline(routeData.geometry);
@@ -120,7 +177,9 @@ const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
             L.polyline(routeCoordinates, {
               color: '#2563eb',
               weight: 4,
-              opacity: 0.8
+              opacity: 0.8,
+              smoothFactor: 1.0,
+              dashArray: null
             }).addTo(map);
           }
         } catch (error) {
@@ -140,11 +199,118 @@ const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
   }, [terminalLocation, dropOffLocation, routeData]);
 
   return (
-    <div 
-      ref={mapRef} 
-      style={{ width: '100%', height: '400px' }}
-      className="border rounded-lg overflow-hidden"
-    />
+    <div className="relative">
+      <div 
+        ref={mapRef} 
+        style={{ width: '100%', height: '400px' }}
+        className="border rounded-xl overflow-hidden shadow-sm bg-gray-50"
+      />
+      
+      {/* Enhanced styling for the map */}
+      <style jsx>{`
+        .custom-marker {
+          background: transparent;
+          border: none;
+        }
+        
+        .custom-marker:hover {
+          transform: scale(1.1);
+          transition: transform 0.2s ease;
+          z-index: 1000;
+        }
+        
+        .leaflet-popup-content-wrapper {
+          border-radius: 12px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          font-family: inherit;
+        }
+        
+        .leaflet-popup-tip {
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .leaflet-control-zoom {
+          border: none;
+          border-radius: 8px;
+          overflow: hidden;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .leaflet-control-zoom a {
+          background: transparent;
+          border: none;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+          color: #374151;
+          font-weight: 600;
+          transition: all 0.2s ease;
+          width: 40px;
+          height: 40px;
+          line-height: 40px;
+          font-size: 18px;
+        }
+        
+        .leaflet-control-zoom a:last-child {
+          border-bottom: none;
+        }
+        
+        .leaflet-control-zoom a:hover {
+          background: rgba(59, 130, 246, 0.1);
+          color: #2563EB;
+        }
+        
+        .leaflet-control-attribution {
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+          border-radius: 6px;
+          font-size: 10px;
+          padding: 2px 6px;
+        }
+        
+        .leaflet-container {
+          background: #f8fafc;
+          font-family: inherit;
+          border-radius: 12px;
+        }
+        
+        .leaflet-popup-close-button {
+          color: #6b7280;
+          font-size: 18px;
+          padding: 4px 8px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+        }
+        
+        .leaflet-popup-close-button:hover {
+          background: rgba(239, 68, 68, 0.1);
+          color: #dc2626;
+        }
+        
+        @media (max-width: 640px) {
+          .leaflet-popup-content-wrapper {
+            font-size: 12px;
+            border-radius: 12px;
+          }
+          
+          .leaflet-popup-content {
+            margin: 8px 12px;
+          }
+          
+          .leaflet-container {
+            font-size: 12px;
+          }
+          
+          .leaflet-control-zoom a {
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            font-size: 16px;
+          }
+        }
+      `}</style>
+    </div>
   );
 };
 
@@ -218,13 +384,15 @@ const LocationDialog = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-blue-800">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200">
+        {/* Enhanced Header */}
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-indigo-700">
           <div className="flex items-center">
-            <CheckCircle className="h-6 w-6 text-white mr-3" />
+            <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center mr-4">
+              <CheckCircle className="h-6 w-6 text-white" />
+            </div>
             <div>
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-xl font-bold text-white">
                 Trip {isEdit ? 'Updated' : 'Created'} Successfully!
               </h3>
               <p className="text-blue-100 text-sm">View locations and route details below</p>
@@ -232,71 +400,82 @@ const LocationDialog = ({
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:text-blue-200 transition-colors"
+            className="text-white hover:text-blue-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200">
+        {/* Enhanced Tab Navigation */}
+        <div className="flex border-b border-gray-200 bg-gray-50">
           <button
             onClick={() => setActiveTab('locations')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 px-6 py-4 text-sm font-medium transition-all duration-200 ${
               activeTab === 'locations'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
             }`}
           >
-            <MapPin className="h-4 w-4 inline mr-2" />
-            Locations
+            <div className="flex items-center justify-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Locations
+            </div>
           </button>
           {routeUrl && (
             <button
               onClick={() => setActiveTab('route')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-all duration-200 ${
                 activeTab === 'route'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <Navigation className="h-4 w-4 inline mr-2" />
-              Route
+              <div className="flex items-center justify-center gap-2">
+                <Navigation className="h-4 w-4" />
+                Route
+              </div>
             </button>
           )}
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[70vh]">
+        <div className="p-6 overflow-y-auto max-h-[70vh] bg-gray-50">
           {activeTab === 'locations' && (
             <div className="space-y-6">
-              {/* Trip Summary */}
+              {/* Enhanced Trip Summary */}
               {tripDetails.drop_off_point && (
-                <div className="bg-gray-50 rounded-lg p-4 border">
-                  <h4 className="font-medium text-gray-900 mb-3">Trip Details</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1z"/>
+                      </svg>
+                    </div>
+                    Trip Details
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     {tripDetails.company && (
-                      <div>
-                        <span className="text-gray-500">Company:</span>
-                        <p className="font-medium">{tripDetails.company}</p>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <span className="text-gray-500 block mb-1">Company:</span>
+                        <p className="font-medium text-gray-900">{tripDetails.company}</p>
                       </div>
                     )}
                     {tripDetails.terminal && (
-                      <div>
-                        <span className="text-gray-500">Terminal:</span>
-                        <p className="font-medium">{tripDetails.terminal}</p>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <span className="text-gray-500 block mb-1">Terminal:</span>
+                        <p className="font-medium text-gray-900">{tripDetails.terminal}</p>
                       </div>
                     )}
                     {tripDetails.drop_off_point && (
-                      <div>
-                        <span className="text-gray-500">Drop-off:</span>
-                        <p className="font-medium">{tripDetails.drop_off_point}</p>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <span className="text-gray-500 block mb-1">Drop-off:</span>
+                        <p className="font-medium text-gray-900">{tripDetails.drop_off_point}</p>
                       </div>
                     )}
                     {tripDetails.receipt_no && (
-                      <div>
-                        <span className="text-gray-500">Receipt:</span>
-                        <p className="font-medium">{tripDetails.receipt_no}</p>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <span className="text-gray-500 block mb-1">Receipt:</span>
+                        <p className="font-medium text-gray-900">{tripDetails.receipt_no}</p>
                       </div>
                     )}
                   </div>
@@ -304,32 +483,34 @@ const LocationDialog = ({
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Terminal Location */}
+                {/* Enhanced Terminal Location */}
                 {terminalLocation && (
-                  <div className="border rounded-lg p-4 bg-green-50 border-green-200">
-                    <div className="flex items-center mb-3">
-                      <MapPin className="h-5 w-5 text-green-600 mr-2" />
-                      <h4 className="font-medium text-gray-900">Terminal Location</h4>
+                  <div className="bg-white border border-green-200 rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mr-3">
+                        <MapPin className="h-5 w-5 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Terminal Location</h4>
                     </div>
                     
-                    <div className="space-y-3">
-                      <div className="bg-white rounded p-3 border">
-                        <div className="text-xs text-gray-500 mb-1">Coordinates</div>
-                        <div className="font-mono text-sm">{formatCoordinates(terminalLocation)}</div>
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 rounded-lg p-4 border">
+                        <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Coordinates</div>
+                        <div className="font-mono text-sm text-gray-900">{formatCoordinates(terminalLocation)}</div>
                       </div>
                       
-                      <div className="bg-white rounded p-3 border">
-                        <div className="text-xs text-gray-500 mb-2">Google Maps URL</div>
+                      <div className="bg-gray-50 rounded-lg p-4 border">
+                        <div className="text-xs text-gray-500 mb-3 uppercase tracking-wide">Google Maps URL</div>
                         <div className="flex space-x-2">
                           <input
                             type="text"
                             value={terminalUrl}
                             readOnly
-                            className="flex-1 text-xs bg-gray-50 border rounded px-2 py-1 font-mono"
+                            className="flex-1 text-xs bg-white border border-gray-200 rounded-lg px-3 py-2 font-mono text-gray-700"
                           />
                           <button
                             onClick={() => copyToClipboard(terminalUrl, 'terminal')}
-                            className="px-3 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition-colors"
+                            className="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-xs hover:bg-green-200 transition-colors font-medium"
                           >
                             <Copy className="h-3 w-3 mr-1 inline" />
                             {copied === 'terminal' ? 'Copied!' : 'Copy'}
@@ -339,7 +520,7 @@ const LocationDialog = ({
                       
                       <button
                         onClick={() => window.open(terminalUrl, '_blank')}
-                        className="w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                        className="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Open in Google Maps
@@ -348,32 +529,34 @@ const LocationDialog = ({
                   </div>
                 )}
 
-                {/* Drop-off Location */}
+                {/* Enhanced Drop-off Location */}
                 {dropOffLocation && (
-                  <div className="border rounded-lg p-4 bg-red-50 border-red-200">
-                    <div className="flex items-center mb-3">
-                      <MapPin className="h-5 w-5 text-red-600 mr-2" />
-                      <h4 className="font-medium text-gray-900">Drop-off Location</h4>
+                  <div className="bg-white border border-red-200 rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mr-3">
+                        <MapPin className="h-5 w-5 text-red-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Drop-off Location</h4>
                     </div>
                     
-                    <div className="space-y-3">
-                      <div className="bg-white rounded p-3 border">
-                        <div className="text-xs text-gray-500 mb-1">Coordinates</div>
-                        <div className="font-mono text-sm">{formatCoordinates(dropOffLocation)}</div>
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 rounded-lg p-4 border">
+                        <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Coordinates</div>
+                        <div className="font-mono text-sm text-gray-900">{formatCoordinates(dropOffLocation)}</div>
                       </div>
                       
-                      <div className="bg-white rounded p-3 border">
-                        <div className="text-xs text-gray-500 mb-2">Google Maps URL</div>
+                      <div className="bg-gray-50 rounded-lg p-4 border">
+                        <div className="text-xs text-gray-500 mb-3 uppercase tracking-wide">Google Maps URL</div>
                         <div className="flex space-x-2">
                           <input
                             type="text"
                             value={dropOffUrl}
                             readOnly
-                            className="flex-1 text-xs bg-gray-50 border rounded px-2 py-1 font-mono"
+                            className="flex-1 text-xs bg-white border border-gray-200 rounded-lg px-3 py-2 font-mono text-gray-700"
                           />
                           <button
                             onClick={() => copyToClipboard(dropOffUrl, 'dropoff')}
-                            className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition-colors"
+                            className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-xs hover:bg-red-200 transition-colors font-medium"
                           >
                             <Copy className="h-3 w-3 mr-1 inline" />
                             {copied === 'dropoff' ? 'Copied!' : 'Copy'}
@@ -383,7 +566,7 @@ const LocationDialog = ({
                       
                       <button
                         onClick={() => window.open(dropOffUrl, '_blank')}
-                        className="w-full flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                        className="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-sm"
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Open in Google Maps
@@ -397,76 +580,97 @@ const LocationDialog = ({
 
           {activeTab === 'route' && routeUrl && (
             <div className="space-y-6">
-              <div className="text-center">
-                <Navigation className="h-12 w-12 mx-auto text-blue-500 mb-3" />
-                <h4 className="font-medium text-gray-900 mb-2">Complete Route</h4>
+              <div className="text-center bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Navigation className="h-8 w-8 text-blue-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-2 text-lg">Complete Route</h4>
                 <p className="text-sm text-gray-600">From terminal to drop-off location</p>
               </div>
 
-              {/* Route Details Cards */}
+              {/* Enhanced Route Details Cards */}
               {routeData ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 text-center">
-                    <Navigation className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                    <div className="text-lg font-bold text-blue-900">
+                  <div className="bg-white border border-blue-200 rounded-xl p-6 text-center shadow-sm">
+                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <Navigation className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-blue-900 mb-1">
                       {typeof routeData.distance === 'number' 
                         ? routeData.distance.toFixed(1) 
                         : routeData.distance} km
                     </div>
-                    <div className="text-xs text-blue-600">Total Distance</div>
+                    <div className="text-xs text-blue-600 uppercase tracking-wide">Total Distance</div>
                   </div>
-                  <div className="bg-green-50 rounded-lg p-4 border border-green-200 text-center">
-                    <Clock className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                    <div className="text-lg font-bold text-green-900">
+                  <div className="bg-white border border-green-200 rounded-xl p-6 text-center shadow-sm">
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <Clock className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-green-900 mb-1">
                       {formatDuration(routeData.duration)}
                     </div>
-                    <div className="text-xs text-green-600">Estimated Time</div>
+                    <div className="text-xs text-green-600 uppercase tracking-wide">Estimated Time</div>
                   </div>
-                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-200 text-center">
-                    <MapPin className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-                    <div className="text-lg font-bold text-purple-900">OSRM</div>
-                    <div className="text-xs text-purple-600">Route Engine</div>
+                  <div className="bg-white border border-purple-200 rounded-xl p-6 text-center shadow-sm">
+                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <MapPin className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-purple-900 mb-1">OSRM</div>
+                    <div className="text-xs text-purple-600 uppercase tracking-wide">Route Engine</div>
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-50 rounded-lg p-4 border text-center text-gray-600">
+                <div className="bg-white rounded-xl p-6 border border-gray-200 text-center text-gray-600 shadow-sm">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <Navigation className="h-6 w-6 text-gray-500" />
+                  </div>
                   Route data will be calculated by your OSRM server
                 </div>
               )}
 
-              {/* Interactive Map with Route */}
-              <RouteMap 
-                terminalLocation={terminalLocation}
-                dropOffLocation={dropOffLocation}
-                routeData={routeData}
-              />
+              {/* Enhanced Interactive Map with Route */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <RouteMap 
+                  terminalLocation={terminalLocation}
+                  dropOffLocation={dropOffLocation}
+                  routeData={routeData}
+                />
+              </div>
               
-              <div className="p-3 bg-gray-50 border rounded text-xs text-gray-500 text-center">
-                Map data © OpenStreetMap contributors
+              <div className="p-4 bg-white border border-gray-200 rounded-xl text-xs text-gray-500 text-center shadow-sm">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                  </svg>
+                  Map data © OpenStreetMap contributors
+                </div>
                 {routeData && (
-                  <span className="ml-2">
-                    • Route: {typeof routeData.distance === 'number' 
+                  <span className="text-blue-600">
+                    Route: {typeof routeData.distance === 'number' 
                       ? routeData.distance.toFixed(1) 
                       : routeData.distance} km, ~{formatDuration(routeData.duration)}
                   </span>
                 )}
               </div>
 
-              {/* Route URL */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <div className="text-sm font-medium text-blue-900 mb-2">Google Maps Route URL</div>
-                <div className="flex space-x-2">
+              {/* Enhanced Route URL */}
+              <div className="bg-white border border-blue-200 rounded-xl p-6 shadow-sm">
+                <div className="text-sm font-medium text-blue-900 mb-4 flex items-center gap-2">
+                  <Navigation className="h-4 w-4" />
+                  Google Maps Route URL
+                </div>
+                <div className="flex space-x-3">
                   <input
                     type="text"
                     value={routeUrl}
                     readOnly
-                    className="flex-1 text-sm bg-white border rounded px-3 py-2 font-mono"
+                    className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 font-mono text-gray-700"
                   />
                   <button
                     onClick={() => copyToClipboard(routeUrl, 'route')}
-                    className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                    className="px-6 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium"
                   >
-                    <Copy className="h-4 w-4 mr-1 inline" />
+                    <Copy className="h-4 w-4 mr-2 inline" />
                     {copied === 'route' ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
@@ -474,41 +678,56 @@ const LocationDialog = ({
 
               <button
                 onClick={() => window.open(routeUrl, '_blank')}
-                className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full flex items-center justify-center px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-sm"
               >
-                <Navigation className="h-4 w-4 mr-2" />
+                <Navigation className="h-5 w-5 mr-2" />
                 Open Full Route in Google Maps
               </button>
 
-              {/* Comparison with database values */}
+              {/* Enhanced Comparison with database values */}
               {tripDetails.mileage && routeData && (
-                <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
-                  <div className="text-sm text-yellow-800">
-                    <strong>Database vs OSRM:</strong> 
-                    <span className="ml-2">
-                      Database: {tripDetails.mileage} km | 
-                      OSRM: {typeof routeData.distance === 'number' 
-                        ? routeData.distance.toFixed(1) 
-                        : routeData.distance} km
-                    </span>
-                    {Math.abs(parseFloat(tripDetails.mileage) - parseFloat(routeData.distance)) > 1 && (
-                      <span className="ml-2 text-yellow-700">
-                        (Difference: {Math.abs(parseFloat(tripDetails.mileage) - parseFloat(routeData.distance)).toFixed(1)} km)
-                      </span>
-                    )}
+                <div className="bg-white border border-yellow-200 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                    </div>
+                    <h5 className="font-medium text-yellow-800">Distance Comparison</h5>
                   </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="bg-yellow-50 rounded-lg p-3">
+                      <div className="text-yellow-600 text-xs uppercase tracking-wide mb-1">Database</div>
+                      <div className="font-bold text-yellow-900">{tripDetails.mileage} km</div>
+                    </div>
+                    <div className="bg-yellow-50 rounded-lg p-3">
+                      <div className="text-yellow-600 text-xs uppercase tracking-wide mb-1">OSRM</div>
+                      <div className="font-bold text-yellow-900">
+                        {typeof routeData.distance === 'number' 
+                          ? routeData.distance.toFixed(1) 
+                          : routeData.distance} km
+                      </div>
+                    </div>
+                  </div>
+                  {Math.abs(parseFloat(tripDetails.mileage) - parseFloat(routeData.distance)) > 1 && (
+                    <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
+                      <div className="text-yellow-700 text-sm">
+                        <strong>Difference:</strong> {Math.abs(parseFloat(tripDetails.mileage) - parseFloat(routeData.distance)).toFixed(1)} km
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-center p-6 border-t bg-gray-50">
+        {/* Enhanced Footer */}
+        <div className="flex justify-between items-center p-6 border-t bg-white">
           <div className="text-sm">
             {copied && (
-              <span className="text-green-600 flex items-center">
-                <CheckCircle className="h-4 w-4 mr-1" />
+              <span className="text-green-600 flex items-center bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                <CheckCircle className="h-4 w-4 mr-2" />
                 {copied === 'terminal' ? 'Terminal' : copied === 'dropoff' ? 'Drop-off' : 'Route'} URL copied!
               </span>
             )}
@@ -517,14 +736,14 @@ const LocationDialog = ({
             {routeUrl && (
               <button
                 onClick={() => window.open(routeUrl, '_blank')}
-                className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                className="px-6 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium"
               >
                 View Route
               </button>
             )}
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
             >
               Close
             </button>

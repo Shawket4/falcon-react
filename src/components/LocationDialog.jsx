@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Copy, ExternalLink, X, Navigation, CheckCircle, Clock } from 'lucide-react';
+import { MapPin, Copy, ExternalLink, X, Navigation, CheckCircle, Clock, Route, Layers } from 'lucide-react';
+import ETITRoute from './ETITRoute';
 
 // Polyline decoder function
 const decodePolyline = (encoded, precision = 5) => {
@@ -39,7 +40,7 @@ const decodePolyline = (encoded, precision = 5) => {
   return coordinates;
 };
 
-// Enhanced marker creation with styling from OpenStreetMapApp
+// Enhanced marker creation with styling
 const createMarker = (color, size = 24, label = '') => {
   return window.L.divIcon({
     html: `
@@ -71,9 +72,69 @@ const createMarker = (color, size = 24, label = '') => {
 const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const [satelliteView, setSatelliteView] = useState(false);
+  const [baseLayers, setBaseLayers] = useState({});
+  const [locationNames, setLocationNames] = useState({});
+
+  // Reverse geocoding function
+  const getLocationName = async (lat, lng) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+      const data = await response.json();
+      
+      if (data && data.display_name) {
+        const address = data.address || {};
+        const street = address.road || address.pedestrian || address.footway || '';
+        const houseNumber = address.house_number || '';
+        const suburb = address.suburb || address.neighbourhood || address.quarter || '';
+        const city = address.city || address.town || address.village || '';
+        
+        let formattedAddress = '';
+        if (houseNumber && street) {
+          formattedAddress = `${houseNumber} ${street}`;
+        } else if (street) {
+          formattedAddress = street;
+        }
+        
+        if (suburb && formattedAddress) {
+          formattedAddress += `, ${suburb}`;
+        } else if (suburb) {
+          formattedAddress = suburb;
+        }
+        
+        if (city) {
+          formattedAddress += formattedAddress ? `, ${city}` : city;
+        }
+        
+        return {
+          fullAddress: data.display_name,
+          shortAddress: formattedAddress || data.display_name,
+          street: street,
+          city: city,
+          suburb: suburb
+        };
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+    }
+    return null;
+  };
 
   useEffect(() => {
     if (!mapRef.current || !terminalLocation || !dropOffLocation) return;
+
+    // Load location names
+    const loadLocationNames = async () => {
+      const terminalName = await getLocationName(terminalLocation.lat, terminalLocation.lng);
+      const dropOffName = await getLocationName(dropOffLocation.lat, dropOffLocation.lng);
+      
+      setLocationNames({
+        terminal: terminalName,
+        dropOff: dropOffName
+      });
+    };
+
+    loadLocationNames();
 
     // Load Leaflet dynamically
     const loadLeaflet = async () => {
@@ -118,22 +179,47 @@ const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
       
       mapInstanceRef.current = map;
 
-      // Use enhanced tile layer from OpenStreetMapApp
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      // Define base layers
+      const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: "abcd",
         maxZoom: 20
-      }).addTo(map);
+      });
 
-      // Add terminal marker with enhanced styling
-      const terminalMarker = createMarker('#16a34a', 26, 'T');
+      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 19
+      });
+
+      const hybridLayer = L.layerGroup([
+        satelliteLayer,
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: "abcd",
+          maxZoom: 20,
+          opacity: 0.8
+        })
+      ]);
+
+      // Set initial layer
+      const currentLayer = satelliteView ? satelliteLayer : streetLayer;
+      currentLayer.addTo(map);
+
+      setBaseLayers({
+        street: streetLayer,
+        satellite: satelliteLayer,
+        hybrid: hybridLayer
+      });
+
+      // Add terminal marker with enhanced styling and location info
+      const terminalMarker = createMarker('#16a34a', 28, 'T');
       L.marker([terminalLocation.lat, terminalLocation.lng], { icon: terminalMarker })
         .addTo(map)
         .bindPopup(`
           <div class="p-4">
             <h3 class="font-semibold text-green-700 text-base mb-3 flex items-center gap-2">
               <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
               Terminal Location
             </h3>
@@ -142,13 +228,41 @@ const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
                 <span class="text-gray-600">Coordinates:</span>
                 <span class="font-mono text-xs">${terminalLocation.lat.toFixed(6)}, ${terminalLocation.lng.toFixed(6)}</span>
               </div>
+              ${locationNames.terminal ? `
+                <div>
+                  <span class="text-gray-600">Address:</span>
+                  <p class="text-gray-900 mt-1">${locationNames.terminal.shortAddress}</p>
+                </div>
+                ${locationNames.terminal.street ? `
+                  <div>
+                    <span class="text-gray-600">Street:</span>
+                    <p class="text-gray-900">${locationNames.terminal.street}</p>
+                  </div>
+                ` : ''}
+              ` : '<div class="text-gray-500 text-xs">Loading address...</div>'}
               <div class="text-green-600 text-xs">Starting point for your journey</div>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button onclick="window.open('https://www.google.com/maps?q=${terminalLocation.lat},${terminalLocation.lng}', '_blank')" 
+                      class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
+                </svg>
+                Open in Maps
+              </button>
+              <button onclick="navigator.clipboard.writeText('${terminalLocation.lat}, ${terminalLocation.lng}')" 
+                      class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/>
+                </svg>
+                Copy
+              </button>
             </div>
           </div>
         `);
 
-      // Add drop-off marker with enhanced styling
-      const dropOffMarker = createMarker('#dc2626', 26, 'D');
+      // Add drop-off marker with enhanced styling and location info
+      const dropOffMarker = createMarker('#dc2626', 28, 'D');
       L.marker([dropOffLocation.lat, dropOffLocation.lng], { icon: dropOffMarker })
         .addTo(map)
         .bindPopup(`
@@ -164,7 +278,35 @@ const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
                 <span class="text-gray-600">Coordinates:</span>
                 <span class="font-mono text-xs">${dropOffLocation.lat.toFixed(6)}, ${dropOffLocation.lng.toFixed(6)}</span>
               </div>
+              ${locationNames.dropOff ? `
+                <div>
+                  <span class="text-gray-600">Address:</span>
+                  <p class="text-gray-900 mt-1">${locationNames.dropOff.shortAddress}</p>
+                </div>
+                ${locationNames.dropOff.street ? `
+                  <div>
+                    <span class="text-gray-600">Street:</span>
+                    <p class="text-gray-900">${locationNames.dropOff.street}</p>
+                  </div>
+                ` : ''}
+              ` : '<div class="text-gray-500 text-xs">Loading address...</div>'}
               <div class="text-red-600 text-xs">Destination point</div>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button onclick="window.open('https://www.google.com/maps?q=${dropOffLocation.lat},${dropOffLocation.lng}', '_blank')" 
+                      class="text-xs bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
+                </svg>
+                Open in Maps
+              </button>
+              <button onclick="navigator.clipboard.writeText('${dropOffLocation.lat}, ${dropOffLocation.lng}')" 
+                      class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/>
+                </svg>
+                Copy
+              </button>
             </div>
           </div>
         `);
@@ -198,6 +340,20 @@ const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
     };
   }, [terminalLocation, dropOffLocation, routeData]);
 
+  // Handle satellite view toggle
+  useEffect(() => {
+    if (mapInstanceRef.current && baseLayers.street && baseLayers.satellite) {
+      mapInstanceRef.current.eachLayer((layer) => {
+        if (layer === baseLayers.street || layer === baseLayers.satellite) {
+          mapInstanceRef.current.removeLayer(layer);
+        }
+      });
+
+      const newLayer = satelliteView ? baseLayers.satellite : baseLayers.street;
+      newLayer.addTo(mapInstanceRef.current);
+    }
+  }, [satelliteView, baseLayers]);
+
   return (
     <div className="relative">
       <div 
@@ -205,6 +361,22 @@ const RouteMap = ({ terminalLocation, dropOffLocation, routeData }) => {
         style={{ width: '100%', height: '400px' }}
         className="border rounded-xl overflow-hidden shadow-sm bg-gray-50"
       />
+      
+      {/* Satellite View Toggle */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        <button
+          onClick={() => setSatelliteView(!satelliteView)}
+          className={`flex items-center px-3 py-2 rounded-lg shadow-lg border backdrop-blur-sm transition-all ${
+            satelliteView 
+              ? 'bg-blue-600 text-white border-blue-600' 
+              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+          }`}
+          title={satelliteView ? 'Switch to Street View' : 'Switch to Satellite View'}
+        >
+          <Layers className="h-4 w-4 mr-2" />
+          {satelliteView ? 'Street' : 'Satellite'}
+        </button>
+      </div>
       
       {/* Enhanced styling for the map */}
       <style jsx>{`
@@ -382,6 +554,13 @@ const LocationDialog = ({
     }
   };
 
+  // Enhanced trip details with terminal and destination location data
+  const enhancedTripDetails = {
+    ...tripDetails,
+    terminal_location: terminalLocation,
+    drop_off_location: dropOffLocation
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200">
@@ -421,7 +600,7 @@ const LocationDialog = ({
               Locations
             </div>
           </button>
-          {routeUrl && (
+          {(routeUrl || tripDetails.car_id) && (
             <button
               onClick={() => setActiveTab('route')}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-all duration-200 ${
@@ -436,6 +615,19 @@ const LocationDialog = ({
               </div>
             </button>
           )}
+          <button
+            onClick={() => setActiveTab('etit-route')}
+            className={`flex-1 px-6 py-4 text-sm font-medium transition-all duration-200 ${
+              activeTab === 'etit-route'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Route className="h-4 w-4" />
+              ETIT Route
+            </div>
+          </button>
         </div>
 
         {/* Content */}
@@ -585,7 +777,7 @@ const LocationDialog = ({
                   <Navigation className="h-8 w-8 text-blue-600" />
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-2 text-lg">Complete Route</h4>
-                <p className="text-sm text-gray-600">From terminal to drop-off location</p>
+                <p className="text-sm text-gray-600">From terminal to drop-off location with satellite view toggle</p>
               </div>
 
               {/* Enhanced Route Details Cards */}
@@ -628,7 +820,7 @@ const LocationDialog = ({
                 </div>
               )}
 
-              {/* Enhanced Interactive Map with Route */}
+              {/* Enhanced Interactive Map with Route and Satellite Toggle */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <RouteMap 
                   terminalLocation={terminalLocation}
@@ -642,7 +834,7 @@ const LocationDialog = ({
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
                   </svg>
-                  Map data © OpenStreetMap contributors
+                  Map data © OpenStreetMap contributors • Satellite imagery © Esri
                 </div>
                 {routeData && (
                   <span className="text-blue-600">
@@ -719,6 +911,12 @@ const LocationDialog = ({
                 </div>
               )}
             </div>
+          )}
+
+          {activeTab === 'etit-route' && (
+            <ETITRoute 
+              tripDetails={enhancedTripDetails}
+            />
           )}
         </div>
 

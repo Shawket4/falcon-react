@@ -244,7 +244,9 @@ const TripList = () => {
           drop_off_point: response.data.data.drop_off_point,
           receipt_no: response.data.data.receipt_no,
           mileage: response.data.data.mileage || response.data.data.distance,
-          revenue: response.data.data.revenue || response.data.data.fee
+          revenue: response.data.data.revenue || response.data.data.fee,
+          car_id: response.data.data.car_id,
+          date: response.data.data.date,
         });
         
         setShowLocationDialog(true);

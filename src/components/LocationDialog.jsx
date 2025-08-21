@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Copy, ExternalLink, X, Navigation, CheckCircle, Clock, Route, Layers } from 'lucide-react';
-import ETITRoute from './ETITRoute';
+import ETITRoute from './Etit/ETITRoute';
 
 // Polyline decoder function
 const decodePolyline = (encoded, precision = 5) => {

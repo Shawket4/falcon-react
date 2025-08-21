@@ -247,6 +247,7 @@ const TripList = () => {
           revenue: response.data.data.revenue || response.data.data.fee,
           car_id: response.data.data.car_id,
           date: response.data.data.date,
+          id: response.data.data.ID,
         });
         
         setShowLocationDialog(true);

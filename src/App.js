@@ -14,7 +14,7 @@ import { FuelEventsList, FuelEventDetails, AddFuelEvent, EditFuelEvent } from '.
 import { AuthProvider } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import WhatsAppWrapper from './components/Whatsapp/WhatsappWrapper'; // New import
-
+import { CarServiceManagement } from './components/ServiceInvoices';
 // Original imports for distance and fee mapping components
 import DistanceMappings from './components/DistanceMappings';
 import FeeMappings from './components/FeeMappings';
@@ -94,7 +94,13 @@ function App() {
                 </Layout>
               </ProtectedRoute>
             } />
-            
+            <Route path="/service-management" element={
+  <ProtectedRoute>
+    <Layout>
+      <CarServiceManagement />
+    </Layout>
+  </ProtectedRoute>
+} />
             {/* Add Fuel Event - Requires permission level 3 or higher */}
             <Route path="/add-fuel" element={
               <ProtectedRoute minPermissionLevel={REQUIRED_PERMISSION_LEVEL}>

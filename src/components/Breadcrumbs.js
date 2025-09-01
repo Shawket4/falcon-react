@@ -123,21 +123,63 @@ const Breadcrumbs = () => {
             }
           }
         }
-        
-        setEntityDetails(newDetails);
-      } catch (error) {
-        console.error('Error fetching entity details:', error);
-      } finally {
-        setIsLoading(false);
+        if (pathnames.includes('service-management') || pathnames.some(p => p.startsWith('service-'))) {
+        const carId = params.carId || pathnames[pathnames.findIndex(p => p === 'car') + 1];
+        if (carId && !isNaN(carId)) {
+          const cacheKey = `car-${carId}`;
+          if (cache.current[cacheKey]) {
+            newDetails.car = cache.current[cacheKey];
+          } else {
+            try {
+              const response = await apiClient.get('/api/GetCars');
+              const car = response.data?.find(c => c.ID.toString() === carId);
+              if (car) {
+                cache.current[cacheKey] = car;
+                newDetails.car = car;
+              }
+            } catch (error) {
+              console.warn('Could not fetch car details:', error);
+            }
+          }
+        }
       }
-    };
-    
-    fetchDetails();
-  }, [location.pathname, params]);
+      
+      // Service Invoice details
+      if (pathnames.includes('invoice') || pathnames.some(p => p.includes('service-invoice'))) {
+        const invoiceId = params.invoiceId || pathnames[pathnames.length - 1];
+        if (invoiceId && !isNaN(invoiceId)) {
+          const cacheKey = `service-invoice-${invoiceId}`;
+          if (cache.current[cacheKey]) {
+            newDetails.serviceInvoice = cache.current[cacheKey];
+          } else {
+            try {
+              const response = await apiClient.get(`/api/service-invoices/${invoiceId}`);
+              if (response.data?.data) {
+                cache.current[cacheKey] = response.data.data;
+                newDetails.serviceInvoice = response.data.data;
+              }
+            } catch (error) {
+              console.warn('Could not fetch service invoice details:', error);
+            }
+          }
+        }
+      }
+      
+      setEntityDetails(newDetails);
+    } catch (error) {
+      console.error('Error fetching entity details:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  fetchDetails();
+}, [location.pathname, params]);
   
   // Route configuration with icons and labels
   const routeConfig = useMemo(() => ({
     // Root sections
+    'service-management': { label: 'Service Management', icon: FileText, color: 'text-amber-600' },
     'fuel': { label: 'Fuel Events', icon: Fuel, color: 'text-emerald-600' },
     'add-fuel': { label: 'Add Fuel Event', icon: Plus, color: 'text-emerald-600' },
     'edit-fuel': { label: 'Edit Fuel Event', icon: Fuel, color: 'text-emerald-600' },
@@ -201,7 +243,20 @@ const Breadcrumbs = () => {
       isActive: location.pathname === '/',
       color: 'text-gray-600'
     });
+    if (location.pathname.includes('/service-management')) {
+    // Add Service Management breadcrumb
+    items.push({
+      label: 'Service Management',
+      icon: FileText,
+      path: '/service-management',
+      isActive: location.pathname === '/service-management',
+      color: 'text-amber-600'
+    });
     
+    // If we're deeper in service management, we don't show sub-paths
+    // since it's a single-page app with internal navigation
+    return items;
+  }
     // If we're on the home page, return just the home item
     if (location.pathname === '/' || pathnames.length === 0) {
       return items;

@@ -144,32 +144,39 @@ const Layout = ({ children }) => {
         ]
       },
       {
-        title: "Maintenance",
-        icon: Gauge,
-        color: "amber",
-        items: [
-          { 
-            path: '/oil-changes-list', 
-            icon: Droplet, 
-            label: 'Oil Changes',
-            description: 'Oil change records',
-            pathIncludes: ['/oil-change', '/edit-oil-change/']
-          },
-          { 
-            path: '/tires', 
-            icon: Disc, 
-            label: 'Tire Management',
-            description: 'Track tire maintenance',
-            pathIncludes: ['/tires/']
-          },
-          { 
-            path: '/speed-violations', 
-            icon: AlertCircle, 
-            label: 'Speed Violations',
-            description: 'Monitor speed infractions'
-          }
-        ]
-      },
+  title: "Maintenance",
+  icon: Gauge,
+  color: "amber",
+  items: [
+    { 
+      path: '/service-management', 
+      icon: FileText, 
+      label: 'Service Management',
+      description: 'Vehicle service inspections',
+      pathIncludes: ['/service-']
+    },
+    { 
+      path: '/oil-changes-list', 
+      icon: Droplet, 
+      label: 'Oil Changes',
+      description: 'Oil change records',
+      pathIncludes: ['/oil-change', '/edit-oil-change/']
+    },
+    { 
+      path: '/tires', 
+      icon: Disc, 
+      label: 'Tire Management',
+      description: 'Track tire maintenance',
+      pathIncludes: ['/tires/']
+    },
+    { 
+      path: '/speed-violations', 
+      icon: AlertCircle, 
+      label: 'Speed Violations',
+      description: 'Monitor speed infractions'
+    }
+  ]
+},
       {
         title: "Trip Management",
         icon: Container,

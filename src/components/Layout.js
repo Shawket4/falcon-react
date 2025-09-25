@@ -140,7 +140,13 @@ const Layout = ({ children }) => {
             icon: Map, 
             label: 'Station Locator',
             description: 'Find PetroApp stations'
-          }
+          },
+          { 
+  path: '/vehicle-status', 
+  icon: Activity, 
+  label: 'Vehicle Status',
+  description: 'Monitor and update vehicle status'
+}
         ]
       },
       {

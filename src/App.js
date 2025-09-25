@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { VehicleStatusManagement } from './components/Slack';
 
 // Original imports
 import TruckList from './components/TruckList';
@@ -98,6 +99,13 @@ function App() {
   <ProtectedRoute>
     <Layout>
       <CarServiceManagement />
+    </Layout>
+  </ProtectedRoute>
+} />
+<Route path="/vehicle-status" element={
+  <ProtectedRoute>
+    <Layout>
+      <VehicleStatusManagement />
     </Layout>
   </ProtectedRoute>
 } />

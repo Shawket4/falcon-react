@@ -228,7 +228,8 @@ const Breadcrumbs = () => {
     'settings': { label: 'Settings', icon: Settings, color: 'text-slate-600' },
     
     // Analytics
-    'driver-analytics': { label: 'Driver Analytics', icon: BarChart4, color: 'text-indigo-600' }
+    'driver-analytics': { label: 'Driver Analytics', icon: BarChart4, color: 'text-indigo-600' },
+    'trip-report-garage': { label: 'Garage Report', icon: FileText, color: 'text-purple-600' },
   }), []);
   
   // Build breadcrumb items

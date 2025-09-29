@@ -24,7 +24,9 @@ import TripDetails from './components/TripDetails';
 import { AllOilChanges, AddOilChange, EditOilChange } from './components/OilChanges';
 
 // Import the refactored TripList component instead of AllTrips
-import { TripList, DriverAnalytics } from './components/AllTrips';
+import { TripList, DriverAnalytics, TripReportGarage } from './components/AllTrips';
+
+
 
 // Import vendor financial system components
 import {
@@ -70,6 +72,7 @@ export const pathNames = {
   'driver-analytics': 'Driver Analytics',
   'car-management': 'Car Management',
   'map': 'OpenStreetMap',
+  'trip-report-garage': 'Trip Report - Garage',
 };
 
 // Permission level required for certain operations
@@ -106,6 +109,13 @@ function App() {
   <ProtectedRoute>
     <Layout>
       <VehicleStatusManagement />
+    </Layout>
+  </ProtectedRoute>
+} />
+<Route path="/trip-report-garage" element={
+  <ProtectedRoute>
+    <Layout>
+      <TripReportGarage />
     </Layout>
   </ProtectedRoute>
 } />

@@ -201,6 +201,12 @@ const Layout = ({ children }) => {
             label: 'Register Trip',
             description: 'Log new trip'
           },
+           { 
+      path: '/trip-report-garage', 
+      icon: FileText, 
+      label: 'Garage Report',
+      description: 'Generate company trip reports'
+    },
           { 
             path: '/fees', 
             icon: DollarSign, 

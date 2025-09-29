@@ -14,3 +14,4 @@ export { default as NoResultsAlert } from './NoResultsAlert';
 export { default as TripStatistics } from './TripStatistics';
 export {default as DriverAnalytics} from './DriverAnalytics/DriverAnalytics'
 export {default as RouteDetailsSection} from "./RouteDetailsSection"
+export {default as TripReportGarage} from "./TripReportGarage"

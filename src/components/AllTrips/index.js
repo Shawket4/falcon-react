@@ -15,3 +15,4 @@ export { default as TripStatistics } from './TripStatistics';
 export {default as DriverAnalytics} from './DriverAnalytics/DriverAnalytics'
 export {default as RouteDetailsSection} from "./RouteDetailsSection"
 export {default as TripReportGarage} from "./TripReportGarage"
+export {default as MultiContainerTripForm} from "./MultiContainerTripForm" 

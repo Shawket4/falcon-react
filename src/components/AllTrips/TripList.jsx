@@ -14,7 +14,7 @@ import NoResultsAlert from './NoResultsAlert';
 import ResponsiveTripStatistics from './TripStatsController';
 
 // Import LocationDialog
-import LocationDialog from '../LocationDialog'; // Adjust path as needed
+import LocationDialog from '../LocationDialog';
 
 // Import icons
 import { List, BarChart3 } from 'lucide-react';
@@ -24,10 +24,9 @@ const TripList = () => {
   const getFirstDayOfMonth = () => {
     const now = new Date();
     const year = now.getFullYear();
-    const month = now.getMonth(); // 0-indexed (0 = January, 1 = February, etc.)
+    const month = now.getMonth();
     const firstDay = new Date(year, month, 1);
     const result = firstDay.toLocaleDateString('en-CA');
-    console.log('getFirstDayOfMonth:', { now: now.toISOString(), year, month, firstDay: firstDay.toISOString(), result });
     return result;
   };
 
@@ -37,18 +36,18 @@ const TripList = () => {
   };
 
   const [meta, setMeta] = useState({
-  page: 1,
-  pages: 1,
-  total: 0,
-  limit: 10,
-  company: '',
-  start_date: '',
-  end_date: '',
-  search: ''
-});
+    page: 1,
+    pages: 1,
+    total: 0,
+    limit: 10,
+    company: '',
+    start_date: '',
+    end_date: '',
+    search: ''
+  });
 
   // State for tab management
-  const [activeTab, setActiveTab] = useState('list'); // 'list' or 'statistics'
+  const [activeTab, setActiveTab] = useState('list');
 
   // State declarations for trip list
   const [trips, setTrips] = useState([]);
@@ -64,14 +63,17 @@ const TripList = () => {
   });
   const [filters, setFilters] = useState({
     company: '',
-    startDate: getFirstDayOfMonth(), // Default to first day of current month
-    endDate: getToday() // Default to today
+    startDate: getFirstDayOfMonth(),
+    endDate: getToday()
   });
+  
   // Global search state
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  
   // Mobile view state
   const [showMobileDetails, setShowMobileDetails] = useState(null);
+  
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [tripToDelete, setTripToDelete] = useState(null);
@@ -90,7 +92,6 @@ const TripList = () => {
   useEffect(() => {
     fetchCompanies();
     
-    // Only fetch trips when on the list tab
     if (activeTab === 'list') {
       fetchTrips();
     }
@@ -106,82 +107,75 @@ const TripList = () => {
   };
 
   const fetchTrips = async (pageNumber = currentPage, pageLimit = meta.limit) => {
-  setIsLoading(true);
-  setError('');
-  
-  try {
-    let url = `/api/trips`;
-    let params = {
-      page: pageNumber,
-      limit: pageLimit
-    };
+    setIsLoading(true);
+    setError('');
     
-    // Add search term to params if provided
-    if (searchTerm) {
-      params.search = searchTerm;
-    }
-    
-    // Apply filters if set
-    if (filters.company) {
-      url = `/api/trips/company/${filters.company}`;
-      params.page = pageNumber;
-      params.limit = pageLimit;
-      
-      if (searchTerm) {
-        params.search = searchTerm;
-      }
-    }
-    
-    if (filters.startDate && filters.endDate) {
-      url = `/api/trips/date`;
-      params = {
-        ...params,
+    try {
+      let url = `/api/trips`;
+      let params = {
         page: pageNumber,
-        limit: pageLimit,
-        start_date: filters.startDate,
-        end_date: filters.endDate
+        limit: pageLimit
       };
       
-      if (filters.company) {
-        params.company = filters.company;
-      }
-      
       if (searchTerm) {
         params.search = searchTerm;
       }
+      
+      if (filters.company) {
+        url = `/api/trips/company/${filters.company}`;
+        params.page = pageNumber;
+        params.limit = pageLimit;
+        
+        if (searchTerm) {
+          params.search = searchTerm;
+        }
+      }
+      
+      if (filters.startDate && filters.endDate) {
+        url = `/api/trips/date`;
+        params = {
+          ...params,
+          page: pageNumber,
+          limit: pageLimit,
+          start_date: filters.startDate,
+          end_date: filters.endDate
+        };
+        
+        if (filters.company) {
+          params.company = filters.company;
+        }
+        
+        if (searchTerm) {
+          params.search = searchTerm;
+        }
+      }
+      
+      const response = await apiClient.get(url, { params });
+      setTrips(response.data.data || []);
+      
+      if (response.data.meta) {
+        setMeta(response.data.meta);
+        setTotalPages(response.data.meta.pages || 1);
+      }
+    } catch (err) {
+      setError('Failed to fetch trips: ' + (err.response?.data?.message || err.message));
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+      setIsSearching(false);
     }
-    
-    const response = await apiClient.get(url, { params });
-    setTrips(response.data.data || []);
-    
-    // Update meta information
-    if (response.data.meta) {
-      setMeta(response.data.meta);
-      setTotalPages(response.data.meta.pages || 1);
-    }
-  } catch (err) {
-    setError('Failed to fetch trips: ' + (err.response?.data?.message || err.message));
-    console.error(err);
-  } finally {
-    setIsLoading(false);
-    setIsSearching(false);
-  }
-};
+  };
 
-
-  // Fetch all trips for Excel export (without pagination)
   const fetchAllTrips = async () => {
     setIsExporting(true);
     try {
       let url = `/api/trips`;
-      let params = { limit: 10000 }; // Request a large number to get all trips
+      let params = { limit: 10000 };
       
-      // Add search term to params if provided
       if (searchTerm) {
         params.search = searchTerm;
       }
       
-      // Apply filters if set
       if (filters.company) {
         url = `/api/trips/company/${filters.company}`;
       }
@@ -211,19 +205,16 @@ const TripList = () => {
   };
 
   const handleLimitChange = (newLimit) => {
-  setMeta(prev => ({ ...prev, limit: newLimit }));
-  setCurrentPage(1); // Reset to first page when changing limit
-  fetchTrips(1, newLimit);
-};
+    setMeta(prev => ({ ...prev, limit: newLimit }));
+    setCurrentPage(1);
+    fetchTrips(1, newLimit);
+  };
 
-  // Handle showing trip details
   const handleShowDetails = async (tripId) => {
     setIsLoadingDetails(true);
     try {
-      // Call the API to get trip details with locations
       const response = await apiClient.get(`/api/trips/${tripId}/details`);
       
-      // Check if we have location data
       if (response.data && 
           response.data.drop_off_point_location && 
           response.data.terminal_location &&
@@ -252,14 +243,13 @@ const TripList = () => {
         
         setShowLocationDialog(true);
       } else {
-        // Show a message if no location data available
         setError('No location data available for this trip. The trip may not have valid terminal or drop-off coordinates.');
-        setTimeout(() => setError(''), 5000); // Clear error after 5 seconds
+        setTimeout(() => setError(''), 5000);
       }
     } catch (error) {
       console.error('Error fetching trip details:', error);
       setError('Failed to fetch trip details: ' + (error.response?.data?.message || error.message));
-      setTimeout(() => setError(''), 5000); // Clear error after 5 seconds
+      setTimeout(() => setError(''), 5000);
     } finally {
       setIsLoadingDetails(false);
     }
@@ -268,11 +258,10 @@ const TripList = () => {
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   };
 
   const handleResetFilters = () => {
-    // Reset to completely empty values
     setFilters({
       company: '',
       startDate: '',
@@ -288,7 +277,7 @@ const TripList = () => {
 
   const handleSearch = () => {
     setIsSearching(true);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
     fetchTrips();
   };
 
@@ -299,16 +288,14 @@ const TripList = () => {
   };
 
   const handlePageChange = (page) => {
-  setCurrentPage(page);
-  fetchTrips(page, meta.limit);
-};
+    setCurrentPage(page);
+    fetchTrips(page, meta.limit);
+  };
   
-  // Toggle mobile details view
   const toggleMobileDetails = (id) => {
     setShowMobileDetails(showMobileDetails === id ? null : id);
   };
   
-  // Delete modal handlers
   const openDeleteModal = (id) => {
     setTripToDelete(id);
     setShowDeleteModal(true);
@@ -316,7 +303,7 @@ const TripList = () => {
 
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
-    setTimeout(() => setTripToDelete(null), 200); // Clear after animation
+    setTimeout(() => setTripToDelete(null), 200);
   };
 
   const handleDelete = async () => {
@@ -335,7 +322,6 @@ const TripList = () => {
     }
   };
   
-  // Sorting function
   const requestSort = (key) => {
     let direction = 'ascending';
     if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -344,7 +330,6 @@ const TripList = () => {
     setSortConfig({ key, direction });
   };
   
-  // Apply sorting to trips
   const sortedTrips = React.useMemo(() => {
     let sortableItems = [...trips];
     if (sortConfig.key) {
@@ -352,19 +337,16 @@ const TripList = () => {
         let aValue = a[sortConfig.key];
         let bValue = b[sortConfig.key];
         
-        // Handle numeric values
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           return sortConfig.direction === 'ascending' ? aValue - bValue : bValue - aValue;
         }
         
-        // Handle date values
         if (sortConfig.key === 'date') {
           return sortConfig.direction === 'ascending' 
             ? new Date(aValue) - new Date(bValue) 
             : new Date(bValue) - new Date(aValue);
         }
         
-        // Handle string values (case insensitive)
         if (aValue && bValue) {
           aValue = aValue.toString().toLowerCase();
           bValue = bValue.toString().toLowerCase();
@@ -373,7 +355,6 @@ const TripList = () => {
             : bValue.localeCompare(aValue);
         }
         
-        // Handle null/undefined values
         if (aValue === null || aValue === undefined) return sortConfig.direction === 'ascending' ? -1 : 1;
         if (bValue === null || bValue === undefined) return sortConfig.direction === 'ascending' ? 1 : -1;
         
@@ -384,9 +365,7 @@ const TripList = () => {
   }, [trips, sortConfig]);
 
   return (
-    // Main container - improved max width and padding for mobile/wide screens
     <div className="w-full overflow-auto px-2 sm:px-4 md:px-6 py-2 sm:py-4">
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <DeleteConfirmationModal
           isDeleting={isDeleting}
@@ -395,18 +374,16 @@ const TripList = () => {
         />
       )}
 
-      {/* Location Dialog */}
       <LocationDialog
         isOpen={showLocationDialog}
         onClose={() => setShowLocationDialog(false)}
         dropOffLocation={locationData.dropOffLocation}
         terminalLocation={locationData.terminalLocation}
-        isEdit={false} // This is for viewing, not editing
+        isEdit={false}
         tripDetails={selectedTripDetails}
         routeData={locationData.routeData}
       />
 
-      {/* Loading overlay for trip details */}
       {isLoadingDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 flex flex-col items-center">
@@ -460,7 +437,6 @@ const TripList = () => {
             </div>
           )}
           
-          {/* Shared filter panel for both tabs */}
           <FilterPanel
             companies={companies}
             filters={filters}
@@ -468,11 +444,8 @@ const TripList = () => {
             onReset={handleResetFilters}
           />
 
-          {/* Display content based on active tab */}
           {activeTab === 'list' ? (
-            // Trip List Tab Content
             <>
-              {/* Global Search Bar - only visible in list view */}
               <SearchBar
                 searchTerm={searchTerm}
                 isSearching={isSearching}
@@ -482,7 +455,6 @@ const TripList = () => {
                 onClear={() => setSearchTerm('')}
               />
               
-              {/* Active filters/search tags */}
               {(searchTerm || filters.company || filters.startDate || filters.endDate) && (
                 <ActiveFilters
                   searchTerm={searchTerm}
@@ -493,7 +465,6 @@ const TripList = () => {
                 />
               )}
               
-              {/* Actions */}
               <ListActions
                 isLoading={isLoading}
                 isExporting={isExporting}
@@ -501,19 +472,16 @@ const TripList = () => {
                 onExport={fetchAllTrips}
               />
               
-              {/* Search and filter results indicator */}
               {(searchTerm || filters.company || filters.startDate || filters.endDate) && trips.length === 0 && !isLoading && (
                 <NoResultsAlert />
               )}
               
-              {/* Loading indicator */}
               {isLoading && (
                 <div className="flex justify-center p-8">
                   <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
               
-              {/* Desktop Trip list */}
               {!isLoading && (
                 <div className="hidden lg:block">
                   <TripTable
@@ -527,7 +495,6 @@ const TripList = () => {
                 </div>
               )}
               
-              {/* Mobile Trip List */}
               {!isLoading && (
                 <div className="block lg:hidden">
                   <MobileTripList
@@ -541,21 +508,19 @@ const TripList = () => {
                 </div>
               )}
               
-              {/* Pagination */}
               {totalPages > 1 && (
-  <Pagination
-    currentPage={currentPage}
-    totalPages={totalPages}
-    total={meta.total}
-    limit={meta.limit}
-    onPageChange={handlePageChange}
-    onLimitChange={handleLimitChange}
-    isLoading={isLoading}
-  />
-)}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  total={meta.total}
+                  limit={meta.limit}
+                  onPageChange={handlePageChange}
+                  onLimitChange={handleLimitChange}
+                  isLoading={isLoading}
+                />
+              )}
             </>
           ) : (
-            // Statistics Tab Content
             <ResponsiveTripStatistics filters={filters} />
           )}
         </div>

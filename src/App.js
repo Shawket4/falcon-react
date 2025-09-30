@@ -50,6 +50,7 @@ import CV from './cv';
 import SpeedViolations from './components/SpeedViolations';
 import LogsViewer from './components/LogsViewer';
 import EditDriver from './components/Drivers/EditDriver';
+import MultiContainerTripForm from './components/AllTrips/MultiContainerTripForm';
 
 // Map paths to readable names for breadcrumbs
 export const pathNames = {
@@ -300,10 +301,26 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/add-trip" element={
+            {/* <Route path="/add-trip" element={
               <ProtectedRoute>
                 <Layout>
                   <AddTripComponent />
+                </Layout>
+              </ProtectedRoute>
+            } /> */}
+
+            <Route path="/add-trip" element={
+              <ProtectedRoute>
+                <Layout>
+                  <MultiContainerTripForm />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+             <Route path="/trips/multi-container/:parentId/edit" element={
+              <ProtectedRoute>
+                <Layout>
+                  <MultiContainerTripForm />
                 </Layout>
               </ProtectedRoute>
             } />

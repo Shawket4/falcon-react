@@ -6,6 +6,7 @@ import SearchBar from './SearchBar';
 import FilterPanel from './FilterPanel';
 import ActiveFilters from './ActiveFilters';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
+import ParentTripDeleteModal from './ParentTripDeleteModal';
 import TripTable from './TripTable';
 import MobileTripList from './MobileTripList';
 import Pagination from './Pagination';
@@ -64,7 +65,8 @@ const TripList = () => {
   const [filters, setFilters] = useState({
     company: '',
     startDate: getFirstDayOfMonth(),
-    endDate: getToday()
+    endDate: getToday(),
+    missingData: ''
   });
   
   // Global search state
@@ -74,10 +76,16 @@ const TripList = () => {
   // Mobile view state
   const [showMobileDetails, setShowMobileDetails] = useState(null);
   
-  // Delete confirmation modal state
+  // Delete confirmation modal state for single trips
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [tripToDelete, setTripToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Delete confirmation modal state for parent trips
+  const [showDeleteParentModal, setShowDeleteParentModal] = useState(false);
+  const [parentToDelete, setParentToDelete] = useState(null);
+  const [parentContainerCount, setParentContainerCount] = useState(0);
+  const [isDeletingParent, setIsDeletingParent] = useState(false);
 
   // Location dialog state
   const [showLocationDialog, setShowLocationDialog] = useState(false);
@@ -95,7 +103,7 @@ const TripList = () => {
     if (activeTab === 'list') {
       fetchTrips();
     }
-  }, [currentPage, filters, searchTerm, activeTab]);
+  }, [currentPage, filters.company, filters.startDate, filters.endDate, searchTerm, activeTab]);
 
   const fetchCompanies = async () => {
     try {
@@ -265,10 +273,15 @@ const TripList = () => {
     setFilters({
       company: '',
       startDate: '',
-      endDate: ''
+      endDate: '',
+      missingData: ''
     });
     setSearchTerm('');
     setCurrentPage(1);
+  };
+
+  const handleClearMissingData = () => {
+    setFilters(prev => ({ ...prev, missingData: '' }));
   };
 
   const handleSearchChange = (e) => {
@@ -296,6 +309,7 @@ const TripList = () => {
     setShowMobileDetails(showMobileDetails === id ? null : id);
   };
   
+  // Single trip delete handlers
   const openDeleteModal = (id) => {
     setTripToDelete(id);
     setShowDeleteModal(true);
@@ -321,6 +335,39 @@ const TripList = () => {
       setIsDeleting(false);
     }
   };
+
+  // Parent trip delete handlers
+  const openDeleteParentModal = (parentId) => {
+    // Find the container count
+    const parentContainers = trips.filter(t => t.parent_trip_id === parentId);
+    setParentToDelete(parentId);
+    setParentContainerCount(parentContainers.length);
+    setShowDeleteParentModal(true);
+  };
+
+  const closeDeleteParentModal = () => {
+    setShowDeleteParentModal(false);
+    setTimeout(() => {
+      setParentToDelete(null);
+      setParentContainerCount(0);
+    }, 200);
+  };
+
+  const handleDeleteParent = async () => {
+    if (!parentToDelete) return;
+    
+    setIsDeletingParent(true);
+    try {
+      await apiClient.delete(`/api/trips/parent/${parentToDelete}`);
+      fetchTrips();
+      closeDeleteParentModal();
+    } catch (err) {
+      setError('Failed to delete parent trip: ' + (err.response?.data?.message || err.message));
+      console.error(err);
+    } finally {
+      setIsDeletingParent(false);
+    }
+  };
   
   const requestSort = (key) => {
     let direction = 'ascending';
@@ -330,8 +377,26 @@ const TripList = () => {
     setSortConfig({ key, direction });
   };
   
+  // Client-side filtering for missing data
+  const filteredTrips = React.useMemo(() => {
+    let filtered = [...trips];
+    
+    // Filter by missing data
+    if (filters.missingData === 'driver') {
+      filtered = filtered.filter(trip => trip.driver_name === 'غير مسجل');
+    } else if (filters.missingData === 'route') {
+      filtered = filtered.filter(trip => trip.drop_off_point === 'غير مسجل');
+    } else if (filters.missingData === 'any') {
+      filtered = filtered.filter(trip => 
+        trip.driver_name === 'غير مسجل' || trip.drop_off_point === 'غير مسجل'
+      );
+    }
+    
+    return filtered;
+  }, [trips, filters.missingData]);
+
   const sortedTrips = React.useMemo(() => {
-    let sortableItems = [...trips];
+    let sortableItems = [...filteredTrips];
     if (sortConfig.key) {
       sortableItems.sort((a, b) => {
         let aValue = a[sortConfig.key];
@@ -362,7 +427,7 @@ const TripList = () => {
       });
     }
     return sortableItems;
-  }, [trips, sortConfig]);
+  }, [filteredTrips, sortConfig]);
 
   return (
     <div className="w-full overflow-auto px-2 sm:px-4 md:px-6 py-2 sm:py-4">
@@ -371,6 +436,15 @@ const TripList = () => {
           isDeleting={isDeleting}
           onClose={closeDeleteModal}
           onDelete={handleDelete}
+        />
+      )}
+
+      {showDeleteParentModal && (
+        <ParentTripDeleteModal
+          isDeleting={isDeletingParent}
+          containerCount={parentContainerCount}
+          onClose={closeDeleteParentModal}
+          onDelete={handleDeleteParent}
         />
       )}
 
@@ -455,24 +529,24 @@ const TripList = () => {
                 onClear={() => setSearchTerm('')}
               />
               
-              {(searchTerm || filters.company || filters.startDate || filters.endDate) && (
-                <ActiveFilters
-                  searchTerm={searchTerm}
-                  filters={filters}
-                  onClearSearch={() => setSearchTerm('')}
-                  onClearCompany={() => setFilters({...filters, company: ''})}
-                  onClearDates={() => setFilters({...filters, startDate: '', endDate: ''})}
-                />
-              )}
+              <ActiveFilters
+                searchTerm={searchTerm}
+                filters={filters}
+                onClearSearch={() => setSearchTerm('')}
+                onClearCompany={() => setFilters({...filters, company: ''})}
+                onClearDates={() => setFilters({...filters, startDate: '', endDate: ''})}
+                onClearMissingData={handleClearMissingData}
+              />
               
               <ListActions
                 isLoading={isLoading}
                 isExporting={isExporting}
-                tripsCount={trips.length}
+                tripsCount={filteredTrips.length}
                 onExport={fetchAllTrips}
               />
               
-              {(searchTerm || filters.company || filters.startDate || filters.endDate) && trips.length === 0 && !isLoading && (
+              {(searchTerm || filters.company || filters.startDate || filters.endDate || 
+                filters.missingData) && filteredTrips.length === 0 && !isLoading && (
                 <NoResultsAlert />
               )}
               
@@ -490,6 +564,7 @@ const TripList = () => {
                     sortConfig={sortConfig}
                     onSort={requestSort}
                     onDelete={openDeleteModal}
+                    onDeleteParent={openDeleteParentModal}
                     onShowDetails={handleShowDetails}
                   />
                 </div>
@@ -503,6 +578,7 @@ const TripList = () => {
                     visibleDetailId={showMobileDetails}
                     onToggleDetails={toggleMobileDetails}
                     onDelete={openDeleteModal}
+                    onDeleteParent={openDeleteParentModal}
                     onShowDetails={handleShowDetails}
                   />
                 </div>

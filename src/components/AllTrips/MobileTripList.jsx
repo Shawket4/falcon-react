@@ -1,4 +1,3 @@
-// File: components/trips/MobileTripList.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -20,7 +19,7 @@ import {
 } from 'lucide-react';
 import EmptyTableState from './EmptyTableState';
 
-const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, onDelete, onShowDetails }) => {
+const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, onDelete, onDeleteParent, onShowDetails }) => {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
 
   const formatCurrency = (amount) => {
@@ -146,7 +145,7 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                 <div className="flex items-start justify-between mb-2.5">
                   <div className="flex-1 min-w-0 pr-3">
                     <div className="flex items-center mb-1.5">
-                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-2">
+                      <div className="w-8h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-2">
                         <FileText className="h-4 w-4 text-blue-600" />
                       </div>
                       <div>
@@ -376,6 +375,7 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
           const firstContainer = containers[0];
           const totalCapacity = containers.reduce((sum, c) => sum + c.tank_capacity, 0);
           const isExpanded = item.isExpanded;
+          const hasMultipleContainers = containers.length > 1;
 
           return (
             <div 
@@ -415,26 +415,35 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                     </div>
                   </div>
                   
-                  {/* Expand Button */}
+                  {/* Action Buttons */}
                   <div className="flex-shrink-0 flex items-center space-x-2">
-  <Link
-    to={`/trips/multi-container/${item.parentId}/edit`}
-    className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center hover:bg-blue-200 transition-colors"
-    onClick={(e) => e.stopPropagation()}
-  >
-    <Edit3 className="h-3.5 w-3.5 text-blue-600" />
-  </Link>
-  <button
-    onClick={() => toggleGroup(item.parentId)}
-    className="w-6 h-6 rounded-md bg-purple-100 flex items-center justify-center hover:bg-purple-200 transition-colors"
-  >
-    {isExpanded ? (
-      <ChevronDown className="h-3.5 w-3.5 text-purple-600" />
-    ) : (
-      <ChevronRight className="h-3.5 w-3.5 text-purple-600" />
-    )}
-  </button>
-</div>
+                    <Link
+                      to={`/trips/multi-container/${item.parentId}/edit`}
+                      className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center hover:bg-blue-200 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Edit3 className="h-3.5 w-3.5 text-blue-600" />
+                    </Link>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteParent(item.parentId);
+                      }}
+                      className="w-6 h-6 rounded-md bg-red-100 flex items-center justify-center hover:bg-red-200 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                    </button>
+                    <button
+                      onClick={() => toggleGroup(item.parentId)}
+                      className="w-6 h-6 rounded-md bg-purple-100 flex items-center justify-center hover:bg-purple-200 transition-colors"
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="h-3.5 w-3.5 text-purple-600" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 text-purple-600" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Parent Summary */}
@@ -538,10 +547,8 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                               </div>
                             </div>
 
-                            {/* Action Buttons */}
+                            {/* Action Buttons - hide delete if only one container */}
                             <div className="flex space-x-2">
-                            
-                              
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -553,15 +560,17 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                                 Details
                               </button>
                               
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDelete(container.ID);
-                                }}
-                                className="inline-flex items-center justify-center px-2.5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
+                              {hasMultipleContainers && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(container.ID);
+                                  }}
+                                  className="inline-flex items-center justify-center px-2.5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}

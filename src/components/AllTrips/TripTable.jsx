@@ -17,7 +17,7 @@ import {
 import TableHeader from './TableHeader';
 import EmptyTableState from './EmptyTableState';
 
-const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetails }) => {
+const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onDeleteParent, onShowDetails }) => {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
 
   const formatCurrency = (amount) => {
@@ -325,15 +325,16 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetai
                     </tr>
                   );
                 } else {
-                  // Parent group - now matching single trip styling
+                  // Parent group
                   const containers = item.containers;
                   const firstContainer = containers[0];
                   const totalCapacity = containers.reduce((sum, c) => sum + c.tank_capacity, 0);
                   const isExpanded = item.isExpanded;
+                  const hasMultipleContainers = containers.length > 1;
                   
                   return (
                     <React.Fragment key={`parent-${item.parentId}`}>
-                      {/* Parent Row - Styled like single trips */}
+                      {/* Parent Row */}
                       <tr className={`hover:bg-blue-50/50 transition-colors duration-150 ${
                         index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
                       }`}>
@@ -350,7 +351,7 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetai
                           </button>
                         </td>
                         
-                        {/* Type indicator - matching single trip style */}
+                        {/* Type indicator */}
                         <td className="py-4 pl-3 pr-3">
                           <div className="flex items-center">
                             <div className="flex-shrink-0">
@@ -383,7 +384,7 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetai
                           </div>
                         </td>
 
-                        {/* Route - Show terminal and destinations count */}
+                        {/* Route */}
                         <td className="px-3 py-4">
                           <div className="space-y-1">
                             <div className="flex items-center text-xs">
@@ -419,7 +420,7 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetai
                           </div>
                         </td>
 
-                        {/* Total Tank - styled like single trip */}
+                        {/* Total Tank */}
                         <td className="px-3 py-4">
                           <div className="flex items-center">
                             <Fuel className="h-4 w-4 text-gray-400 mr-2" />
@@ -432,7 +433,7 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetai
                           </div>
                         </td>
 
-                        {/* Summary - show click to expand */}
+                        {/* Summary */}
                         <td className="px-3 py-4">
                           <div className="text-xs text-purple-600 font-medium">
                             {isExpanded ? 'View less' : 'View containers'}
@@ -441,26 +442,33 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetai
 
                         {/* Actions for parent */}
                         <td className="px-6 py-4 text-right">
-  <div className="flex items-center justify-end space-x-2">
-    <Link
-      to={`/trips/multi-container/${item.parentId}/edit`}
-      className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-100 transition-colors"
-      title="Edit Multi-Container Trip"
-    >
-      <Edit3 className="h-4 w-4" />
-    </Link>
-    <button
-      onClick={() => toggleGroup(item.parentId)}
-      className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-purple-600 hover:text-purple-700 hover:bg-purple-100 transition-colors"
-      title={isExpanded ? 'Collapse' : 'Expand'}
-    >
-      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-    </button>
-  </div>
-</td>
+                          <div className="flex items-center justify-end space-x-2">
+                            <Link
+                              to={`/trips/multi-container/${item.parentId}/edit`}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-100 transition-colors"
+                              title="Edit Multi-Container Trip"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Link>
+                            <button
+                              onClick={() => onDeleteParent(item.parentId)}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-100 transition-colors"
+                              title="Delete Multi-Container Trip"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => toggleGroup(item.parentId)}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-purple-600 hover:text-purple-700 hover:bg-purple-100 transition-colors"
+                              title={isExpanded ? 'Collapse' : 'Expand'}
+                            >
+                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </td>
                       </tr>
 
-                      {/* Container Rows (when expanded) - indented with subtle styling */}
+                      {/* Container Rows (when expanded) */}
                       {isExpanded && containers.map((container, containerIndex) => (
                         <tr 
                           key={`container-${container.ID}`}
@@ -539,10 +547,9 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetai
                             </div>
                           </td>
 
-                          {/* Actions for container */}
+                          {/* Actions for container - hide delete if only one container */}
                           <td className="px-6 py-3 text-right">
                             <div className="flex items-center justify-end space-x-2">
-                            
                               <button
                                 onClick={() => onShowDetails(container.ID)}
                                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-green-600 hover:text-green-700 hover:bg-green-100 transition-colors"
@@ -550,13 +557,15 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onShowDetai
                               >
                                 <FileText className="h-4 w-4" />
                               </button>
-                              <button
-                                onClick={() => onDelete(container.ID)}
-                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-100 transition-colors"
-                                title="Delete Container"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              {hasMultipleContainers && (
+                                <button
+                                  onClick={() => onDelete(container.ID)}
+                                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-100 transition-colors"
+                                  title="Delete Container"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

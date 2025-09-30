@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import apiClient from '../../apiClient';
 import { debounce } from 'lodash';
-import { Plus, Trash2, X, Package, Check } from 'lucide-react';
+import { Plus, Trash2, X, Package, Check, AlertCircle, Info } from 'lucide-react';
 
 const MultiContainerTripForm = () => {
-  const { parentId } = useParams(); // Get parent ID from URL for edit mode
+  const { parentId } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!parentId;
   
@@ -42,13 +42,17 @@ const MultiContainerTripForm = () => {
   const [companyDropdownVisible, setCompanyDropdownVisible] = useState(false);
   const [terminalDropdownVisible, setTerminalDropdownVisible] = useState(false);
   
+  // Unregistered flags
+  const [isDriverUnregistered, setIsDriverUnregistered] = useState(false);
+  const [unregisteredDropOffs, setUnregisteredDropOffs] = useState({});
+  
   // Refs for dropdowns
   const carDropdownRef = useRef(null);
   const driverDropdownRef = useRef(null);
   const companyDropdownRef = useRef(null);
   const terminalDropdownRef = useRef(null);
   
-  // Parent trip data (common to all containers)
+  // Parent trip data
   const [parentData, setParentData] = useState({
     car_id: '',
     driver_id: '',
@@ -60,10 +64,10 @@ const MultiContainerTripForm = () => {
     date: new Date().toISOString().split('T')[0],
   });
   
-  // Container data (1-4 containers)
+  // Container data
   const [containers, setContainers] = useState([
     {
-      id: null, // For edit mode - existing container ID
+      id: null,
       drop_off_point: '',
       tank_capacity: 0,
       gas_type: '',
@@ -73,6 +77,38 @@ const MultiContainerTripForm = () => {
   
   // Active container for drop-off selection
   const [activeContainerIndex, setActiveContainerIndex] = useState(null);
+  
+  // Selected car data for capacity validation
+  const [selectedCar, setSelectedCar] = useState(null);
+  
+  // Calculate total container capacity
+  const totalContainerCapacity = useMemo(() => {
+    return containers.reduce((sum, container) => {
+      const capacity = parseFloat(container.tank_capacity) || 0;
+      return sum + capacity;
+    }, 0);
+  }, [containers]);
+  
+  // Check if capacity matches
+  const capacityValidation = useMemo(() => {
+    if (!selectedCar || !selectedCar.tank_capacity) {
+      return { isValid: true, message: '' };
+    }
+    
+    const carCapacity = parseFloat(selectedCar.tank_capacity);
+    const diff = Math.abs(totalContainerCapacity - carCapacity);
+    
+    if (diff === 0) {
+      return { isValid: true, message: 'Capacity matches perfectly!' };
+    } else if (diff < 0.01) {
+      return { isValid: true, message: 'Capacity matches (minor rounding)' };
+    } else {
+      return {
+        isValid: false,
+        message: `Total containers (${totalContainerCapacity}L) must equal car capacity (${carCapacity}L). Difference: ${diff.toFixed(2)}L`
+      };
+    }
+  }, [totalContainerCapacity, selectedCar]);
   
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -195,6 +231,10 @@ const MultiContainerTripForm = () => {
       const response = await apiClient.get(`/api/trips/parent/${parentId}/containers`);
       const { parent_trip, containers: existingContainers } = response.data;
       
+      // Check if driver is unregistered
+      const isUnregisteredDriver = parent_trip.driver_name === 'غير مسجل';
+      setIsDriverUnregistered(isUnregisteredDriver);
+      
       // Set parent data
       setParentData({
         car_id: parent_trip.car_id,
@@ -207,14 +247,30 @@ const MultiContainerTripForm = () => {
         date: parent_trip.date,
       });
       
-      // Set containers data
-      setContainers(existingContainers.map(c => ({
-        id: c.ID,
-        drop_off_point: c.drop_off_point,
-        tank_capacity: c.tank_capacity,
-        gas_type: c.gas_type,
-        receipt_no: c.receipt_no,
-      })));
+      // Find and set selected car
+      const car = cars.find(c => (c.ID || c.id) === parent_trip.car_id);
+      if (car) {
+        setSelectedCar(car);
+      }
+      
+      // Set containers data and check for unregistered drop-offs
+      const unregisteredMap = {};
+      const containerData = existingContainers.map((c, idx) => {
+        const isUnregistered = c.drop_off_point === 'غير مسجل';
+        if (isUnregistered) {
+          unregisteredMap[idx] = true;
+        }
+        return {
+          id: c.ID,
+          drop_off_point: c.drop_off_point,
+          tank_capacity: c.tank_capacity,
+          gas_type: c.gas_type,
+          receipt_no: c.receipt_no,
+        };
+      });
+      
+      setContainers(containerData);
+      setUnregisteredDropOffs(unregisteredMap);
       
     } catch (err) {
       setError('Failed to load trip data');
@@ -253,6 +309,7 @@ const MultiContainerTripForm = () => {
   };
   
   const handleCarSelect = (car) => {
+    setSelectedCar(car);
     setParentData(prev => ({
       ...prev,
       car_id: car.ID || car.id,
@@ -264,6 +321,7 @@ const MultiContainerTripForm = () => {
         (d.ID === car.driver_id) || (d.id === car.driver_id)
       );
       if (assignedDriver) {
+        setIsDriverUnregistered(false);
         setParentData(prev => ({
           ...prev,
           driver_id: assignedDriver.ID || assignedDriver.id,
@@ -277,11 +335,21 @@ const MultiContainerTripForm = () => {
   };
   
   const handleDriverSelect = (driver) => {
-    setParentData(prev => ({
-      ...prev,
-      driver_id: driver.ID || driver.id,
-      driver_name: driver.name || driver.driver_name
-    }));
+    if (driver === 'UNREGISTERED') {
+      setIsDriverUnregistered(true);
+      setParentData(prev => ({
+        ...prev,
+        driver_id: 0,
+        driver_name: 'غير مسجل'
+      }));
+    } else {
+      setIsDriverUnregistered(false);
+      setParentData(prev => ({
+        ...prev,
+        driver_id: driver.ID || driver.id,
+        driver_name: driver.name || driver.driver_name
+      }));
+    }
     setDriverDropdownVisible(false);
     setDriverSearch('');
   };
@@ -293,6 +361,7 @@ const MultiContainerTripForm = () => {
       terminal: ''
     }));
     setContainers(containers.map(c => ({ ...c, drop_off_point: '' })));
+    setUnregisteredDropOffs({});
     setCompanyDropdownVisible(false);
     setCompanySearch('');
   };
@@ -303,6 +372,7 @@ const MultiContainerTripForm = () => {
       terminal
     }));
     setContainers(containers.map(c => ({ ...c, drop_off_point: '' })));
+    setUnregisteredDropOffs({});
     setTerminalDropdownVisible(false);
     setTerminalSearch('');
   };
@@ -322,8 +392,23 @@ const MultiContainerTripForm = () => {
   const removeContainer = (index) => {
     if (containers.length > 1) {
       setContainers(containers.filter((_, i) => i !== index));
+      
+      // Update unregistered drop-offs mapping
+      const newUnregistered = {};
+      Object.keys(unregisteredDropOffs).forEach(key => {
+        const idx = parseInt(key);
+        if (idx < index) {
+          newUnregistered[idx] = unregisteredDropOffs[idx];
+        } else if (idx > index) {
+          newUnregistered[idx - 1] = unregisteredDropOffs[idx];
+        }
+      });
+      setUnregisteredDropOffs(newUnregistered);
+      
       if (activeContainerIndex === index) {
         setActiveContainerIndex(null);
+      } else if (activeContainerIndex > index) {
+        setActiveContainerIndex(activeContainerIndex - 1);
       }
     }
   };
@@ -336,7 +421,19 @@ const MultiContainerTripForm = () => {
   
   const handleDropOffPointSelect = (point) => {
     if (activeContainerIndex !== null) {
-      updateContainer(activeContainerIndex, 'drop_off_point', point);
+      if (point === 'UNREGISTERED') {
+        updateContainer(activeContainerIndex, 'drop_off_point', 'غير مسجل');
+        setUnregisteredDropOffs(prev => ({
+          ...prev,
+          [activeContainerIndex]: true
+        }));
+      } else {
+        updateContainer(activeContainerIndex, 'drop_off_point', point);
+        setUnregisteredDropOffs(prev => ({
+          ...prev,
+          [activeContainerIndex]: false
+        }));
+      }
       setActiveContainerIndex(null);
     }
   };
@@ -352,6 +449,12 @@ const MultiContainerTripForm = () => {
     
     if (!parentData.car_no_plate || !parentData.driver_name) {
       setError('Please select a car and driver');
+      return;
+    }
+    
+    // Validate capacity match
+    if (!capacityValidation.isValid) {
+      setError(capacityValidation.message);
       return;
     }
     
@@ -378,7 +481,7 @@ const MultiContainerTripForm = () => {
       const payload = {
         parent_trip: {
           car_id: parseInt(parentData.car_id, 10),
-          driver_id: parseInt(parentData.driver_id, 10),
+          driver_id: isDriverUnregistered ? 0 : parseInt(parentData.driver_id, 10),
           car_no_plate: parentData.car_no_plate,
           driver_name: parentData.driver_name,
           transporter: 'Apex',
@@ -387,7 +490,7 @@ const MultiContainerTripForm = () => {
           date: parentData.date,
         },
         containers: containers.map(c => ({
-        ...(c.id != null && { id: c.id }),
+          ...(c.id != null && { id: c.id }),
           drop_off_point: c.drop_off_point,
           tank_capacity: parseInt(c.tank_capacity, 10),
           gas_type: c.gas_type,
@@ -424,22 +527,34 @@ const MultiContainerTripForm = () => {
     }
   };
   
-  const filteredCars = cars.filter(car => 
-    car.car_no_plate?.toLowerCase().includes(carSearch.toLowerCase()) ||
-    (car.car_type && car.car_type.toLowerCase().includes(carSearch.toLowerCase()))
+  const filteredCars = useMemo(() => 
+    cars.filter(car => 
+      car.car_no_plate?.toLowerCase().includes(carSearch.toLowerCase()) ||
+      (car.car_type && car.car_type.toLowerCase().includes(carSearch.toLowerCase()))
+    ),
+    [cars, carSearch]
   );
   
-  const filteredDrivers = drivers.filter(driver => 
-    (driver.name?.toLowerCase().includes(driverSearch.toLowerCase())) ||
-    (driver.driver_name?.toLowerCase().includes(driverSearch.toLowerCase()))
+  const filteredDrivers = useMemo(() => 
+    drivers.filter(driver => 
+      (driver.name?.toLowerCase().includes(driverSearch.toLowerCase())) ||
+      (driver.driver_name?.toLowerCase().includes(driverSearch.toLowerCase()))
+    ),
+    [drivers, driverSearch]
   );
   
-  const filteredCompanies = companies.filter(company => 
-    company.toLowerCase().includes(companySearch.toLowerCase())
+  const filteredCompanies = useMemo(() => 
+    companies.filter(company => 
+      company.toLowerCase().includes(companySearch.toLowerCase())
+    ),
+    [companies, companySearch]
   );
   
-  const filteredTerminals = terminals.filter(terminal => 
-    terminal.toLowerCase().includes(terminalSearch.toLowerCase())
+  const filteredTerminals = useMemo(() => 
+    terminals.filter(terminal => 
+      terminal.toLowerCase().includes(terminalSearch.toLowerCase())
+    ),
+    [terminals, terminalSearch]
   );
 
   if (isInitialLoading) {
@@ -493,8 +608,35 @@ const MultiContainerTripForm = () => {
                 </div>
               )}
               
-              {/* Rest of the form remains exactly the same as before... */}
-              {/* I'll continue with the rest of the form JSX in the next part */}
+              {/* Capacity Validation Warning/Success */}
+              {selectedCar && selectedCar.tank_capacity && (
+                <div className={`border-l-4 p-4 rounded ${
+                  capacityValidation.isValid 
+                    ? 'bg-green-100 border-green-500' 
+                    : 'bg-yellow-100 border-yellow-500'
+                }`}>
+                  <div className="flex items-start">
+                    {capacityValidation.isValid ? (
+                      <Check className="text-green-600 mr-3 mt-0.5" size={20} />
+                    ) : (
+                      <AlertCircle className="text-yellow-600 mr-3 mt-0.5" size={20} />
+                    )}
+                    <div>
+                      <p className={`font-medium ${
+                        capacityValidation.isValid ? 'text-green-800' : 'text-yellow-800'
+                      }`}>
+                        Capacity Validation
+                      </p>
+                      <p className={capacityValidation.isValid ? 'text-green-700' : 'text-yellow-700'}>
+                        {capacityValidation.message}
+                      </p>
+                      <p className="text-sm mt-1 text-gray-600">
+                        Car capacity: {selectedCar.tank_capacity}L | Total containers: {totalContainerCapacity}L
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Common Trip Information */}
               <div>
@@ -514,7 +656,7 @@ const MultiContainerTripForm = () => {
                 </div>
               </div>
               
-              {/* Vehicle & Driver Section - Keeping existing code */}
+              {/* Vehicle & Driver Section */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
                   Vehicle & Driver Information
@@ -545,17 +687,17 @@ const MultiContainerTripForm = () => {
                     </div>
                     
                     {carDropdownVisible && (
-                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto">
+                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto border border-gray-200">
                         {filteredCars.length > 0 ? (
                           filteredCars.map(car => (
                             <div
                               key={car.ID || car.id}
-                              className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
+                              className="px-4 py-2 hover:bg-blue-100 cursor-pointer transition-colors"
                               onClick={() => handleCarSelect(car)}
                             >
                               <div className="font-medium">{car.car_no_plate}</div>
                               <div className="text-sm text-gray-500">
-                                {car.car_type && `${car.car_type} • `}Capacity: {car.tank_capacity || 'N/A'}
+                                {car.car_type && `${car.car_type} • `}Capacity: {car.tank_capacity || 'N/A'}L
                               </div>
                             </div>
                           ))
@@ -566,8 +708,12 @@ const MultiContainerTripForm = () => {
                     )}
                     
                     {parentData.car_no_plate && (
-                      <div className="mt-2 text-sm text-blue-600">
+                      <div className="mt-2 text-sm text-blue-600 flex items-center">
+                        <Check size={16} className="mr-1" />
                         Selected: {parentData.car_no_plate}
+                        {selectedCar && selectedCar.tank_capacity && (
+                          <span className="ml-2 text-gray-500">({selectedCar.tank_capacity}L)</span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -596,12 +742,24 @@ const MultiContainerTripForm = () => {
                     </div>
                     
                     {driverDropdownVisible && (
-                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto">
+                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto border border-gray-200">
+                        {/* Unregistered Driver Option */}
+                        <div
+                          className="px-4 py-2 hover:bg-orange-100 cursor-pointer transition-colors border-b border-gray-200 bg-orange-50"
+                          onClick={() => handleDriverSelect('UNREGISTERED')}
+                        >
+                          <div className="font-medium text-orange-700 flex items-center">
+                            <Info size={16} className="mr-2" />
+                            غير مسجل (Unregistered)
+                          </div>
+                          <div className="text-sm text-orange-600">Driver not in system</div>
+                        </div>
+                        
                         {filteredDrivers.length > 0 ? (
                           filteredDrivers.map(driver => (
                             <div
                               key={driver.ID || driver.id}
-                              className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
+                              className="px-4 py-2 hover:bg-blue-100 cursor-pointer transition-colors"
                               onClick={() => handleDriverSelect(driver)}
                             >
                               <div className="font-medium">{driver.name || driver.driver_name}</div>
@@ -614,8 +772,14 @@ const MultiContainerTripForm = () => {
                     )}
                     
                     {parentData.driver_name && (
-                      <div className="mt-2 text-sm text-blue-600">
+                      <div className={`mt-2 text-sm flex items-center ${
+                        isDriverUnregistered ? 'text-orange-600' : 'text-blue-600'
+                      }`}>
+                        <Check size={16} className="mr-1" />
                         Selected: {parentData.driver_name}
+                        {isDriverUnregistered && (
+                          <span className="ml-2 text-xs bg-orange-100 px-2 py-0.5 rounded">Unregistered</span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -623,11 +787,11 @@ const MultiContainerTripForm = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Plate Number (Auto-filled)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Plate Number</label>
                     <input 
                       type="text"
                       value={parentData.car_no_plate}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 cursor-not-allowed"
                       readOnly
                     />
                   </div>
@@ -636,7 +800,7 @@ const MultiContainerTripForm = () => {
                     <input 
                       type="text"
                       value={parentData.driver_name}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 cursor-not-allowed"
                       readOnly
                     />
                   </div>
@@ -645,7 +809,7 @@ const MultiContainerTripForm = () => {
                     <input 
                       type="text"
                       value="Apex"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 cursor-not-allowed"
                       readOnly
                     />
                   </div>
@@ -681,12 +845,12 @@ const MultiContainerTripForm = () => {
                     </div>
                     
                     {companyDropdownVisible && (
-                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto">
+                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto border border-gray-200">
                         {filteredCompanies.length > 0 ? (
                           filteredCompanies.map((company, idx) => (
                             <div
                               key={idx}
-                              className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
+                              className="px-4 py-2 hover:bg-blue-100 cursor-pointer transition-colors"
                               onClick={() => handleCompanySelect(company)}
                             >
                               {company}
@@ -699,7 +863,8 @@ const MultiContainerTripForm = () => {
                     )}
                     
                     {parentData.company && (
-                      <div className="mt-2 text-sm text-blue-600">
+                      <div className="mt-2 text-sm text-blue-600 flex items-center">
+                        <Check size={16} className="mr-1" />
                         Selected: {parentData.company}
                       </div>
                     )}
@@ -716,17 +881,18 @@ const MultiContainerTripForm = () => {
                         onFocus={() => parentData.company && terminals.length > 0 && setTerminalDropdownVisible(true)}
                         placeholder={
                           !parentData.company 
-                            ? "Select a company first": terminals.length === 0
+                            ? "Select a company first"
+                            : terminals.length === 0
                               ? "No terminals available"
                               : "Search for a terminal..."
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         disabled={!parentData.company || terminals.length === 0}
                       />
                       <button
                         type="button"
                         onClick={() => parentData.company && terminals.length > 0 && setTerminalDropdownVisible(!terminalDropdownVisible)}
-                        className="absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"
+                        className="absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 disabled:cursor-not-allowed"
                         disabled={!parentData.company || terminals.length === 0}
                       >
                         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -736,12 +902,12 @@ const MultiContainerTripForm = () => {
                     </div>
                     
                     {terminalDropdownVisible && (
-                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto">
+                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 overflow-auto border border-gray-200">
                         {filteredTerminals.length > 0 ? (
                           filteredTerminals.map((terminal, idx) => (
                             <div
                               key={idx}
-                              className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
+                              className="px-4 py-2 hover:bg-blue-100 cursor-pointer transition-colors"
                               onClick={() => handleTerminalSelect(terminal)}
                             >
                               {terminal}
@@ -754,7 +920,8 @@ const MultiContainerTripForm = () => {
                     )}
                     
                     {parentData.terminal && (
-                      <div className="mt-2 text-sm text-blue-600">
+                      <div className="mt-2 text-sm text-blue-600 flex items-center">
+                        <Check size={16} className="mr-1" />
                         Selected: {parentData.terminal}
                       </div>
                     )}
@@ -794,6 +961,7 @@ const MultiContainerTripForm = () => {
                             type="button"
                             onClick={() => removeContainer(index)}
                             className="text-red-600 hover:text-red-800 transition-colors"
+                            title="Remove container"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -828,6 +996,7 @@ const MultiContainerTripForm = () => {
                             className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Enter capacity"
                             min="0"
+                            step="0.01"
                             required
                           />
                         </div>
@@ -861,7 +1030,9 @@ const MultiContainerTripForm = () => {
                             disabled={!parentData.company || !parentData.terminal || isMappingLoading}
                             className={`w-full px-4 py-2 border rounded-md shadow-sm text-left ${
                               container.drop_off_point 
-                                ? 'border-green-500 bg-green-50' 
+                                ? unregisteredDropOffs[index]
+                                  ? 'border-orange-500 bg-orange-50'
+                                  : 'border-green-500 bg-green-50'
                                 : 'border-gray-300 bg-white'
                             } ${
                               !parentData.company || !parentData.terminal || isMappingLoading
@@ -873,8 +1044,15 @@ const MultiContainerTripForm = () => {
                               <span className="text-gray-500">Loading drop-off points...</span>
                             ) : container.drop_off_point ? (
                               <div>
-                                <div className="font-medium text-gray-900">{container.drop_off_point}</div>
-                                {mappingDetails[container.drop_off_point] && (
+                                <div className="font-medium text-gray-900 flex items-center">
+                                  {container.drop_off_point}
+                                  {unregisteredDropOffs[index] && (
+                                    <span className="ml-2 text-xs bg-orange-200 text-orange-700 px-2 py-0.5 rounded">
+                                      Unregistered
+                                    </span>
+                                  )}
+                                </div>
+                                {mappingDetails[container.drop_off_point] && !unregisteredDropOffs[index] && (
                                   <div className="text-xs text-gray-600 mt-1">
                                     Distance: {mappingDetails[container.drop_off_point].distance}km • 
                                     Fee: {mappingDetails[container.drop_off_point].fee}
@@ -893,7 +1071,7 @@ const MultiContainerTripForm = () => {
                       </div>
                       
                       {/* Show fee and distance if available */}
-                      {container.drop_off_point && mappingDetails[container.drop_off_point] && (
+                      {container.drop_off_point && mappingDetails[container.drop_off_point] && !unregisteredDropOffs[index] && (
                         <div className="mt-4 bg-white rounded-md p-3 border border-blue-200">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -928,7 +1106,7 @@ const MultiContainerTripForm = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !capacityValidation.isValid}
                   className="px-6 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
                 >
                   {isLoading ? (
@@ -975,6 +1153,7 @@ const MultiContainerTripForm = () => {
                   onChange={(e) => setDropOffSearch(e.target.value)}
                   placeholder="Search drop-off points..."
                   className="w-full px-4 py-2 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  autoFocus
                 />
               </div>
             </div>
@@ -986,43 +1165,75 @@ const MultiContainerTripForm = () => {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
                   <p className="mt-4 text-gray-600">Loading drop-off points...</p>
                 </div>
-              ) : filteredDropOffPoints.length > 0 ? (
+              ) : (
                 <div className="space-y-2">
-                  {filteredDropOffPoints.map((point, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => handleDropOffPointSelect(point)}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        containers[activeContainerIndex].drop_off_point === point
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">{point}</div>
-                          {mappingDetails[point] && (
-                            <div className="text-sm text-gray-600 mt-1">
-                              Distance: {mappingDetails[point].distance}km • Fee: {mappingDetails[point].fee}
-                            </div>
+                  {/* Unregistered Option */}
+                  <div
+                    onClick={() => handleDropOffPointSelect('UNREGISTERED')}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      containers[activeContainerIndex].drop_off_point === 'غير مسجل'
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-orange-200 hover:border-orange-300 hover:bg-orange-50 bg-orange-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium text-orange-700 flex items-center">
+                          <Info size={18} className="mr-2" />
+                          غير مسجل (Unregistered)
+                        </div>
+                        <div className="text-sm text-orange-600 mt-1">
+                          Drop-off point not in system
+                        </div>
+                      </div>
+                      {containers[activeContainerIndex].drop_off_point === 'غير مسجل' && (
+                        <Check className="text-orange-600 ml-4" size={24} />
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Regular Drop-off Points */}
+                  {filteredDropOffPoints.length > 0 ? (
+                    filteredDropOffPoints.map((point, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleDropOffPointSelect(point)}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          containers[activeContainerIndex].drop_off_point === point
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{point}</div>
+                            {mappingDetails[point] && (
+                              <div className="text-sm text-gray-600 mt-1">
+                                Distance: {mappingDetails[point].distance}km • Fee: {mappingDetails[point].fee}
+                              </div>
+                            )}
+                          </div>
+                          {containers[activeContainerIndex].drop_off_point === point && (
+                            <Check className="text-blue-600 ml-4" size={24} />
                           )}
                         </div>
-                        {containers[activeContainerIndex].drop_off_point === point && (
-                          <Check className="text-blue-600 ml-4" size={24} />
-                        )}
                       </div>
+                    ))
+                  ) : dropOffSearch.trim() !== '' ? (
+                    <div className="text-center py-12 text-gray-500">
+                      No drop-off points found matching "{dropOffSearch}"
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  No drop-off points found
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      No drop-off points available
+                    </div>
+                  )}
                 </div>
               )}
             </div>
             
             {/* Modal Footer with Pagination */}
-            {!isMappingLoading && filteredDropOffPoints.length > 0 && (
+            {!isMappingLoading && filteredDropOffPoints.length > 0 && totalPages > 1 && (
               <div className="border-t px-6 py-4 bg-gray-50 rounded-b-lg">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">
@@ -1032,14 +1243,14 @@ const MultiContainerTripForm = () => {
                     <button
                       onClick={handlePrevPage}
                       disabled={currentPage === 1}
-                      className="px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors text-sm"
                     >
                       Previous
                     </button>
                     <button
                       onClick={handleNextPage}
                       disabled={currentPage === totalPages}
-                      className="px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors text-sm"
                     >
                       Next
                     </button>

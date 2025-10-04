@@ -34,11 +34,12 @@ const TripList = () => {
     return new Date().toISOString().split('T')[0];
   };
 
+  // Separate limit state from meta
+  const [limit, setLimit] = useState(10);
   const [meta, setMeta] = useState({
     page: 1,
     pages: 1,
     total: 0,
-    limit: 10,
   });
 
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
@@ -106,7 +107,7 @@ const TripList = () => {
     setShowReceiptDialog(false);
     setSelectedTripForReceipt(null);
     setShouldRefresh(prev => !prev);
-  }, [currentPage, meta.limit]);
+  }, []);
 
   const fetchCompanies = useCallback(async () => {
     try {
@@ -117,7 +118,7 @@ const TripList = () => {
     }
   }, []);
 
-  const fetchTrips = useCallback(async (pageNumber = currentPage, pageLimit = meta.limit) => {
+  const fetchTrips = useCallback(async (pageNumber = currentPage, pageLimit = limit) => {
     setIsLoading(true);
     setError('');
     
@@ -132,12 +133,10 @@ const TripList = () => {
         params.search = searchTerm;
       }
       
-      // Add missing data filter
       if (filters.missingData) {
         params.missing_data = filters.missingData;
       }
       
-      // Add receipt status filter
       if (filters.receiptStatus) {
         params.receipt_status = filters.receiptStatus;
       }
@@ -163,7 +162,11 @@ const TripList = () => {
       setTrips(response.data.data || []);
       
       if (response.data.meta) {
-        setMeta(response.data.meta);
+        setMeta({
+          page: response.data.meta.page,
+          pages: response.data.meta.pages,
+          total: response.data.meta.total,
+        });
         setTotalPages(response.data.meta.pages || 1);
       }
     } catch (err) {
@@ -173,29 +176,22 @@ const TripList = () => {
       setIsLoading(false);
       setIsSearching(false);
     }
-  }, [currentPage, meta.limit, searchTerm, filters.missingData, filters.receiptStatus, filters.company, filters.startDate, filters.endDate]);
+  }, [currentPage, limit, searchTerm, filters.missingData, filters.receiptStatus, filters.company, filters.startDate, filters.endDate]);
 
   // Initial fetch of companies
   useEffect(() => {
     fetchCompanies();
   }, [fetchCompanies]);
 
-  // Fetch trips when dependencies change - FIXED: Added all filter dependencies
+  // Fetch trips when dependencies change
   useEffect(() => {
     if (activeTab === 'list') {
       fetchTrips();
     }
   }, [
+    fetchTrips,
     activeTab,
-    currentPage, 
-    filters.company, 
-    filters.startDate, 
-    filters.endDate, 
-    filters.missingData,      // ADDED
-    filters.receiptStatus,    // ADDED
-    searchTerm,
-    shouldRefresh,
-    meta.limit
+    shouldRefresh
   ]);
 
   const fetchAllTrips = useCallback(async () => {
@@ -245,10 +241,9 @@ const TripList = () => {
   }, [searchTerm, filters]);
 
   const handleLimitChange = useCallback((newLimit) => {
-    setMeta(prev => ({ ...prev, limit: newLimit }));
+    setLimit(newLimit);
     setCurrentPage(1);
-    fetchTrips(1, newLimit);
-  }, [fetchTrips]);
+  }, []);
 
   const handleShowDetails = useCallback(async (tripId) => {
     setIsLoadingDetails(true);
@@ -411,39 +406,38 @@ const TripList = () => {
     }));
   }, []);
   
-  // REMOVED: Client-side filtering is now handled by backend
-  // Just use trips directly since backend filters them
+  // Client-side sorting only (backend handles filtering)
   const sortedTrips = useMemo(() => {
-    let sortableItems = [...trips];
-    if (sortConfig.key) {
-      sortableItems.sort((a, b) => {
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
-        
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
-          return sortConfig.direction === 'ascending' ? aValue - bValue : bValue - aValue;
-        }
-        
-        if (sortConfig.key === 'date') {
-          return sortConfig.direction === 'ascending' 
-            ? new Date(aValue) - new Date(bValue) 
-            : new Date(bValue) - new Date(aValue);
-        }
-        
-        if (aValue && bValue) {
-          aValue = aValue.toString().toLowerCase();
-          bValue = bValue.toString().toLowerCase();
-          return sortConfig.direction === 'ascending'
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        }
-        
-        if (aValue === null || aValue === undefined) return sortConfig.direction === 'ascending' ? -1 : 1;
-        if (bValue === null || bValue === undefined) return sortConfig.direction === 'ascending' ? 1 : -1;
-        
-        return 0;
-      });
-    }
+    if (!sortConfig.key) return trips;
+    
+    const sortableItems = [...trips];
+    sortableItems.sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'ascending' ? aValue - bValue : bValue - aValue;
+      }
+      
+      if (sortConfig.key === 'date') {
+        return sortConfig.direction === 'ascending' 
+          ? new Date(aValue) - new Date(bValue) 
+          : new Date(bValue) - new Date(aValue);
+      }
+      
+      if (aValue && bValue) {
+        aValue = aValue.toString().toLowerCase();
+        bValue = bValue.toString().toLowerCase();
+        return sortConfig.direction === 'ascending'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      if (aValue === null || aValue === undefined) return sortConfig.direction === 'ascending' ? -1 : 1;
+      if (bValue === null || bValue === undefined) return sortConfig.direction === 'ascending' ? 1 : -1;
+      
+      return 0;
+    });
     return sortableItems;
   }, [trips, sortConfig]);
 
@@ -617,7 +611,7 @@ const TripList = () => {
                   currentPage={currentPage}
                   totalPages={totalPages}
                   total={meta.total}
-                  limit={meta.limit}
+                  limit={limit}
                   onPageChange={handlePageChange}
                   onLimitChange={handleLimitChange}
                   isLoading={isLoading}

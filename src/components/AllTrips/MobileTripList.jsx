@@ -67,35 +67,46 @@ const MobileTripList = ({
   };
 
   // Get receipt status for a trip
-  const getReceiptStatus = (trip) => {
-    if (!trip.receipt_steps || trip.receipt_steps.length === 0) {
-      return { status: 'pending', label: 'Pending', color: 'gray', icon: Clock };
-    }
-    
-    const hasGarage = trip.receipt_steps.some(s => s.location === 'Garage');
-    const hasOffice = trip.receipt_steps.some(s => s.location === 'Office');
-    const isStamped = trip.receipt_steps.some(s => s.stamped === true);
-    
-    if (hasGarage && hasOffice) {
-      return { 
-        status: 'complete', 
-        label: isStamped ? 'Complete & Stamped' : 'Complete', 
-        color: isStamped ? 'emerald' : 'green',
-        icon: CheckCircle2 
-      };
-    }
-    
-    if (hasGarage || hasOffice) {
-      return { 
-        status: 'in_progress', 
-        label: hasGarage ? 'In Garage' : 'In Office', 
-        color: 'amber',
-        icon: Archive 
-      };
-    }
-    
-    return { status: 'pending', label: 'Pending', color: 'gray', icon: Clock };
+  // Replace the getReceiptStatus function with this version:
+const getReceiptStatus = (trip) => {
+  if (!trip.receipt_steps || trip.receipt_steps.length === 0) {
+    return { 
+      status: 'pending', 
+      label: 'Pending', 
+      classes: 'bg-gray-100 text-gray-700 border-gray-200',
+      icon: Clock 
+    };
+  }
+  
+  const hasGarage = trip.receipt_steps.some(s => s.location === 'Garage');
+  const hasOffice = trip.receipt_steps.some(s => s.location === 'Office');
+  const isStamped = trip.receipt_steps.some(s => s.stamped === true);
+  
+  if (hasGarage && hasOffice) {
+    return { 
+      status: 'complete', 
+      label: isStamped ? 'Complete & Stamped' : 'Complete', 
+      classes: isStamped ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-green-100 text-green-700 border-green-200',
+      icon: CheckCircle2 
+    };
+  }
+  
+  if (hasGarage || hasOffice) {
+    return { 
+      status: 'in_progress', 
+      label: hasGarage ? 'In Garage' : 'In Office', 
+      classes: 'bg-amber-100 text-amber-700 border-amber-200',
+      icon: Archive 
+    };
+  }
+  
+  return { 
+    status: 'pending', 
+    label: 'Pending', 
+    classes: 'bg-gray-100 text-gray-700 border-gray-200',
+    icon: Clock 
   };
+};
 
   // Group trips by parent_trip_id
   const groupTrips = () => {
@@ -233,11 +244,11 @@ const MobileTripList = ({
 
                 {/* Receipt Status Badge */}
                 <div className="mb-2.5">
-                  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-${receiptStatus.color}-100 text-${receiptStatus.color}-700 border border-${receiptStatus.color}-200`}>
-                    <StatusIcon className="h-3 w-3 mr-1.5" />
-                    {receiptStatus.label}
-                  </div>
-                </div>
+  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${receiptStatus.classes}`}>
+    <StatusIcon className="h-3 w-3 mr-1.5" />
+    {receiptStatus.label}
+  </div>
+</div>
 
                 {/* Two Column Route Preview */}
                 <div className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
@@ -597,10 +608,10 @@ const MobileTripList = ({
                                 </div>
                                 <div>
                                   <div className="text-sm font-semibold text-gray-900">#{container.receipt_no}</div>
-                                  <div className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded text-xs font-semibold bg-${containerReceiptStatus.color}-100 text-${containerReceiptStatus.color}-700`}>
-                                    <ContainerStatusIcon className="h-2.5 w-2.5 mr-1" />
-                                    {containerReceiptStatus.label}
-                                  </div>
+                                  <div className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded text-xs font-semibold ${containerReceiptStatus.classes}`}>
+  <ContainerStatusIcon className="h-2.5 w-2.5 mr-1" />
+  {containerReceiptStatus.label}
+</div>
                                 </div>
                               </div>
                               <div className="w-5 h-5 rounded bg-gray-100 flex items-center justify-center">

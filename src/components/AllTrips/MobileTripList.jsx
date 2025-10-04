@@ -15,11 +15,23 @@ import {
   Fuel,
   DollarSign,
   Layers,
-  Package
+  Package,
+  CheckCircle2,
+  Clock,
+  Archive
 } from 'lucide-react';
 import EmptyTableState from './EmptyTableState';
 
-const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, onDelete, onDeleteParent, onShowDetails }) => {
+const MobileTripList = ({ 
+  isLoading, 
+  trips, 
+  visibleDetailId, 
+  onToggleDetails, 
+  onDelete, 
+  onDeleteParent, 
+  onShowDetails,
+  onManageReceipt 
+}) => {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
 
   const formatCurrency = (amount) => {
@@ -52,6 +64,37 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
     if (!text) return '—';
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
+  };
+
+  // Get receipt status for a trip
+  const getReceiptStatus = (trip) => {
+    if (!trip.receipt_steps || trip.receipt_steps.length === 0) {
+      return { status: 'pending', label: 'Pending', color: 'gray', icon: Clock };
+    }
+    
+    const hasGarage = trip.receipt_steps.some(s => s.location === 'Garage');
+    const hasOffice = trip.receipt_steps.some(s => s.location === 'Office');
+    const isStamped = trip.receipt_steps.some(s => s.stamped === true);
+    
+    if (hasGarage && hasOffice) {
+      return { 
+        status: 'complete', 
+        label: isStamped ? 'Complete & Stamped' : 'Complete', 
+        color: isStamped ? 'emerald' : 'green',
+        icon: CheckCircle2 
+      };
+    }
+    
+    if (hasGarage || hasOffice) {
+      return { 
+        status: 'in_progress', 
+        label: hasGarage ? 'In Garage' : 'In Office', 
+        color: 'amber',
+        icon: Archive 
+      };
+    }
+    
+    return { status: 'pending', label: 'Pending', color: 'gray', icon: Clock };
   };
 
   // Group trips by parent_trip_id
@@ -132,6 +175,9 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
       {displayItems.map((item, index) => {
         if (item.type === 'standalone') {
           const trip = item.trip;
+          const receiptStatus = getReceiptStatus(trip);
+          const StatusIcon = receiptStatus.icon;
+
           return (
             <div 
               key={`standalone-${trip.ID}`}
@@ -145,7 +191,7 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                 <div className="flex items-start justify-between mb-2.5">
                   <div className="flex-1 min-w-0 pr-3">
                     <div className="flex items-center mb-1.5">
-                      <div className="w-8h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-2">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-2">
                         <FileText className="h-4 w-4 text-blue-600" />
                       </div>
                       <div>
@@ -182,6 +228,14 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                         <ChevronDown className="h-3.5 w-3.5 text-gray-600" />
                       )}
                     </div>
+                  </div>
+                </div>
+
+                {/* Receipt Status Badge */}
+                <div className="mb-2.5">
+                  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-${receiptStatus.color}-100 text-${receiptStatus.color}-700 border border-${receiptStatus.color}-200`}>
+                    <StatusIcon className="h-3 w-3 mr-1.5" />
+                    {receiptStatus.label}
                   </div>
                 </div>
 
@@ -278,6 +332,36 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                       </div>
                     </div>
 
+                    {/* Receipt Tracking Info */}
+                    {trip.receipt_steps && trip.receipt_steps.length > 0 && (
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center mb-2">
+                          <Archive className="h-3.5 w-3.5 text-blue-500 mr-1.5" />
+                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Receipt Tracking</span>
+                        </div>
+                        <div className="space-y-2">
+                          {trip.receipt_steps.map((step, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center">
+                                <CheckCircle2 className={`h-3 w-3 mr-1.5 ${step.stamped ? 'text-emerald-500' : 'text-blue-500'}`} />
+                                <span className="font-medium text-gray-700">{step.location}</span>
+                              </div>
+                              <div className="text-gray-500">
+                                {step.received_by && (
+                                  <span className="mr-2">{step.received_by}</span>
+                                )}
+                                {step.stamped && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-semibold text-xs">
+                                    Stamped
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Route Details */}
                     <div className="bg-white rounded-lg p-3 border border-gray-200">
                       <div className="flex items-center mb-3">
@@ -334,10 +418,10 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="flex space-x-2.5 pt-1">
+                    <div className="grid grid-cols-2 gap-2">
                       <Link
                         to={`/trips/${trip.ID}`}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                        className="inline-flex items-center justify-center px-3 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
                       >
                         <Edit3 className="h-3.5 w-3.5 mr-1.5" />
                         Edit
@@ -348,10 +432,21 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                           e.stopPropagation();
                           onShowDetails(trip.ID);
                         }}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm"
+                        className="inline-flex items-center justify-center px-3 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm"
                       >
-                        <FileText className="h-3.5 w-3.5 mr-1.5" />
-                        Details
+                        <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                        Map
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onManageReceipt(trip.ID);
+                        }}
+                        className="inline-flex items-center justify-center px-3 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm"
+                      >
+                        <Archive className="h-3.5 w-3.5 mr-1.5" />
+                        Receipt
                       </button>
                       
                       <button
@@ -359,9 +454,10 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
                           e.stopPropagation();
                           onDelete(trip.ID);
                         }}
-                        className="inline-flex items-center justify-center px-3 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        className="inline-flex items-center justify-center px-3 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -373,7 +469,7 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
           // Multi-container parent group
           const containers = item.containers;
           const firstContainer = containers[0];
-          const totalCapacity = containers.reduce((sum, c) => sum + c.tank_capacity, 0);
+          const totalCapacity = containers.reduce((sum, c) => sum + (c.tank_capacity || 0), 0);
           const isExpanded = item.isExpanded;
           const hasMultipleContainers = containers.length > 1;
 
@@ -480,102 +576,147 @@ const MobileTripList = ({ isLoading, trips, visibleDetailId, onToggleDetails, on
               {isExpanded && (
                 <div className="border-t border-purple-200 bg-purple-50/30">
                   <div className="p-3 space-y-3">
-                    {containers.map((container, containerIndex) => (
-                      <div 
-                        key={container.ID}
-                        className="bg-white rounded-lg border border-purple-200 overflow-hidden"
-                      >
-                        {/* Container Header */}
+                    {containers.map((container, containerIndex) => {
+                      const containerReceiptStatus = getReceiptStatus(container);
+                      const ContainerStatusIcon = containerReceiptStatus.icon;
+
+                      return (
                         <div 
-                          className="px-3 py-2 bg-purple-50 cursor-pointer"
-                          onClick={() => onToggleDetails(container.ID)}
+                          key={container.ID}
+                          className="bg-white rounded-lg border border-purple-200 overflow-hidden"
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center flex-1">
-                              <div className="w-6 h-6 rounded-md bg-white border-2 border-purple-300 flex items-center justify-center mr-2">
-                                <span className="text-xs font-bold text-purple-600">{containerIndex + 1}</span>
+                          {/* Container Header */}
+                          <div 
+                            className="px-3 py-2 bg-purple-50 cursor-pointer"
+                            onClick={() => onToggleDetails(container.ID)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center flex-1">
+                                <div className="w-6 h-6 rounded-md bg-white border-2 border-purple-300 flex items-center justify-center mr-2">
+                                  <span className="text-xs font-bold text-purple-600">{containerIndex + 1}</span>
+                                </div>
+                                <div>
+                                  <div className="text-sm font-semibold text-gray-900">#{container.receipt_no}</div>
+                                  <div className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded text-xs font-semibold bg-${containerReceiptStatus.color}-100 text-${containerReceiptStatus.color}-700`}>
+                                    <ContainerStatusIcon className="h-2.5 w-2.5 mr-1" />
+                                    {containerReceiptStatus.label}
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <div className="text-sm font-semibold text-gray-900">#{container.receipt_no}</div>
-                                <div className="text-xs text-gray-500">Container {containerIndex + 1}</div>
+                              <div className="w-5 h-5 rounded bg-gray-100 flex items-center justify-center">
+                                {visibleDetailId === container.ID ? (
+                                  <ChevronUp className="h-3 w-3 text-gray-600" />
+                                ) : (
+                                  <ChevronDown className="h-3 w-3 text-gray-600" />
+                                )}
                               </div>
                             </div>
-                            <div className="w-5 h-5 rounded bg-gray-100 flex items-center justify-center">
-                              {visibleDetailId === container.ID ? (
-                                <ChevronUp className="h-3 w-3 text-gray-600" />
-                              ) : (
-                                <ChevronDown className="h-3 w-3 text-gray-600" />
+                          </div>
+
+                          {/* Container Quick Info */}
+                          <div className="px-3 py-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center">
+                                <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div>
+                                <span className="text-gray-700 font-medium" title={container.drop_off_point}>
+                                  {truncateText(container.drop_off_point, 18)}
+                                </span>
+                              </div>
+<div className="flex items-center">
+                                <Fuel className="h-3 w-3 text-gray-400 mr-1" />
+                                <span className="font-semibold text-gray-900">{container.tank_capacity}L</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Container Expanded Details */}
+                          {visibleDetailId === container.ID && (
+                            <div className="border-t border-gray-100 p-3 space-y-3 bg-gray-50">
+                              {/* Receipt Tracking for Container */}
+                              {container.receipt_steps && container.receipt_steps.length > 0 && (
+                                <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                                  <div className="flex items-center mb-2">
+                                    <Archive className="h-3 w-3 text-blue-500 mr-1.5" />
+                                    <span className="text-xs font-semibold text-gray-500 uppercase">Receipt</span>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    {container.receipt_steps.map((step, idx) => (
+                                      <div key={idx} className="flex items-center justify-between text-xs">
+                                        <div className="flex items-center">
+                                          <CheckCircle2 className={`h-2.5 w-2.5 mr-1.5 ${step.stamped ? 'text-emerald-500' : 'text-blue-500'}`} />
+                                          <span className="font-medium text-gray-700">{step.location}</span>
+                                        </div>
+                                        {step.stamped && (
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-semibold text-xs">
+                                            Stamped
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
                               )}
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Container Quick Info */}
-                        <div className="px-3 py-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div>
-                              <span className="text-gray-700 font-medium" title={container.drop_off_point}>
-                                {truncateText(container.drop_off_point, 18)}
-                              </span>
-                            </div>
-                            <div className="flex items-center">
-                              <Fuel className="h-3 w-3 text-gray-400 mr-1" />
-                              <span className="font-semibold text-gray-900">{container.tank_capacity}L</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Container Expanded Details */}
-                        {visibleDetailId === container.ID && (
-                          <div className="border-t border-gray-100 p-3 space-y-3 bg-gray-50">
-                            {/* Route Details */}
-                            <div className="bg-white rounded-lg p-2.5 border border-gray-200">
-                              <div className="flex items-center justify-between text-xs mb-2">
-                                <div className="flex items-center">
-                                  <MapPin className="h-3 w-3 text-indigo-500 mr-1" />
-                                  <span className="font-semibold text-gray-500 uppercase">Distance</span>
+                              {/* Route Details */}
+                              <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                                <div className="flex items-center justify-between text-xs mb-2">
+                                  <div className="flex items-center">
+                                    <MapPin className="h-3 w-3 text-indigo-500 mr-1" />
+                                    <span className="font-semibold text-gray-500 uppercase">Distance</span>
+                                  </div>
+                                  <span className="font-bold text-indigo-600">{formatDistance(container.mileage)}</span>
                                 </div>
-                                <span className="font-bold text-indigo-600">{formatDistance(container.mileage)}</span>
-                              </div>
-                              <div className="flex items-center justify-between text-xs">
-                                <div className="flex items-center">
-                                  <DollarSign className="h-3 w-3 text-emerald-500 mr-1" />
-                                  <span className="font-semibold text-gray-500 uppercase">Fee</span>
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center">
+                                    <DollarSign className="h-3 w-3 text-emerald-500 mr-1" />
+                                    <span className="font-semibold text-gray-500 uppercase">Fee</span>
+                                  </div>
+                                  <span className="font-bold text-emerald-600">{formatCurrency(container.fee)}</span>
                                 </div>
-                                <span className="font-bold text-emerald-600">{formatCurrency(container.fee)}</span>
                               </div>
-                            </div>
 
-                            {/* Action Buttons - hide delete if only one container */}
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onShowDetails(container.ID);
-                                }}
-                                className="flex-1 inline-flex items-center justify-center px-2.5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-xs"
-                              >
-                                <FileText className="h-3 w-3 mr-1" />
-                                Details
-                              </button>
-                              
-                              {hasMultipleContainers && (
+                              {/* Action Buttons */}
+                              <div className="grid grid-cols-2 gap-2">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    onDelete(container.ID);
+                                    onShowDetails(container.ID);
                                   }}
-                                  className="inline-flex items-center justify-center px-2.5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                  className="inline-flex items-center justify-center px-2.5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-xs"
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <MapPin className="h-3 w-3 mr-1" />
+                                  Map
                                 </button>
-                              )}
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onManageReceipt(container.ID);
+                                  }}
+                                  className="inline-flex items-center justify-center px-2.5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-xs"
+                                >
+                                  <Archive className="h-3 w-3 mr-1" />
+                                  Receipt
+                                </button>
+                                
+                                {hasMultipleContainers && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onDelete(container.ID);
+                                    }}
+                                    className="col-span-2 inline-flex items-center justify-center px-2.5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-xs"
+                                  >
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                    Delete Container
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

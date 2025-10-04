@@ -2,236 +2,417 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import * as ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { Download, Plus } from 'lucide-react';
 
 const ListActions = ({ isLoading, isExporting, tripsCount, onExport }) => {
   const exportToExcel = async () => {
     const trips = await onExport();
     if (!trips.length) return;
 
-    // Updated sorting logic
+    // Sort trips for better organization
     trips.sort((a, b) => {
-      // First sort by date
-      const dateA = a.date || '';
-      const dateB = b.date || '';
-      if (dateA !== dateB) {
-        return dateA.localeCompare(dateB);
-      }
+      const dateCompare = (b.date || '').localeCompare(a.date || '');
+      if (dateCompare !== 0) return dateCompare;
       
-      // Then by company
-      const companyA = a.company || '';
-      const companyB = b.company || '';
-      if (companyA !== companyB) {
-        return companyA.localeCompare(companyB);
-      }
+      const companyCompare = (a.company || '').localeCompare(b.company || '');
+      if (companyCompare !== 0) return companyCompare;
       
-      // Then by terminal
-      const terminalA = a.terminal || '';
-      const terminalB = b.terminal || '';
-      if (terminalA !== terminalB) {
-        return terminalA.localeCompare(terminalB);
-      }
-      
-      // Then by drop-off point
-      const dropOffA = a.drop_off_point || '';
-      const dropOffB = b.drop_off_point || '';
-      if (dropOffA !== dropOffB) {
-        return dropOffA.localeCompare(dropOffB);
-      }
-      
-      // Then by car no plate
-      const carNoPlateA = a.car_no_plate || '';
-      const carNoPlateB = b.car_no_plate || '';
-      if (carNoPlateA !== carNoPlateB) {
-        return carNoPlateA.localeCompare(carNoPlateB);
-      }
-      
-      // Then by tank capacity
-      const capacityA = a.tank_capacity || 0;
-      const capacityB = b.tank_capacity || 0;
-      if (capacityA !== capacityB) {
-        return capacityB - capacityA; // Descending order
-      }
-      
-      // Finally by receipt no
-      const receiptA = a.receipt_no || '';
-      const receiptB = b.receipt_no || '';
-      return receiptA.localeCompare(receiptB);
+      return (a.receipt_no || '').localeCompare(b.receipt_no || '');
     });
 
-    // Create a new workbook
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Trips');
+    
+    // Set workbook properties
+    workbook.creator = 'Trip Management System';
+    workbook.created = new Date();
+    workbook.modified = new Date();
+    
+    const worksheet = workbook.addWorksheet('Trip Data', {
+      pageSetup: { 
+        paperSize: 9, 
+        orientation: 'landscape',
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0
+      }
+    });
 
-    // Set columns with custom widths and header styling
+    // Define columns - REMOVED: Parent Trip ID, Trip Type, Receipt Status
     worksheet.columns = [
-      { header: 'Receipt No', key: 'receipt_no', width: 12 },
-      { header: 'Date', key: 'date', width: 12 },
-      { header: 'Company', key: 'company', width: 20 },
-      { header: 'Terminal', key: 'terminal', width: 20 },
-      { header: 'Drop-off Point', key: 'drop_off_point', width: 20 },
-      { header: 'Tank Capacity', key: 'tank_capacity', width: 15 },
-      { header: 'Driver', key: 'driver_name', width: 20 },
-      { header: 'Car', key: 'car_no_plate', width: 15 },
-      { header: 'Distance (km)', key: 'mileage', width: 15 },
-      { header: 'Fee', key: 'fee', width: 12 }
+      { header: 'Receipt No', key: 'receipt_no', width: 15 },
+      { header: 'Date', key: 'date', width: 13 },
+      { header: 'Company', key: 'company', width: 22 },
+      { header: 'Terminal', key: 'terminal', width: 22 },
+      { header: 'Drop-off Point', key: 'drop_off_point', width: 24 },
+      { header: 'Car Number', key: 'car_no_plate', width: 15 },
+      { header: 'Driver Name', key: 'driver_name', width: 22 },
+      { header: 'Tank Capacity (L)', key: 'tank_capacity', width: 17 },
+      { header: 'Distance (km)', key: 'distance', width: 15 },
+      { header: 'Fee', key: 'fee', width: 13 },
+      { header: 'In Garage', key: 'in_garage', width: 13 },
+      { header: 'In Office', key: 'in_office', width: 13 },
+      { header: 'Garage Received By', key: 'garage_received_by', width: 20 },
+      { header: 'Garage Date', key: 'garage_date', width: 18 },
+      { header: 'Office Received By', key: 'office_received_by', width: 20 },
+      { header: 'Office Date', key: 'office_date', width: 18 },
+      { header: 'Stamped', key: 'stamped', width: 12 },
     ];
 
-    // Add data rows with proper formatting
+    // Add data rows
     trips.forEach(trip => {
+      let inGarage = 'No';
+      let inOffice = 'No';
+      let garageReceivedBy = '';
+      let garageDate = '';
+      let officeReceivedBy = '';
+      let officeDate = '';
+      let garageStep = null;
+      let officeStep = null;
+      
+      if (trip.receipt_steps && trip.receipt_steps.length > 0) {
+        garageStep = trip.receipt_steps.find(s => s.location === 'Garage');
+        officeStep = trip.receipt_steps.find(s => s.location === 'Office');
+        
+        if (garageStep) {
+          inGarage = 'Yes';
+          garageReceivedBy = garageStep.received_by || '';
+          garageDate = garageStep.received_at ? new Date(garageStep.received_at).toLocaleString() : '';
+        }
+
+        if (officeStep) {
+          inOffice = 'Yes';
+          officeReceivedBy = officeStep.received_by || '';
+          officeDate = officeStep.received_at ? new Date(officeStep.received_at).toLocaleString() : '';
+        }
+      }
+
       worksheet.addRow({
         receipt_no: trip.receipt_no || '',
         date: trip.date || '',
         company: trip.company || '',
         terminal: trip.terminal || '',
         drop_off_point: trip.drop_off_point || '',
-        tank_capacity: trip.tank_capacity || '',
-        driver_name: trip.driver_name || '',
         car_no_plate: trip.car_no_plate || '',
-        mileage: typeof trip.mileage === 'number' ? trip.mileage : (trip.mileage || ''),
-        fee: typeof trip.fee === 'number' ? trip.fee : (trip.fee || '')
+        driver_name: trip.driver_name || '',
+        tank_capacity: trip.tank_capacity || '',
+        distance: trip.mileage || trip.distance || '',
+        fee: trip.fee || '',
+        in_garage: inGarage,
+        in_office: inOffice,
+        garage_received_by: garageReceivedBy,
+        garage_date: garageDate,
+        office_received_by: officeReceivedBy,
+        office_date: officeDate,
+        stamped: (garageStep?.stamped || officeStep?.stamped) ? 'Yes' : 'No'
       });
     });
 
-    // Get max column number and row number for the table
-    const maxCol = worksheet.columnCount;
-    const maxRow = worksheet.rowCount;
-
-    // Define the common border style for all cells
-    const borderStyle = {
-      top: { style: 'medium', color: { argb: 'D1D5DB' } },
-      left: { style: 'medium', color: { argb: 'D1D5DB' } },
-      bottom: { style: 'medium', color: { argb: 'D1D5DB' } },
-      right: { style: 'medium', color: { argb: 'D1D5DB' } }
+    // REVAMPED STYLING - Modern, professional design
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 30;
+    headerRow.font = {
+      name: 'Arial',
+      size: 12,
+      bold: true,
+      color: { argb: 'FFFFFF' }
+    };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: '1F2937' } // Dark gray (gray-800)
+    };
+    headerRow.alignment = {
+      horizontal: 'center',
+      vertical: 'middle',
+      wrapText: true
+    };
+    headerRow.border = {
+      top: { style: 'medium', color: { argb: '111827' } },
+      left: { style: 'medium', color: { argb: '111827' } },
+      bottom: { style: 'medium', color: { argb: '111827' } },
+      right: { style: 'medium', color: { argb: '111827' } }
     };
 
-    // Style the header row
-    const headerRow = worksheet.getRow(1);
-    headerRow.height = 22; // Slightly taller header for professional look
-    
-    // Apply styles to each header cell
-    for (let i = 1; i <= maxCol; i++) {
-      const cell = headerRow.getCell(i);
-      cell.font = {
-        name: 'Arial',
-        size: 11,
-        bold: true,
-        color: { argb: 'FFFFFF' }
-      };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: '3B82F6' } // Blue color
-      };
-      cell.alignment = {
-        horizontal: 'center',
-        vertical: 'middle'
-      };
-      cell.border = { ...borderStyle };
-    }
+    // Style data rows with modern design
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // Skip header
 
-    // Style all data cells with consistent borders and zebra striping
-    for (let rowIndex = 2; rowIndex <= maxRow; rowIndex++) {
-      const row = worksheet.getRow(rowIndex);
+      const isEven = rowNumber % 2 === 0;
+      const fillColor = isEven ? 'F3F4F6' : 'FFFFFF'; // Lighter alternating rows
+
+      row.height = 22;
       
-      // Apply zebra striping - more subtle for professional look
-      const fillColor = rowIndex % 2 === 0 ? 'F9FAFB' : 'FFFFFF';
-      
-      for (let colIndex = 1; colIndex <= maxCol; colIndex++) {
-        const cell = row.getCell(colIndex);
-        
-        // Apply zebra striping
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        // Fill
         cell.fill = {
           type: 'pattern',
           pattern: 'solid',
           fgColor: { argb: fillColor }
         };
-        
-        // Add borders to all cells
-        cell.border = { ...borderStyle };
-        
-        // Set alignment based on cell type
-        if (colIndex === 1) { // Receipt No
-          cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        } else if (colIndex === 2) { // Date
-          cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        } else if (colIndex === 9 || colIndex === 10) { // Distance and Fee
-          cell.alignment = { horizontal: 'right', vertical: 'middle' };
-          
-          // Apply number formatting
-          if (colIndex === 9 && typeof cell.value === 'number') {
-            cell.numFmt = '#,##0.00';
-          } else if (colIndex === 10 && typeof cell.value === 'number') {
-            cell.numFmt = '$#,##0.00';
-          }
-        } else {
-          cell.alignment = { horizontal: 'left', vertical: 'middle' };
-        }
-        
-        // Add consistent font for all cells
+
+        // Border - subtle borders
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'D1D5DB' } },
+          left: { style: 'thin', color: { argb: 'D1D5DB' } },
+          bottom: { style: 'thin', color: { argb: 'D1D5DB' } },
+          right: { style: 'thin', color: { argb: 'D1D5DB' } }
+        };
+
+        // Font - Modern, clean
         cell.font = {
           name: 'Arial',
-          size: 10
+          size: 10,
+          color: { argb: '1F2937' }
+        };
+
+        // Alignment based on column content
+        // Receipt No (1), Date (2), Car Number (6), Tank Capacity (8), Distance (9), Fee (10), In Garage (11), In Office (12), Stamped (17)
+        if ([1, 2, 6, 8, 9, 10, 11, 12, 17].includes(colNumber)) {
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        } else {
+          // Left align text fields
+          cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+        }
+
+        // Number formatting
+        if (colNumber === 8 && cell.value && !isNaN(cell.value)) {
+          // Tank Capacity
+          cell.numFmt = '#,##0';
+        } else if (colNumber === 9 && cell.value && !isNaN(cell.value)) {
+          // Distance
+          cell.numFmt = '#,##0.00';
+        } else if (colNumber === 10 && cell.value && !isNaN(cell.value)) {
+          // Fee
+          cell.numFmt = '#,##0.00';
+        }
+
+        // Conditional formatting for Yes/No columns (In Garage, In Office, Stamped)
+        if ([11, 12, 17].includes(colNumber)) {
+          if (cell.value === 'Yes') {
+            cell.font = { 
+              ...cell.font, 
+              color: { argb: '10B981' }, // Green-500
+              bold: true 
+            };
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: isEven ? 'ECFDF5' : 'F0FDF4' } // Light green tint
+            };
+          } else if (cell.value === 'No') {
+            cell.font = { 
+              ...cell.font, 
+              color: { argb: 'EF4444' } // Red-500
+            };
+          }
+        }
+      });
+    });
+
+    // Freeze header row and first column
+    worksheet.views = [
+      { state: 'frozen', xSplit: 1, ySplit: 1 }
+    ];
+
+    // Add autofilter
+    worksheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: worksheet.columnCount }
+    };
+
+    // Add a modern summary sheet
+    const summarySheet = workbook.addWorksheet('Summary');
+    
+    // Calculate summary statistics
+    const totalTrips = trips.length;
+    const companies = [...new Set(trips.map(t => t.company))];
+    const inGarageCount = trips.filter(t => 
+      t.receipt_steps?.some(s => s.location === 'Garage')
+    ).length;
+    const inOfficeCount = trips.filter(t => 
+      t.receipt_steps?.some(s => s.location === 'Office')
+    ).length;
+    const stampedCount = trips.filter(t => 
+      t.receipt_steps?.some(s => s.stamped === true)
+    ).length;
+    const totalVolume = trips.reduce((sum, t) => sum + (parseFloat(t.tank_capacity) || 0), 0);
+    const totalDistance = trips.reduce((sum, t) => sum + (parseFloat(t.mileage || t.distance) || 0), 0);
+    const totalFees = trips.reduce((sum, t) => sum + (parseFloat(t.fee) || 0), 0);
+
+    // Title
+    summarySheet.mergeCells('A1:C1');
+    const titleCell = summarySheet.getCell('A1');
+    titleCell.value = 'Trip Export Summary Report';
+    titleCell.font = { 
+      name: 'Arial', 
+      size: 18, 
+      bold: true, 
+      color: { argb: '1F2937' } 
+    };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'F3F4F6' }
+    };
+    summarySheet.getRow(1).height = 35;
+
+    // Export info
+    summarySheet.getCell('A3').value = 'Export Date:';
+    summarySheet.getCell('B3').value = new Date().toLocaleString();
+    summarySheet.getCell('A4').value = 'Generated By:';
+    summarySheet.getCell('B4').value = 'Trip Management System';
+
+    // Summary statistics
+    const summaryData = [
+      ['OVERVIEW', '', ''],
+      ['Total Trips:', totalTrips, ''],
+      ['Unique Companies:', companies.length, ''],
+      ['Total Volume (Liters):', totalVolume.toLocaleString(undefined, { maximumFractionDigits: 2 }), 'L'],
+      ['Total Distance:', totalDistance.toLocaleString(undefined, { maximumFractionDigits: 2 }), 'km'],
+      ['Total Fees:', totalFees.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), ''],
+      ['', '', ''],
+      ['RECEIPT TRACKING', '', ''],
+      ['Receipts in Garage:', inGarageCount, `${((inGarageCount / totalTrips) * 100).toFixed(1)}%`],
+      ['Receipts in Office:', inOfficeCount, `${((inOfficeCount / totalTrips) * 100).toFixed(1)}%`],
+      ['Stamped Receipts:', stampedCount, `${((stampedCount / totalTrips) * 100).toFixed(1)}%`],
+      ['', '', ''],
+      ['COMPANY BREAKDOWN', '', ''],
+    ];
+
+    let currentRow = 6;
+    summaryData.forEach((row) => {
+      summarySheet.getCell(`A${currentRow}`).value = row[0];
+      summarySheet.getCell(`B${currentRow}`).value = row[1];
+      summarySheet.getCell(`C${currentRow}`).value = row[2];
+      
+      // Style section headers
+      if (row[0].includes('OVERVIEW') || row[0].includes('RECEIPT') || row[0].includes('COMPANY')) {
+        summarySheet.mergeCells(`A${currentRow}:C${currentRow}`);
+        const headerCell = summarySheet.getCell(`A${currentRow}`);
+        headerCell.font = { 
+          name: 'Arial', 
+          size: 12, 
+          bold: true, 
+          color: { argb: 'FFFFFF' } 
+        };
+        headerCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: '4B5563' }
+        };
+        headerCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+        summarySheet.getRow(currentRow).height = 25;
+      } else if (row[0].endsWith(':')) {
+        // Style labels
+        summarySheet.getCell(`A${currentRow}`).font = { 
+          name: 'Arial', 
+          size: 10, 
+          bold: true 
+        };
+        summarySheet.getCell(`B${currentRow}`).font = { 
+          name: 'Arial', 
+          size: 10 
+        };
+        summarySheet.getCell(`C${currentRow}`).font = { 
+          name: 'Arial', 
+          size: 10,
+          italic: true,
+          color: { argb: '6B7280' }
         };
       }
-    }
+      
+      currentRow++;
+    });
 
-    // Generate Excel file
+    // Add company details
+    companies.sort().forEach((company) => {
+      const companyTrips = trips.filter(t => t.company === company);
+      summarySheet.getCell(`A${currentRow}`).value = company;
+      summarySheet.getCell(`B${currentRow}`).value = companyTrips.length;
+      summarySheet.getCell(`C${currentRow}`).value = `${((companyTrips.length / totalTrips) * 100).toFixed(1)}%`;
+      
+      summarySheet.getCell(`A${currentRow}`).font = { name: 'Arial', size: 10 };
+      summarySheet.getCell(`B${currentRow}`).font = { name: 'Arial', size: 10 };
+      summarySheet.getCell(`C${currentRow}`).font = { 
+        name: 'Arial', 
+        size: 10,
+        italic: true,
+        color: { argb: '6B7280' }
+      };
+      
+      currentRow++;
+    });
+
+    // Set column widths
+    summarySheet.getColumn('A').width = 30;
+    summarySheet.getColumn('B').width = 20;
+    summarySheet.getColumn('C').width = 15;
+
+    // Generate and save file
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { 
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
     });
     
-    // Create filename with readable timestamp for better organization
     const now = new Date();
-    const date = now.toISOString().split('T')[0];
-    const time = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-    const fileName = `trips_export_${date}_${time}.xlsx`;
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+    const fileName = `trip_export_${dateStr}_${timeStr}.xlsx`;
     
-    // Save file using file-saver
     saveAs(blob, fileName);
   };
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 sticky top-0 bg-white z-10 pb-2">
-      <div className="text-xs sm:text-sm text-gray-500 mb-2 sm:mb-0">
-        {isLoading ? 'Loading trips...' : (
-          tripsCount > 0 ? `Showing ${tripsCount} trips` : 'No trips found'
-        )}
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gradient-to-r from-gray-50 to-white p-4 rounded-lg border border-gray-200">
+      <div className="flex items-center space-x-2">
+        <div className="text-sm font-medium text-gray-700">
+          {isLoading ? (
+            <span className="flex items-center">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2"></div>
+              Loading trips...
+            </span>
+          ) : (
+            <span>
+              {tripsCount > 0 ? (
+                <>
+                  <span className="text-blue-600 font-bold">{tripsCount}</span> 
+                  <span className="text-gray-500"> {tripsCount === 1 ? 'trip' : 'trips'} found</span>
+                </>
+              ) : (
+                <span className="text-gray-400">No trips found</span>
+              )}
+            </span>
+          )}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2 justify-end">
+      
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={exportToExcel}
-          disabled={isExporting}
-          className="inline-flex items-center justify-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-green-300 flex-1 sm:flex-none"
+          disabled={isExporting || tripsCount === 0}
+          className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200"
         >
           {isExporting ? (
             <>
-              <svg className="animate-spin h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
               Exporting...
             </>
           ) : (
             <>
-              <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Export
+              <Download className="h-4 w-4 mr-2" />
+              Export to Excel
             </>
           )}
         </button>
+        
         <Link
           to="/add-trip"
-          className="inline-flex items-center justify-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex-1 sm:flex-none"
+          className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
         >
-          
-          <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+          <Plus className="h-4 w-4 mr-2" />
           Add Trip
         </Link>
-        
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import apiClient from '../../apiClient';
 
 // Import existing trip components
@@ -13,9 +13,8 @@ import Pagination from './Pagination';
 import ListActions from './ListActions';
 import NoResultsAlert from './NoResultsAlert';
 import ResponsiveTripStatistics from './TripStatsController';
-
-// Import LocationDialog
 import LocationDialog from '../LocationDialog';
+import ReceiptDialog from './ReceiptDialog';
 
 // Import icons
 import { List, BarChart3 } from 'lucide-react';
@@ -27,8 +26,7 @@ const TripList = () => {
     const year = now.getFullYear();
     const month = now.getMonth();
     const firstDay = new Date(year, month, 1);
-    const result = firstDay.toLocaleDateString('en-CA');
-    return result;
+    return firstDay.toLocaleDateString('en-CA');
   };
 
   // Function to get today's date
@@ -41,11 +39,11 @@ const TripList = () => {
     pages: 1,
     total: 0,
     limit: 10,
-    company: '',
-    start_date: '',
-    end_date: '',
-    search: ''
   });
+
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false);
+  const [selectedTripForReceipt, setSelectedTripForReceipt] = useState(null);
+  const [shouldRefresh, setShouldRefresh] = useState(false);
 
   // State for tab management
   const [activeTab, setActiveTab] = useState('list');
@@ -66,7 +64,8 @@ const TripList = () => {
     company: '',
     startDate: getFirstDayOfMonth(),
     endDate: getToday(),
-    missingData: ''
+    missingData: '',
+    receiptStatus: ''
   });
   
   // Global search state
@@ -97,24 +96,28 @@ const TripList = () => {
   const [selectedTripDetails, setSelectedTripDetails] = useState({});
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  useEffect(() => {
-    fetchCompanies();
-    
-    if (activeTab === 'list') {
-      fetchTrips();
-    }
-  }, [currentPage, filters.company, filters.startDate, filters.endDate, searchTerm, activeTab]);
+  // Memoized callbacks
+  const handleOpenReceiptDialog = useCallback((tripId) => {
+    setSelectedTripForReceipt(tripId);
+    setShowReceiptDialog(true);
+  }, []);
 
-  const fetchCompanies = async () => {
+  const handleCloseReceiptDialog = useCallback(() => {
+    setShowReceiptDialog(false);
+    setSelectedTripForReceipt(null);
+    setShouldRefresh(prev => !prev);
+  }, [currentPage, meta.limit]);
+
+  const fetchCompanies = useCallback(async () => {
     try {
       const response = await apiClient.get(`/api/mappings/companies`);
       setCompanies(response.data.data || []);
     } catch (err) {
       console.error('Failed to fetch companies:', err);
     }
-  };
+  }, []);
 
-  const fetchTrips = async (pageNumber = currentPage, pageLimit = meta.limit) => {
+  const fetchTrips = useCallback(async (pageNumber = currentPage, pageLimit = meta.limit) => {
     setIsLoading(true);
     setError('');
     
@@ -129,32 +132,30 @@ const TripList = () => {
         params.search = searchTerm;
       }
       
+      // Add missing data filter
+      if (filters.missingData) {
+        params.missing_data = filters.missingData;
+      }
+      
+      // Add receipt status filter
+      if (filters.receiptStatus) {
+        params.receipt_status = filters.receiptStatus;
+      }
+      
       if (filters.company) {
         url = `/api/trips/company/${filters.company}`;
-        params.page = pageNumber;
-        params.limit = pageLimit;
-        
-        if (searchTerm) {
-          params.search = searchTerm;
-        }
       }
       
       if (filters.startDate && filters.endDate) {
         url = `/api/trips/date`;
         params = {
           ...params,
-          page: pageNumber,
-          limit: pageLimit,
           start_date: filters.startDate,
           end_date: filters.endDate
         };
         
         if (filters.company) {
           params.company = filters.company;
-        }
-        
-        if (searchTerm) {
-          params.search = searchTerm;
         }
       }
       
@@ -172,9 +173,31 @@ const TripList = () => {
       setIsLoading(false);
       setIsSearching(false);
     }
-  };
+  }, [currentPage, meta.limit, searchTerm, filters.missingData, filters.receiptStatus, filters.company, filters.startDate, filters.endDate]);
 
-  const fetchAllTrips = async () => {
+  // Initial fetch of companies
+  useEffect(() => {
+    fetchCompanies();
+  }, [fetchCompanies]);
+
+  // Fetch trips when dependencies change - FIXED: Added all filter dependencies
+  useEffect(() => {
+    if (activeTab === 'list') {
+      fetchTrips();
+    }
+  }, [
+    activeTab,
+    currentPage, 
+    filters.company, 
+    filters.startDate, 
+    filters.endDate, 
+    filters.missingData,      // ADDED
+    filters.receiptStatus,    // ADDED
+    searchTerm,
+    shouldRefresh
+  ]);
+
+  const fetchAllTrips = useCallback(async () => {
     setIsExporting(true);
     try {
       let url = `/api/trips`;
@@ -182,6 +205,14 @@ const TripList = () => {
       
       if (searchTerm) {
         params.search = searchTerm;
+      }
+
+      if (filters.missingData) {
+        params.missing_data = filters.missingData;
+      }
+      
+      if (filters.receiptStatus) {
+        params.receipt_status = filters.receiptStatus;
       }
       
       if (filters.company) {
@@ -210,15 +241,14 @@ const TripList = () => {
     } finally {
       setIsExporting(false);
     }
-  };
+  }, [searchTerm, filters]);
 
-  const handleLimitChange = (newLimit) => {
+  const handleLimitChange = useCallback((newLimit) => {
     setMeta(prev => ({ ...prev, limit: newLimit }));
     setCurrentPage(1);
-    fetchTrips(1, newLimit);
-  };
+  }, []);
 
-  const handleShowDetails = async (tripId) => {
+  const handleShowDetails = useCallback(async (tripId) => {
     setIsLoadingDetails(true);
     try {
       const response = await apiClient.get(`/api/trips/${tripId}/details`);
@@ -251,7 +281,7 @@ const TripList = () => {
         
         setShowLocationDialog(true);
       } else {
-        setError('No location data available for this trip. The trip may not have valid terminal or drop-off coordinates.');
+        setError('No location data available for this trip.');
         setTimeout(() => setError(''), 5000);
       }
     } catch (error) {
@@ -261,66 +291,71 @@ const TripList = () => {
     } finally {
       setIsLoadingDetails(false);
     }
-  };
+  }, []);
 
-  const handleFilterChange = (e) => {
+  const handleFilterChange = useCallback((e) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
     setCurrentPage(1);
-  };
+  }, []);
 
-  const handleResetFilters = () => {
+  const handleClearReceiptStatus = useCallback(() => {
+    setFilters(prev => ({ ...prev, receiptStatus: '' }));
+    setCurrentPage(1);
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
     setFilters({
       company: '',
       startDate: '',
       endDate: '',
-      missingData: ''
+      missingData: '',
+      receiptStatus: ''
     });
     setSearchTerm('');
     setCurrentPage(1);
-  };
+  }, []);
 
-  const handleClearMissingData = () => {
+  const handleClearMissingData = useCallback(() => {
     setFilters(prev => ({ ...prev, missingData: '' }));
-  };
+    setCurrentPage(1);
+  }, []);
 
-  const handleSearchChange = (e) => {
+  const handleSearchChange = useCallback((e) => {
     setSearchTerm(e.target.value);
-  };
+  }, []);
 
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     setIsSearching(true);
     setCurrentPage(1);
-    fetchTrips();
-  };
+  }, []);
 
-  const handleSearchKeyPress = (e) => {
+  const handleSearchKeyPress = useCallback((e) => {
     if (e.key === 'Enter') {
       handleSearch();
     }
-  };
+  }, [handleSearch]);
 
-  const handlePageChange = (page) => {
+  const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
-    fetchTrips(page, meta.limit);
-  };
+  }, []);
   
-  const toggleMobileDetails = (id) => {
-    setShowMobileDetails(showMobileDetails === id ? null : id);
-  };
+  const toggleMobileDetails = useCallback((id) => {
+    setShowMobileDetails(prev => prev === id ? null : id);
+  }, []);
   
-  // Single trip delete handlers
-  const openDeleteModal = (id) => {
+  // Delete handlers
+  const openDeleteModal = useCallback((id) => {
     setTripToDelete(id);
     setShowDeleteModal(true);
-  };
+  }, []);
 
-  const closeDeleteModal = () => {
+  const closeDeleteModal = useCallback(() => {
     setShowDeleteModal(false);
     setTimeout(() => setTripToDelete(null), 200);
-  };
+  }, []);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!tripToDelete) return;
     
     setIsDeleting(true);
@@ -334,26 +369,24 @@ const TripList = () => {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [tripToDelete, fetchTrips, closeDeleteModal]);
 
-  // Parent trip delete handlers
-  const openDeleteParentModal = (parentId) => {
-    // Find the container count
+  const openDeleteParentModal = useCallback((parentId) => {
     const parentContainers = trips.filter(t => t.parent_trip_id === parentId);
     setParentToDelete(parentId);
     setParentContainerCount(parentContainers.length);
     setShowDeleteParentModal(true);
-  };
+  }, [trips]);
 
-  const closeDeleteParentModal = () => {
+  const closeDeleteParentModal = useCallback(() => {
     setShowDeleteParentModal(false);
     setTimeout(() => {
       setParentToDelete(null);
       setParentContainerCount(0);
     }, 200);
-  };
+  }, []);
 
-  const handleDeleteParent = async () => {
+  const handleDeleteParent = useCallback(async () => {
     if (!parentToDelete) return;
     
     setIsDeletingParent(true);
@@ -367,36 +400,19 @@ const TripList = () => {
     } finally {
       setIsDeletingParent(false);
     }
-  };
+  }, [parentToDelete, fetchTrips, closeDeleteParentModal]);
   
-  const requestSort = (key) => {
-    let direction = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
+  const requestSort = useCallback((key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'ascending' ? 'descending' : 'ascending'
+    }));
+  }, []);
   
-  // Client-side filtering for missing data
-  const filteredTrips = React.useMemo(() => {
-    let filtered = [...trips];
-    
-    // Filter by missing data
-    if (filters.missingData === 'driver') {
-      filtered = filtered.filter(trip => trip.driver_name === 'غير مسجل');
-    } else if (filters.missingData === 'route') {
-      filtered = filtered.filter(trip => trip.drop_off_point === 'غير مسجل');
-    } else if (filters.missingData === 'any') {
-      filtered = filtered.filter(trip => 
-        trip.driver_name === 'غير مسجل' || trip.drop_off_point === 'غير مسجل'
-      );
-    }
-    
-    return filtered;
-  }, [trips, filters.missingData]);
-
-  const sortedTrips = React.useMemo(() => {
-    let sortableItems = [...filteredTrips];
+  // REMOVED: Client-side filtering is now handled by backend
+  // Just use trips directly since backend filters them
+  const sortedTrips = useMemo(() => {
+    let sortableItems = [...trips];
     if (sortConfig.key) {
       sortableItems.sort((a, b) => {
         let aValue = a[sortConfig.key];
@@ -427,7 +443,9 @@ const TripList = () => {
       });
     }
     return sortableItems;
-  }, [filteredTrips, sortConfig]);
+  }, [trips, sortConfig]);
+
+  const hasActiveFilters = searchTerm || filters.company || filters.startDate || filters.endDate || filters.missingData || filters.receiptStatus;
 
   return (
     <div className="w-full overflow-auto px-2 sm:px-4 md:px-6 py-2 sm:py-4">
@@ -447,6 +465,13 @@ const TripList = () => {
           onDelete={handleDeleteParent}
         />
       )}
+
+      <ReceiptDialog
+        isOpen={showReceiptDialog}
+        onClose={handleCloseReceiptDialog}
+        tripId={selectedTripForReceipt}
+        apiClient={apiClient}
+      />
 
       <LocationDialog
         isOpen={showLocationDialog}
@@ -475,7 +500,6 @@ const TripList = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="text-lg sm:text-xl font-bold text-white">Trip Management</h2>
             
-            {/* Tab Switch Buttons */}
             <div className="flex bg-blue-700 rounded-md">
               <button
                 className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -536,17 +560,17 @@ const TripList = () => {
                 onClearCompany={() => setFilters({...filters, company: ''})}
                 onClearDates={() => setFilters({...filters, startDate: '', endDate: ''})}
                 onClearMissingData={handleClearMissingData}
+                onClearReceiptStatus={handleClearReceiptStatus}
               />
               
               <ListActions
                 isLoading={isLoading}
                 isExporting={isExporting}
-                tripsCount={filteredTrips.length}
+                tripsCount={sortedTrips.length}
                 onExport={fetchAllTrips}
               />
               
-              {(searchTerm || filters.company || filters.startDate || filters.endDate || 
-                filters.missingData) && filteredTrips.length === 0 && !isLoading && (
+              {hasActiveFilters && sortedTrips.length === 0 && !isLoading && (
                 <NoResultsAlert />
               )}
               
@@ -566,6 +590,7 @@ const TripList = () => {
                     onDelete={openDeleteModal}
                     onDeleteParent={openDeleteParentModal}
                     onShowDetails={handleShowDetails}
+                    onManageReceipt={handleOpenReceiptDialog}
                   />
                 </div>
               )}
@@ -580,6 +605,7 @@ const TripList = () => {
                     onDelete={openDeleteModal}
                     onDeleteParent={openDeleteParentModal}
                     onShowDetails={handleShowDetails}
+                    onManageReceipt={handleOpenReceiptDialog}
                   />
                 </div>
               )}

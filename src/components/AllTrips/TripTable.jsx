@@ -17,7 +17,9 @@ import {
 import TableHeader from './TableHeader';
 import EmptyTableState from './EmptyTableState';
 
-const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onDeleteParent, onShowDetails }) => {
+import { FileCheck } from 'lucide-react';
+
+const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onDeleteParent, onShowDetails, onManageReceipt }) => {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
 
   const formatCurrency = (amount) => {
@@ -312,7 +314,13 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onDeletePar
                           >
                             <FileText className="h-4 w-4" />
                           </button>
-
+<button
+  onClick={() => onManageReceipt(trip.ID)}
+  className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-purple-600 hover:text-purple-700 hover:bg-purple-100 transition-colors"
+  title="Manage Receipt"
+>
+  <FileCheck className="h-4 w-4" />
+</button>
                           <button
                             onClick={() => onDelete(trip.ID)}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-100 transition-colors"
@@ -557,6 +565,13 @@ const TripTable = ({ isLoading, trips, sortConfig, onSort, onDelete, onDeletePar
                               >
                                 <FileText className="h-4 w-4" />
                               </button>
+                              <button
+  onClick={() => onManageReceipt(container.ID)}
+  className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-purple-600 hover:text-purple-700 hover:bg-purple-100 transition-colors"
+  title="Manage Receipt"
+>
+  <FileCheck className="h-4 w-4" />
+</button>
                               {hasMultipleContainers && (
                                 <button
                                   onClick={() => onDelete(container.ID)}

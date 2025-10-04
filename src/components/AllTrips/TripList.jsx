@@ -194,7 +194,8 @@ const TripList = () => {
     filters.missingData,      // ADDED
     filters.receiptStatus,    // ADDED
     searchTerm,
-    shouldRefresh
+    shouldRefresh,
+    meta.limit
   ]);
 
   const fetchAllTrips = useCallback(async () => {
@@ -246,7 +247,8 @@ const TripList = () => {
   const handleLimitChange = useCallback((newLimit) => {
     setMeta(prev => ({ ...prev, limit: newLimit }));
     setCurrentPage(1);
-  }, []);
+    fetchTrips(1, newLimit);
+  }, [fetchTrips]);
 
   const handleShowDetails = useCallback(async (tripId) => {
     setIsLoadingDetails(true);
